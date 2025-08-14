@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{% block title %}Gestión de Caja{% endblock %}</title>
+
+    <!-- Favicon global -->
+    <link rel="icon" href="{{ url_for('static', filename='img/cropped-CASTILLO-DE-CHANCAY-32x32.png') }}" sizes="32x32">
+    <link rel="icon" href="{{ url_for('static', filename='img/cropped-CASTILLO-DE-CHANCAY-192x192.png') }}" sizes="192x192">
+
+        <!-- Tailwind y elementos -->
+        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+        <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+        <script
+            src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1"
+            type="module"
+        ></script>
+    </head>
+
+    <body class="bg-slate-50 text-slate-900">
+        <!-- Contenido principal -->
+        <main class="container mx-auto px-4">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Application Resources -->
+        <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    </body>
+</html>
