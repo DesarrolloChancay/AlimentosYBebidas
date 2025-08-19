@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+
+{% block title %}Buscar Inspecciones - Castillo de Chancay{% endblock %}
+
+{% block extra_css %}
+<style>
+    .inspeccion-card {
+        transition: all 0.3s ease;
+    }
+    .inspeccion-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .estado-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    .estado-pendiente { @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200; }
+    .estado-en-proceso { @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200; }
+    .estado-completada { @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-50 dark:bg-slate-900 pt-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-slate-900 dark:text-white">
+                Buscar Inspecciones
+            </h1>
+            <p class="mt-2 text-slate-600 dark:text-slate-400">
+                Encuentra y revisa inspecciones guardadas
+            </p>
+        </div>
+
+        <!-- Filtros -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-8">
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Filtros de Búsqueda</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <!-- Establecimiento -->
+                <div>
+                    <label for="filtro-establecimiento" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Establecimiento
+                    </label>
+                    <select id="filtro-establecimiento" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Todos los establecimientos</option>
+                    </select>
+                </div>
+
+                <!-- Fecha Desde -->
+                <div>
+                    <label for="filtro-fecha-desde" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Fecha Desde
+                    </label>
+                    <input type="date" id="filtro-fecha-desde" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+
+                <!-- Fecha Hasta -->
+                <div>
+                    <label for="filtro-fecha-hasta" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Fecha Hasta
+                    </label>
+                    <input type="date" id="filtro-fecha-hasta" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+
+                <!-- Estado -->
+                <div>
+                    <label for="filtro-estado" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Estado
+                    </label>
+                    <select id="filtro-estado" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Todos los estados</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="en proceso">En Proceso</option>
+                        <option value="completada">Completada</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Botones de acción -->
+            <div class="flex flex-wrap gap-3 mt-6">
+                <button id="btn-buscar" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    Buscar
+                </button>
+                <button id="btn-limpiar" class="px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded-lg transition-colors duration-200">
+                    Limpiar Filtros
+                </button>
+                <button id="btn-nueva-inspeccion" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Nueva Inspección
+                </button>
+            </div>
+        </div>
+
+        <!-- Resultados -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+            <!-- Header de resultados -->
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">
+                        Resultados de Búsqueda
+                    </h3>
+                    <span id="contador-resultados" class="text-sm text-slate-500 dark:text-slate-400">
+                        0 inspecciones encontradas
+                    </span>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading-resultados" class="hidden p-8 text-center">
+                <div class="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-blue-500 bg-blue-100 transition ease-in-out duration-150">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Buscando inspecciones...
+                </div>
+            </div>
+
+            <!-- Lista de inspecciones -->
+            <div id="lista-inspecciones" class="p-6">
+                <div id="sin-resultados" class="text-center py-12">
+                    <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-slate-900 dark:text-white">Sin inspecciones</h3>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Utiliza los filtros para buscar inspecciones.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Vista Previa -->
+<div id="modal-vista-previa" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-slate-200 dark:border-slate-700">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Vista Previa de Inspección</h3>
+                <button id="cerrar-modal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div id="contenido-modal" class="p-6">
+            <!-- Contenido se carga dinámicamente -->
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Variables globales
+    let inspecciones = [];
+    
+    // Elementos del DOM
+    const filtroEstablecimiento = document.getElementById('filtro-establecimiento');
+    const filtroFechaDesde = document.getElementById('filtro-fecha-desde');
+    const filtroFechaHasta = document.getElementById('filtro-fecha-hasta');
+    const filtroEstado = document.getElementById('filtro-estado');
+    const btnBuscar = document.getElementById('btn-buscar');
+    const btnLimpiar = document.getElementById('btn-limpiar');
+    const btnNuevaInspeccion = document.getElementById('btn-nueva-inspeccion');
+    const listaInspecciones = document.getElementById('lista-inspecciones');
+    const contadorResultados = document.getElementById('contador-resultados');
+    const loadingResultados = document.getElementById('loading-resultados');
+    const sinResultados = document.getElementById('sin-resultados');
+    const modalVistaPrevia = document.getElementById('modal-vista-previa');
+    const cerrarModal = document.getElementById('cerrar-modal');
+    const contenidoModal = document.getElementById('contenido-modal');
+    
+    // Cargar establecimientos
+    cargarEstablecimientos();
+    
+    // Event listeners
+    btnBuscar.addEventListener('click', buscarInspecciones);
+    btnLimpiar.addEventListener('click', limpiarFiltros);
+    btnNuevaInspeccion.addEventListener('click', () => window.location.href = '/');
+    cerrarModal.addEventListener('click', cerrarModalPrevia);
+    
+    // Buscar automáticamente al cargar
+    buscarInspecciones();
+    
+    async function cargarEstablecimientos() {
+        try {
+            const response = await fetch('/api/establecimientos');
+            if (response.ok) {
+                const establecimientos = await response.json();
+                
+                filtroEstablecimiento.innerHTML = '<option value="">Todos los establecimientos</option>';
+                establecimientos.forEach(est => {
+                    const option = document.createElement('option');
+                    option.value = est.id;
+                    option.textContent = est.nombre;
+                    filtroEstablecimiento.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error cargando establecimientos:', error);
+        }
+    }
+    
+    async function buscarInspecciones() {
+        mostrarLoading(true);
+        
+        try {
+            const params = new URLSearchParams();
+            
+            if (filtroEstablecimiento.value) params.append('establecimiento_id', filtroEstablecimiento.value);
+            if (filtroFechaDesde.value) params.append('fecha_desde', filtroFechaDesde.value);
+            if (filtroFechaHasta.value) params.append('fecha_hasta', filtroFechaHasta.value);
+            if (filtroEstado.value) params.append('estado', filtroEstado.value);
+            
+            const response = await fetch(`/api/inspecciones/buscar?${params.toString()}`);
+            if (response.ok) {
+                inspecciones = await response.json();
+                mostrarResultados();
+            } else {
+                throw new Error('Error en la búsqueda');
+            }
+        } catch (error) {
+            console.error('Error buscando inspecciones:', error);
+            mostrarError('Error al buscar inspecciones');
+        } finally {
+            mostrarLoading(false);
+        }
+    }
+    
+    function mostrarResultados() {
+        if (inspecciones.length === 0) {
+            sinResultados.classList.remove('hidden');
+            listaInspecciones.innerHTML = '';
+            contadorResultados.textContent = '0 inspecciones encontradas';
+            return;
+        }
+        
+        sinResultados.classList.add('hidden');
+        contadorResultados.textContent = `${inspecciones.length} inspección${inspecciones.length !== 1 ? 'es' : ''} encontrada${inspecciones.length !== 1 ? 's' : ''}`;
+        
+        const html = inspecciones.map(inspeccion => crearCardInspeccion(inspeccion)).join('');
+        listaInspecciones.innerHTML = html;
+        
+        // Agregar event listeners a las cards
+        document.querySelectorAll('[data-inspeccion-id]').forEach(card => {
+            card.addEventListener('click', () => verDetalleInspeccion(card.dataset.inspeccionId));
+        });
+    }
+    
+    function crearCardInspeccion(inspeccion) {
+        const fecha = new Date(inspeccion.fecha).toLocaleDateString('es-ES');
+        const estadoClass = `estado-${inspeccion.estado.toLowerCase().replace(' ', '-')}`;
+        
+        return `
+            <div class="inspeccion-card bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg p-4 cursor-pointer hover:shadow-md transition-all duration-200 mb-4" 
+                 data-inspeccion-id="${inspeccion.id}">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <h4 class="font-semibold text-slate-900 dark:text-white">${inspeccion.establecimiento_nombre}</h4>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">${fecha}</p>
+                    </div>
+                    <span class="estado-badge ${estadoClass}">${inspeccion.estado}</span>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <span class="font-medium text-slate-700 dark:text-slate-300">Inspector:</span>
+                        <p class="text-slate-600 dark:text-slate-400">${inspeccion.inspector_nombre || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <span class="font-medium text-slate-700 dark:text-slate-300">Puntaje:</span>
+                        <p class="text-slate-600 dark:text-slate-400">${inspeccion.puntaje_total || 0}/${inspeccion.puntaje_maximo || 0}</p>
+                    </div>
+                    <div>
+                        <span class="font-medium text-slate-700 dark:text-slate-300">Cumplimiento:</span>
+                        <p class="text-slate-600 dark:text-slate-400">${inspeccion.porcentaje_cumplimiento || 0}%</p>
+                    </div>
+                    <div>
+                        <span class="font-medium text-slate-700 dark:text-slate-300">Items:</span>
+                        <p class="text-slate-600 dark:text-slate-400">${inspeccion.items_evaluados || 0} evaluados</p>
+                    </div>
+                </div>
+                
+                ${inspeccion.observaciones ? `
+                    <div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600">
+                        <span class="font-medium text-slate-700 dark:text-slate-300">Observaciones:</span>
+                        <p class="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">${inspeccion.observaciones}</p>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+    
+    async function verDetalleInspeccion(inspeccionId) {
+        try {
+            const response = await fetch(`/api/inspecciones/${inspeccionId}/detalle`);
+            if (response.ok) {
+                const detalle = await response.json();
+                mostrarModalDetalle(detalle);
+            } else {
+                throw new Error('Error cargando detalle');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarError('Error al cargar el detalle de la inspección');
+        }
+    }
+    
+    function mostrarModalDetalle(detalle) {
+        // Aquí se puede implementar el contenido del modal con el detalle completo
+        contenidoModal.innerHTML = `
+            <div class="space-y-6">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <h4 class="font-semibold text-slate-900 dark:text-white">Establecimiento</h4>
+                        <p class="text-slate-600 dark:text-slate-400">${detalle.establecimiento_nombre}</p>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-slate-900 dark:text-white">Fecha</h4>
+                        <p class="text-slate-600 dark:text-slate-400">${new Date(detalle.fecha).toLocaleDateString('es-ES')}</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-4 p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-blue-600">${detalle.puntaje_total || 0}</div>
+                        <div class="text-sm text-slate-600 dark:text-slate-400">Puntaje Total</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-green-600">${detalle.porcentaje_cumplimiento || 0}%</div>
+                        <div class="text-sm text-slate-600 dark:text-slate-400">Cumplimiento</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-purple-600">${detalle.items_evaluados || 0}</div>
+                        <div class="text-sm text-slate-600 dark:text-slate-400">Items Evaluados</div>
+                    </div>
+                </div>
+                
+                ${detalle.observaciones ? `
+                    <div>
+                        <h4 class="font-semibold text-slate-900 dark:text-white mb-2">Observaciones</h4>
+                        <p class="text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">${detalle.observaciones}</p>
+                    </div>
+                ` : ''}
+                
+                <div class="flex justify-end space-x-3">
+                    <button onclick="editarInspeccion(${detalle.id})" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200">
+                        Editar Inspección
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        modalVistaPrevia.classList.remove('hidden');
+    }
+    
+    function cerrarModalPrevia() {
+        modalVistaPrevia.classList.add('hidden');
+    }
+    
+    function limpiarFiltros() {
+        filtroEstablecimiento.value = '';
+        filtroFechaDesde.value = '';
+        filtroFechaHasta.value = '';
+        filtroEstado.value = '';
+        buscarInspecciones();
+    }
+    
+    function mostrarLoading(mostrar) {
+        if (mostrar) {
+            loadingResultados.classList.remove('hidden');
+            sinResultados.classList.add('hidden');
+        } else {
+            loadingResultados.classList.add('hidden');
+        }
+    }
+    
+    function mostrarError(mensaje) {
+        // Implementar notificación de error
+        console.error(mensaje);
+    }
+    
+    // Función global para editar inspección
+    window.editarInspeccion = function(inspeccionId) {
+        window.location.href = `/?editar=${inspeccionId}`;
+    };
+});
+</script>
+{% endblock %}
