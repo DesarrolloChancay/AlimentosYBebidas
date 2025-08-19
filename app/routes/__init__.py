@@ -1,0 +1,1 @@
+from .inspeccion_routes import inspeccion_bp

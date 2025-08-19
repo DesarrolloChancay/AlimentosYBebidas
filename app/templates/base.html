@@ -1,30 +1,254 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="h-full">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{% block title %}Gestión de Caja{% endblock %}</title>
 
-    <!-- Favicon global -->
-    <link rel="icon" href="{{ url_for('static', filename='img/cropped-CASTILLO-DE-CHANCAY-32x32.png') }}" sizes="32x32">
-    <link rel="icon" href="{{ url_for('static', filename='img/cropped-CASTILLO-DE-CHANCAY-192x192.png') }}" sizes="192x192">
+        <!-- Favicon global -->
+        <link rel="icon" href="{{ url_for('static', filename='img/cropped-CASTILLO-DE-CHANCAY-32x32.png') }}" sizes="32x32">
+        <link rel="icon" href="{{ url_for('static', filename='img/cropped-CASTILLO-DE-CHANCAY-192x192.png') }}" sizes="192x192">
 
-        <!-- Tailwind y elementos -->
-        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+        <!-- Dependencias -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                darkMode: 'class',
+                theme: {
+                    extend: {}
+                }
+            }
+        </script>
         <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-        <script
-            src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1"
-            type="module"
-        ></script>
+        <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
+        <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+
+        <script>
+            // Variables globales para el tema
+            const THEME_KEY = 'tema';
+            const THEMES = {
+                light: 'light',
+                dark: 'dark',
+                system: 'sistema'
+            };
+
+            // Función para detectar tema del sistema
+            function getSystemTheme() {
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? THEMES.dark : THEMES.light;
+            }
+
+            // Función para cambiar el tema
+            window.changeTheme = function(theme) {
+                const html = document.documentElement;
+                const actualTheme = theme === THEMES.system ? getSystemTheme() : theme;
+                
+                // Limpiar clases existentes y aplicar el nuevo tema
+                html.classList.remove(THEMES.light, THEMES.dark);
+                html.classList.add(actualTheme);
+                
+                // Guardar preferencia
+                localStorage.setItem(THEME_KEY, theme);
+                
+                // Ocultar menú
+                const menu = document.getElementById('theme-menu');
+                if (menu) menu.classList.add('hidden');
+            }
+
+            // Inicializar tema
+            const savedTheme = localStorage.getItem(THEME_KEY) || THEMES.system;
+            changeTheme(savedTheme);
+
+            // Configuración cuando el DOM esté listo
+            document.addEventListener('DOMContentLoaded', function() {
+                const toggle = document.getElementById('theme-toggle');
+                const menu = document.getElementById('theme-menu');
+
+                // Manejar clic en el botón de toggle
+                if (toggle) {
+                    toggle.onclick = function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        menu.classList.toggle('hidden');
+                    };
+                }
+
+                // Cerrar menú al hacer clic fuera
+                document.onclick = function(e) {
+                    if (menu && !menu.contains(e.target) && !toggle.contains(e.target)) {
+                        menu.classList.add('hidden');
+                    }
+                };
+
+                // Observar cambios en el tema del sistema
+                const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+                mediaQuery.onchange = function() {
+                    if (localStorage.getItem(THEME_KEY) === THEMES.system) {
+                        changeTheme(THEMES.system);
+                    }
+                };
+            });
+        </script>
     </head>
 
-    <body class="bg-slate-50 text-slate-900">
+    <body class="h-full bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+        <!-- Selector de tema -->
+        <div id="theme-selector" class="fixed top-4 right-4 z-50">
+            <button type="button" id="theme-toggle" class="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-lg hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-600">
+                <!-- Icono del sol (modo claro) -->
+                <svg class="w-5 h-5 hidden dark:block" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
+                </svg>
+                <!-- Icono de la luna (modo oscuro) -->
+                <svg class="w-5 h-5 block dark:hidden" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+                </svg>
+            </button>
+
+            <!-- Menú desplegable de temas -->
+            <div id="theme-menu" class="hidden absolute top-12 right-0 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg">
+                <div class="py-1">
+                    <button type="button" onclick="window.changeTheme('light')" class="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
+                            </svg>
+                            Modo claro
+                        </div>
+                    </button>
+                    <button type="button" onclick="window.changeTheme('dark')" class="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+                            </svg>
+                            Modo oscuro
+                        </div>
+                    </button>
+                    <button type="button" onclick="window.changeTheme('sistema')" class="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clip-rule="evenodd"/>
+                            </svg>
+                            Preferencia del sistema
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Contenido principal -->
         <main class="container mx-auto px-4">
             {% block content %}{% endblock %}
         </main>
 
+        <!-- Modal de Confirmación -->
+        <el-dialog>
+            <dialog
+                id="dialog-confirmar"
+                aria-labelledby="dialog-title"
+                class="fixed inset-0 size-auto max-h-none max-w-none overflow-y-auto bg-transparent backdrop:bg-transparent z-50"
+            >
+                <el-dialog-backdrop
+                    class="fixed inset-0 bg-gray-500/75 transition-opacity"
+                ></el-dialog-backdrop>
+                <div
+                    class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0"
+                >
+                    <el-dialog-panel
+                        class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
+                    >
+                        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                            <div class="sm:flex sm:items-start">
+                                <div
+                                    class="mx-auto flex size-12 shrink-0 items-center justify-center rounded-full bg-blue-100 sm:mx-0 sm:size-10"
+                                >
+                                    <svg
+                                        class="size-6 text-blue-600"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="1.5"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M13 16h-1v-4h-1m1-4h.01M12 18.5A6.5 6.5 0 105.5 12a6.5 6.5 0 006.5 6.5z"
+                                        />
+                                    </svg>
+                                </div>
+                                <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                                    <h3
+                                        id="dialog-title"
+                                        class="text-base font-semibold text-gray-900"
+                                    >
+                                        Confirmar Evaluación
+                                    </h3>
+                                    <p id="dialog-mensaje" class="text-sm text-gray-600 mt-2">
+                                        ¿Estás seguro de guardar esta evaluación? Esta acción es irreversible.
+                                    </p>
+                                    <div id="motivo-admin-modal-destino"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                            <button
+                                type="button"
+                                id="btn-confirmar-modal"
+                                class="inline-flex w-full justify-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-500 sm:ml-3 sm:w-auto"
+                            >
+                                Confirmar
+                            </button>
+                            <button
+                                type="button"
+                                id="btn-cancelar-modal"
+                                command="close"
+                                commandfor="dialog-confirmar"
+                                class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-gray-300 ring-inset hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </el-dialog-panel>
+                </div>
+            </dialog>
+        </el-dialog>
+
         <!-- Application Resources -->
         <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+        
+        <!-- Sistema de Gestión de Sesiones -->
+        <script>
+        // Validación simple de navegación al retroceder
+        function verificarSesionAlRetroceder() {
+            // NO verificar sesión en la página de login
+            if (window.location.pathname === '/login') {
+                return;
+            }
+            
+            // Verificación simple cuando se navega de vuelta
+            fetch('/api/auth/verificar-sesion-unica', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                if (response.status === 401) {
+                    // Sesión no válida, redirigir al login
+                    window.location.href = '/login';
+                }
+            }).catch(() => {
+                // Error de red, redirigir al login por seguridad
+                window.location.href = '/login';
+            });
+        }
+        
+        // Solo verificar cuando el usuario navega de vuelta a la página
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted && window.location.pathname !== '/login') {
+                verificarSesionAlRetroceder();
+            }
+        });
+        </script>
+        </script>
     </body>
 </html>

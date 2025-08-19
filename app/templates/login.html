@@ -1,35 +1,138 @@
 {% extends "base.html" %}
-{% block title %}Evaluación Sanitaria{% endblock %}
+{% block title %}Evaluación Sanitaria - Login{% endblock %}
 
 {% block content %}
+<section id="vista-acceso" class="min-h-screen flex items-center justify-center p-6">
+    <div class="w-full max-w-md bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-6">
+        <h1 class="text-2xl font-bold mb-2 text-slate-900 dark:text-white">Evaluaciones – Acceso</h1>
+        <p class="text-slate-600 dark:text-slate-400 mb-6">
+            Inicia sesión con tu email corporativo.
+        </p>
+        <div id="error-message" class="hidden bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-200 px-4 py-3 rounded relative mb-4" role="alert">
+        </div>
+        <form id="login-form" class="space-y-4">
+            <div>
+                <label for="email" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    class="w-full border dark:border-slate-600 rounded-xl px-4 py-3 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring focus:border-blue-300 dark:focus:border-blue-500"
+                    placeholder="tu-email@empresa.com"
+                    required
+                />
+            </div>
+            <div>
+                <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Contraseña</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    class="w-full border dark:border-slate-600 rounded-xl px-4 py-3 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring focus:border-blue-300 dark:focus:border-blue-500"
+                    required
+                />
+            </div>
+            <button
+                type="submit"
+                class="w-full rounded-xl bg-slate-900 dark:bg-blue-600 text-white py-3 font-semibold hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors"
+            >
+                Iniciar sesión
+            </button>
+        </form>
+    </div>
+</section>
 
-<!-- ========================= -->
-    <!-- VISTA 1: ACCESO (estático)-->
-    <!-- ========================= -->
-    <section
-      id="vista-acceso"
-      class="min-h-screen flex items-center justify-center p-6"
-    >
-      <div class="w-full max-w-md bg-white shadow-xl rounded-2xl p-6">
-        <h1 class="text-2xl font-bold mb-2">Evaluaciones – Acceso</h1>
-        <p class="text-slate-600 mb-6">
-          Inicia sesión con tu email corporativo.
-        </p>
-        <input
-          type="email"
-          class="w-full border rounded-xl px-4 py-3 mb-4 focus:outline-none focus:ring"
-          placeholder="tu-email@empresa.com"
-          value=""
-          readonly
-        />
-        <button
-          class="w-full rounded-xl bg-slate-900 text-white py-3 font-semibold opacity-90 cursor-not-allowed"
-        >
-          Entrar
-        </button>
-        <p class="mt-3 text-xs text-slate-400">
-          Pantalla mock sin funcionalidad. Para Flask: manejar sesión real.
-        </p>
-      </div>
-    </section>
-    {% endblock %}
+<script>
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const errorDiv = document.getElementById('error-message');
+    
+    try {
+        const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            window.location.href = '/';
+        } else {
+            // Manejar diferentes tipos de errores
+            if (data.codigo === 'SESION_DUPLICADA') {
+                // Mostrar opción para forzar cierre de sesión anterior
+                mostrarDialogoSesionDuplicada(email, password);
+            } else {
+                errorDiv.textContent = data.error || 'Error al iniciar sesión';
+                errorDiv.classList.remove('hidden');
+            }
+        }
+    } catch (error) {
+        errorDiv.textContent = 'Error de conexión';
+        errorDiv.classList.remove('hidden');
+    }
+});
+
+function mostrarDialogoSesionDuplicada(email, password) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center';
+    modal.innerHTML = `
+        <div class="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-md mx-4">
+            <h3 class="text-lg font-semibold text-orange-600 mb-4">Sesión Activa Detectada</h3>
+            <p class="text-slate-700 dark:text-slate-300 mb-6">
+                Ya existe una sesión activa para este usuario. ¿Desea cerrar la sesión anterior e iniciar una nueva?
+            </p>
+            <div class="flex space-x-3">
+                <button id="btn-forzar-login" class="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+                    Cerrar Sesión Anterior
+                </button>
+                <button id="btn-cancelar-login" class="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    document.getElementById('btn-forzar-login').onclick = async () => {
+        try {
+            // Forzar login eliminando sesión anterior
+            const response = await fetch('/api/auth/login-forzado', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password, force: true })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                window.location.href = '/';
+            } else {
+                document.body.removeChild(modal);
+                const errorDiv = document.getElementById('error-message');
+                errorDiv.textContent = data.error || 'Error al forzar login';
+                errorDiv.classList.remove('hidden');
+            }
+        } catch (error) {
+            document.body.removeChild(modal);
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = 'Error de conexión';
+            errorDiv.classList.remove('hidden');
+        }
+    };
+    
+    document.getElementById('btn-cancelar-login').onclick = () => {
+        document.body.removeChild(modal);
+    };
+}
+</script>
+{% endblock %}
