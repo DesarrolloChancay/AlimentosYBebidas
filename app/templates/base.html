@@ -2,142 +2,161 @@
 <html lang="es" class="h-full">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+        
+        <!-- Meta tags para móviles y PWA -->
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="Inspecciones">
+        <meta name="theme-color" content="#1e293b">
+        
         <title>{% block title %}Gestión de Caja{% endblock %}</title>
 
         <!-- Favicon global -->
         <link rel="icon" href="{{ url_for('static', filename='img/cropped-CASTILLO-DE-CHANCAY-32x32.png') }}" sizes="32x32">
         <link rel="icon" href="{{ url_for('static', filename='img/cropped-CASTILLO-DE-CHANCAY-192x192.png') }}" sizes="192x192">
 
+        <!-- Tailwind CSS compilado para producción -->
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind-compiled.css') }}">
+        
+        <!-- FontAwesome para íconos -->
+        <link defer="" media="all" onload="this.media='all'" rel="stylesheet" href="https://site-assets.fontawesome.com/releases/v7.1.0/css/all.css">
+        
         <!-- Dependencias -->
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script>
-            tailwind.config = {
-                darkMode: 'class',
-                theme: {
-                    extend: {}
-                }
-            }
-        </script>
         <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
         <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
 
-        <script>
-            // Variables globales para el tema
-            const THEME_KEY = 'tema';
-            const THEMES = {
-                light: 'light',
-                dark: 'dark',
-                system: 'sistema'
-            };
+        <!-- Phosphor Icons para iconos -->
+        <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
-            // Función para detectar tema del sistema
-            function getSystemTheme() {
-                return window.matchMedia('(prefers-color-scheme: dark)').matches ? THEMES.dark : THEMES.light;
+        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+        <!-- Sistema base -->
+        <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+        
+        <!-- Estilos críticos para evitar flash de posicionamiento -->
+        <style>
+            /* Posicionamiento fijo para evitar saltos */
+            #theme-selector {
+                position: fixed !important;
+                z-index: 50 !important;
+                bottom: 0.5rem !important;
+                left: 0 !important;
+                right: 0 !important;
+                width: 100% !important;
+                display: flex !important;
+                justify-content: end !important;
             }
-
-            // Función para cambiar el tema
-            window.changeTheme = function(theme) {
-                const html = document.documentElement;
-                const actualTheme = theme === THEMES.system ? getSystemTheme() : theme;
-                
-                // Limpiar clases existentes y aplicar el nuevo tema
-                html.classList.remove(THEMES.light, THEMES.dark);
-                html.classList.add(actualTheme);
-                
-                // Guardar preferencia
-                localStorage.setItem(THEME_KEY, theme);
-                
-                // Ocultar menú
-                const menu = document.getElementById('theme-menu');
-                if (menu) menu.classList.add('hidden');
-            }
-
-            // Inicializar tema
-            const savedTheme = localStorage.getItem(THEME_KEY) || THEMES.system;
-            changeTheme(savedTheme);
-
-            // Configuración cuando el DOM esté listo
-            document.addEventListener('DOMContentLoaded', function() {
-                const toggle = document.getElementById('theme-toggle');
-                const menu = document.getElementById('theme-menu');
-
-                // Manejar clic en el botón de toggle
-                if (toggle) {
-                    toggle.onclick = function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        menu.classList.toggle('hidden');
-                    };
+            
+            /* Responsive para desktop */
+            @media (min-width: 640px) {
+                #theme-selector {
+                    bottom: 1rem !important;
+                    right: 1rem !important;
+                    left: auto !important;
+                    width: auto !important;
                 }
+            }
+        </style>
 
-                // Cerrar menú al hacer clic fuera
-                document.onclick = function(e) {
-                    if (menu && !menu.contains(e.target) && !toggle.contains(e.target)) {
-                        menu.classList.add('hidden');
-                    }
-                };
-
-                // Observar cambios en el tema del sistema
-                const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-                mediaQuery.onchange = function() {
-                    if (localStorage.getItem(THEME_KEY) === THEMES.system) {
-                        changeTheme(THEMES.system);
-                    }
-                };
-            });
-        </script>
+        {% block extra_css %}{% endblock %}
     </head>
 
     <body class="h-full bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
-        <!-- Selector de tema -->
-        <div id="theme-selector" class="fixed top-4 right-4 z-50">
-            <button type="button" id="theme-toggle" class="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-lg hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-600">
-                <!-- Icono del sol (modo claro) -->
-                <svg class="w-5 h-5 hidden dark:block" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
-                </svg>
-                <!-- Icono de la luna (modo oscuro) -->
-                <svg class="w-5 h-5 block dark:hidden" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
-                </svg>
-            </button>
-
-            <!-- Menú desplegable de temas -->
-            <div id="theme-menu" class="hidden absolute top-12 right-0 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg">
-                <div class="py-1">
-                    <button type="button" onclick="window.changeTheme('light')" class="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
-                        <div class="flex items-center">
-                            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
-                            </svg>
-                            Modo claro
-                        </div>
-                    </button>
-                    <button type="button" onclick="window.changeTheme('dark')" class="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
-                        <div class="flex items-center">
-                            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
-                            </svg>
-                            Modo oscuro
-                        </div>
-                    </button>
-                    <button type="button" onclick="window.changeTheme('sistema')" class="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
-                        <div class="flex items-center">
-                            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clip-rule="evenodd"/>
-                            </svg>
-                            Preferencia del sistema
-                        </div>
-                    </button>
+        <!-- Selector de tema: SIEMPRE abajo en móvil, esquina en desktop -->
+        <div id="theme-selector">
+            <div class="relative">
+                <button type="button" id="theme-toggle" class="p-3 bg-white dark:bg-slate-800 rounded-full shadow-lg hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-600 transition-all duration-200">
+                    <!-- Icono del sol (modo claro) -->
+                    <svg class="w-5 h-5 hidden dark:block" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
+                    </svg>
+                    <!-- Icono de la luna (modo oscuro) -->
+                    <svg class="w-5 h-5 block dark:hidden" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+                    </svg>
+                </button>
+                <!-- Menú desplegable de temas -->
+                <div id="theme-menu" class="hidden absolute bottom-16 left-1/2 transform -translate-x-1/2 sm:left-auto sm:right-0 sm:transform-none w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600">
+                    <div class="py-2">
+                        <button type="button" onclick="window.changeTheme('light')" class="w-full px-4 py-3 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors duration-200">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
+                                </svg>
+                                <span class="font-medium">Modo claro</span>
+                            </div>
+                        </button>
+                        <button type="button" onclick="window.changeTheme('dark')" class="w-full px-4 py-3 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors duration-200">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+                                </svg>
+                                <span class="font-medium">Modo oscuro</span>
+                            </div>
+                        </button>
+                        <button type="button" onclick="window.changeTheme('sistema')" class="w-full px-4 py-3 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors duration-200">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="font-medium">Sistema</span>
+                            </div>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
+        <!-- Indicador de estado de conexión -->
+        <div id="estado-conexion-container" class="fixed bottom-4 left-4 z-50">
+            <div id="estado-conexion" class="estado-conexion px-3 py-2 rounded-full text-xs font-medium shadow-lg"></div>
+        </div>
+
+        <!-- Navegación principal -->
+        {% include 'navigation.html' %}
+
         <!-- Contenido principal -->
-        <main class="container mx-auto px-4">
+        <main class="container mx-auto">
+            <!-- Mensajes Flash -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="mb-6">
+                        {% for category, message in messages %}
+                            <div class="alert-flash p-4 mb-4 text-sm border rounded-lg transition-opacity duration-300
+                                {% if category == 'error' %}text-red-800 border-red-300 bg-red-50 dark:text-red-400 dark:bg-gray-800 dark:border-red-800{% endif %}
+                                {% if category == 'success' %}text-green-800 border-green-300 bg-green-50 dark:text-green-400 dark:bg-gray-800 dark:border-green-800{% endif %}
+                                {% if category == 'warning' %}text-yellow-800 border-yellow-300 bg-yellow-50 dark:text-yellow-300 dark:bg-gray-800 dark:border-yellow-800{% endif %}
+                                {% if category == 'info' %}text-blue-800 border-blue-300 bg-blue-50 dark:text-blue-400 dark:bg-gray-800 dark:border-blue-800{% endif %}"
+                                role="alert">
+                                    
+                                <div class="flex items-center">
+                                    <svg class="flex-shrink-0 inline w-4 h-4 mr-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                                        {% if category == 'error' %}
+                                        <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
+                                        {% else %}
+                                        <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
+                                        {% endif %}
+                                    </svg>
+                                    
+                                    <span class="font-medium">{{ message }}</span>
+                                    
+                                    <button type="button" class="ml-auto -mx-1.5 -my-1.5 rounded-lg focus:ring-2 p-1.5 inline-flex items-center justify-center h-8 w-8 text-gray-500 hover:bg-gray-200 focus:ring-gray-400 dark:hover:bg-gray-300"
+                                        onclick="this.parentElement.parentElement.remove()" aria-label="Cerrar">
+                                        <span class="sr-only">Cerrar</span>
+                                        <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            
             {% block content %}{% endblock %}
         </main>
 
@@ -214,41 +233,65 @@
         </el-dialog>
 
         <!-- Application Resources -->
+        <script src="{{ url_for('static', filename='js/security-utils.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/core.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/form-cookies.js') }}"></script>
         <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-        
-        <!-- Sistema de Gestión de Sesiones -->
-        <script>
-        // Validación simple de navegación al retroceder
-        function verificarSesionAlRetroceder() {
-            // NO verificar sesión en la página de login
-            if (window.location.pathname === '/login') {
-                return;
+
+        {% block scripts %}{% endblock %}
+
+        <!-- Estilos para el indicador de conexión -->
+        <style>
+            .estado-conexion {
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: 500;
+                transition: all 0.3s ease;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+                min-width: 120px;
+                text-align: center;
             }
             
-            // Verificación simple cuando se navega de vuelta
-            fetch('/api/auth/verificar-sesion-unica', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }).then(response => {
-                if (response.status === 401) {
-                    // Sesión no válida, redirigir al login
-                    window.location.href = '/login';
-                }
-            }).catch(() => {
-                // Error de red, redirigir al login por seguridad
-                window.location.href = '/login';
-            });
-        }
-        
-        // Solo verificar cuando el usuario navega de vuelta a la página
-        window.addEventListener('pageshow', function(event) {
-            if (event.persisted && window.location.pathname !== '/login') {
-                verificarSesionAlRetroceder();
+            .estado-conexion.success {
+                background-color: #10b981;
+                color: white;
             }
-        });
-        </script>
+            
+            .estado-conexion.error {
+                background-color: #ef4444;
+                color: white;
+            }
+            
+            .estado-conexion.warning {
+                background-color: #f59e0b;
+                color: white;
+            }
+            
+            .estado-conexion:empty {
+                display: none;
+            }
+            
+            /* Responsivo para móviles */
+            @media (max-width: 640px) {
+                .estado-conexion {
+                    font-size: 11px;
+                    padding: 6px 10px;
+                    min-width: 100px;
+                }
+                
+                #estado-conexion-container {
+                    bottom: 10% !important;
+                    left: 0% !important;
+                }
+                
+                #theme-selector {
+                    bottom: 1rem !important;
+                    right: 1rem !important;
+                    left: auto !important;
+                    width: auto !important;
+                }
+        </style>
         </script>
     </body>
 </html>

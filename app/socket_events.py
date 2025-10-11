@@ -5,7 +5,6 @@ from app.controllers.inspecciones_controller import datos_tiempo_real
 
 @socketio.on('connect')
 def handle_connect():
-    print(f'Cliente conectado: {session.get("user_id", "Anónimo")}')
     emit('connected', {'mensaje': 'Conectado exitosamente'})
 
 @socketio.on('join_inspeccion')
@@ -29,7 +28,6 @@ def on_join_inspeccion(data):
         'inspeccion_id': inspeccion_id
     }, to=room)
     
-    print(f'Usuario {user_id} ({user_role}) se unió a inspección {inspeccion_id}')
 
 @socketio.on('join_establecimiento')
 def handle_join_establecimiento(data):
@@ -42,7 +40,6 @@ def handle_join_establecimiento(data):
         room = f"establecimiento_{establecimiento_id}"
         join_room(room)
         
-        print(f"Usuario {session.get('user_name')} ({role}) se unió al establecimiento {establecimiento_id}")
 
 @socketio.on('item_rating_tiempo_real')
 def handle_item_rating_tiempo_real(data):
@@ -53,12 +50,11 @@ def handle_item_rating_tiempo_real(data):
     items = data.get('items', {})
     observaciones = data.get('observaciones', '')
     timestamp = data.get('timestamp')
-    
-    print(f"Socket recibido - Establecimiento: {establecimiento_id}, Items: {len(items)}, Resumen: {resumen}")
+
     
     if establecimiento_id:
         room = f"establecimiento_{establecimiento_id}"
-        
+            
         # Actualizar datos en tiempo real para el endpoint del encargado
         clave_tiempo_real = f"establecimiento_{establecimiento_id}"
         datos_tiempo_real[clave_tiempo_real] = {
@@ -80,12 +76,9 @@ def handle_item_rating_tiempo_real(data):
             'observaciones': observaciones
         }
         
-        print(f"Emitiendo a room {room}: {datos_emitir}")
-        print(f"Datos guardados en datos_tiempo_real[{clave_tiempo_real}]: {datos_tiempo_real[clave_tiempo_real]}")
         
         emit('inspeccion_tiempo_real', datos_emitir, to=room, include_self=False)
         
-        print(f"Tiempo real: {len(items)} items actualizados por {actualizado_por} en establecimiento {establecimiento_id}")
 
 @socketio.on('leave_inspeccion')
 def on_leave_inspeccion(data):
@@ -175,9 +168,57 @@ def handle_solicitud_firma(data):
         'mensaje': 'Se solicita su firma para aprobar la inspección'
     }, to=room, include_self=False)
 
+@socketio.on('encargado_aprobo')
+def handle_encargado_aprobo(data):
+    """Maneja cuando el encargado aprueba la inspección"""
+    encargado_id = data.get('encargado_id')
+    establecimiento_id = data.get('establecimiento_id')
+    mensaje = data.get('mensaje', 'El encargado ha aprobado la inspección')
+    firma_data = data.get('firma_data')
+    
+    # Emitir a todos los usuarios conectados (broadcast general)
+    emit('encargado_aprobo', {
+        'mensaje': mensaje,
+        'encargado_id': encargado_id,
+        'establecimiento_id': establecimiento_id,
+        'firma_data': firma_data,
+        'timestamp': data.get('timestamp')
+    }, broadcast=True, include_self=False)
+
+@socketio.on('notificacion_general')
+def handle_notificacion_general(data):
+    """Maneja notificaciones generales entre usuarios"""
+    # Reenviar la notificación a todos los usuarios
+    emit('notificacion_general', data, broadcast=True, include_self=False)
+
 @socketio.on('disconnect')
 def handle_disconnect():
-    print(f'Cliente desconectado: {session.get("user_id", "Anónimo")}')
+    pass
+
+@socketio.on('ping_keepalive')
+def handle_ping_keepalive(data):
+    """Responder a ping para mantener conexión activa en móviles"""
+    emit('pong_keepalive', {'timestamp': data.get('timestamp'), 'server_time': __import__('time').time()})
+
+@socketio.on('estado_completo_reconexion')
+def handle_estado_completo_reconexion(data):
+    """Manejar reenvío de estado completo tras reconexión"""
+    inspeccion_id = data.get('inspeccion_id')
+    establecimiento_id = data.get('establecimiento_id')
+
+    if inspeccion_id:
+        room = f"inspeccion_{inspeccion_id}"
+        # Reenviar estado a todos en la sala para sincronizar
+        emit('estado_sincronizado', {
+            'inspeccion_id': inspeccion_id,
+            'establecimiento_id': establecimiento_id,
+            'items': data.get('items', {}),
+            'observaciones': data.get('observaciones', ''),
+            'resumen': data.get('resumen', {}),
+            'evidencias_count': data.get('evidencias_count', 0),
+            'reconectado': True
+        }, to=room)
+
 
 # Función auxiliar para emitir actualizaciones desde el controlador
 def emitir_actualizacion_item(inspeccion_id, item_data):

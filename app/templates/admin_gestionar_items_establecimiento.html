@@ -1,0 +1,1378 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Items - {{ establecimiento.nombre }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Encabezado -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+                        Gestión de Items de Evaluación
+                    </h1>
+                    <p class="text-lg text-gray-600 dark:text-gray-300">
+                        Establecimiento: <span class="font-semibold text-blue-600 dark:text-blue-400">{{ establecimiento.nombre }}</span>
+                    </p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        Dirección: {{ establecimiento.direccion or 'Sin dirección especificada' }}
+                    </p>
+                </div>
+                <a href="{{ url_for('inspeccion.configuracion_sistema') }}#establecimientos"
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Volver
+                </a>
+            </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-list-check text-blue-600 dark:text-blue-400 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Items Totales</h3>
+                        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="total-items">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-check-circle text-green-600 dark:text-green-400 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Items Activos</h3>
+                        <p class="text-2xl font-bold text-green-600 dark:text-green-400" id="items-activos">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-exclamation-triangle text-yellow-600 dark:text-yellow-400 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Alto Riesgo</h3>
+                        <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400" id="items-alto-riesgo">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-times-circle text-red-600 dark:text-red-400 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Crítico</h3>
+                        <p class="text-2xl font-bold text-red-600 dark:text-red-400" id="items-criticos">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Lista de Items Actuales -->
+            <div class="lg:col-span-2">
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                                <i class="fas fa-list mr-2 text-blue-500"></i>
+                                Items de Evaluación
+                            </h2>
+                            <button onclick="abrirModalAgregarItem()"
+                                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                                <i class="fas fa-plus mr-2"></i>
+                                Agregar Item
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lista de Items -->
+                    <div id="items-container" class="divide-y divide-gray-200 dark:divide-gray-700">
+                        <!-- Los items se cargarán aquí vía JavaScript -->
+                        <div class="px-6 py-12 text-center">
+                            <div class="flex flex-col items-center">
+                                <i class="fas fa-spinner fa-spin text-gray-400 text-4xl mb-4"></i>
+                                <p class="text-gray-500 dark:text-gray-400">Cargando items...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel de Búsqueda y Filtros -->
+            <div class="space-y-6">
+                <!-- Buscador -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-search mr-2 text-blue-500"></i>
+                        Buscar Items Disponibles
+                    </h3>
+
+                    <div class="space-y-4">
+                        <!-- Filtro por Plantilla -->
+                        <div>
+                            <label for="filtro-plantilla" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Plantilla
+                            </label>
+                            <select id="filtro-plantilla"
+                                    class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+                                <option value="">Todas las plantillas</option>
+                                <!-- Las plantillas se cargarán aquí -->
+                            </select>
+                        </div>
+
+                        <!-- Buscador por texto -->
+                        <div>
+                            <label for="busqueda-items" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Buscar por descripción o código (opcional)
+                            </label>
+                            <input type="text"
+                                   id="busqueda-items"
+                                   placeholder="Deje vacío para ver todos..."
+                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+                        </div>
+
+                        <button onclick="buscarItemsDisponibles()"
+                                class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                            <i class="fas fa-search mr-2"></i>
+                            Buscar Items
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Resultados de Búsqueda -->
+                <div id="resultados-busqueda" class="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden hidden">
+                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                            <i class="fas fa-plus-circle mr-2 text-green-500"></i>
+                            Items Disponibles
+                        </h3>
+                    </div>
+
+                    <div id="lista-resultados" class="max-h-96 overflow-y-auto">
+                        <!-- Los resultados se mostrarán aquí -->
+                    </div>
+                </div>
+
+                <!-- Panel para Agregar Plantilla Completa -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-layer-group mr-2 text-purple-500"></i>
+                        Agregar Plantilla Completa
+                    </h3>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label for="plantilla-completa" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Seleccionar Plantilla
+                            </label>
+                            <select id="plantilla-completa"
+                                    class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+                                <option value="">Seleccionar plantilla...</option>
+                                <!-- Las plantillas se cargarán aquí -->
+                            </select>
+                        </div>
+
+                        <div id="info-plantilla-completa" class="hidden bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
+                            <!-- Información de la plantilla seleccionada -->
+                        </div>
+
+                        <button onclick="agregarPlantillaCompleta()"
+                                id="btn-agregar-plantilla-completa"
+                                disabled
+                                class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fas fa-layer-group mr-2"></i>
+                            Agregar Plantilla Completa
+                        </button>
+                    </div>
+                </div>
+    </div>
+</div>
+
+<!-- Modal Agregar Item -->
+<div id="modal-agregar-item" class="fixed inset-0 bg-opacity-0 overflow-y-auto h-full w-full hidden z-50 backdrop-blur-sm">
+    <div class="relative min-h-screen flex items-start sm:items-center justify-center p-2 sm:p-4">
+        <div class="relative w-full max-w-full sm:max-w-sm md:max-w-md lg:max-w-2xl xl:max-w-4xl bg-white dark:bg-slate-800 rounded-lg shadow-xl mx-auto my-4 sm:my-8">
+            <!-- Header del Modal -->
+            <div class="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
+                    <i class="fas fa-plus-circle mr-2 text-green-500"></i>
+                    Agregar Item de Evaluación
+                </h3>
+                <button onclick="cerrarModalAgregarItem()"
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Contenido del Modal -->
+            <div class="p-4 sm:p-6 max-h-[80vh] sm:max-h-[70vh] md:max-h-[60vh] overflow-y-auto">
+                <!-- Panel de Búsqueda -->
+                <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-4 sm:p-6 mb-6">
+                    <h4 class="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-search mr-2 text-blue-500"></i>
+                        Buscar Items Disponibles
+                    </h4>
+
+                    <div class="space-y-4">
+                        <!-- Filtro por Plantilla -->
+                        <div>
+                            <label for="modal-filtro-plantilla" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Plantilla
+                            </label>
+                            <select id="modal-filtro-plantilla"
+                                    class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+                                <option value="">Todas las plantillas</option>
+                                <!-- Las plantillas se cargarán aquí -->
+                            </select>
+                        </div>
+
+                        <!-- Buscador por texto -->
+                        <div>
+                            <label for="modal-busqueda-items" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Buscar por descripción o código (opcional)
+                            </label>
+                            <input type="text"
+                                   id="modal-busqueda-items"
+                                   placeholder="Deje vacío para ver todos..."
+                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+                        </div>
+
+                        <button onclick="buscarItemsModal()"
+                                class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                            <i class="fas fa-search mr-2"></i>
+                            Buscar Items
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Resultados de Búsqueda -->
+                <div id="modal-resultados-busqueda" class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden hidden">
+                    <div class="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
+                            <i class="fas fa-plus-circle mr-2 text-green-500"></i>
+                            Items Disponibles
+                        </h4>
+                    </div>
+
+                    <div id="modal-lista-resultados" class="max-h-96 overflow-y-auto">
+                        <!-- Los resultados se mostrarán aquí -->
+                    </div>
+                </div>
+
+                <!-- Estado inicial -->
+                <div id="modal-estado-inicial" class="text-center py-8">
+                    <div class="flex flex-col items-center">
+                        <i class="fas fa-search text-gray-400 text-4xl mb-4"></i>
+                        <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                            Cargando items disponibles...
+                        </h4>
+                        <p class="text-gray-500 dark:text-gray-400">
+                            Espere un momento mientras se cargan los items.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer del Modal -->
+            <div class="flex justify-end px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 dark:bg-slate-700 rounded-b-lg border-t border-gray-200 dark:border-gray-600">
+                <button onclick="cerrarModalAgregarItem()"
+                        class="px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm sm:text-base font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación Agregar Item -->
+<div id="modal-confirmar-agregar" class="fixed inset-0 bg-opacity-0 overflow-y-auto h-full w-full hidden z-50 backdrop-blur-sm">
+    <div class="relative min-h-screen flex items-center justify-center p-4">
+        <div class="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-lg shadow-xl mx-auto">
+            <!-- Header del Modal -->
+            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    <i class="fas fa-plus-circle mr-2 text-green-500"></i>
+                    Confirmar Agregar Item
+                </h3>
+                <button onclick="cerrarModalConfirmarAgregar()"
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Contenido del Modal -->
+            <div class="p-6">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-question-circle text-blue-500 text-3xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                            ¿Agregar Item al Establecimiento?
+                        </h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                            ¿Está seguro de que desea agregar este item de evaluación al establecimiento? El item se agregará con la configuración por defecto.
+                        </p>
+                        <div id="item-info-agregar" class="bg-gray-50 dark:bg-slate-700 rounded-lg p-3 text-sm">
+                            <!-- Información del item se mostrará aquí -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer del Modal -->
+            <div class="flex justify-end space-x-3 px-6 py-4 bg-gray-50 dark:bg-slate-700 rounded-b-lg border-t border-gray-200 dark:border-gray-600">
+                <button onclick="cerrarModalConfirmarAgregar()"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                    Cancelar
+                </button>
+                <button onclick="confirmarAgregarItem()"
+                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>
+                    Agregar Item
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación Eliminar Item -->
+<div id="modal-confirmar-eliminar" class="fixed inset-0 bg-opacity-0 overflow-y-auto h-full w-full hidden z-50 backdrop-blur-sm">
+    <div class="relative min-h-screen flex items-center justify-center p-4">
+        <div class="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-lg shadow-xl mx-auto">
+            <!-- Header del Modal -->
+            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    <i class="fas fa-trash mr-2 text-red-500"></i>
+                    Confirmar Eliminar Item
+                </h3>
+                <button onclick="cerrarModalConfirmarEliminar()"
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Contenido del Modal -->
+            <div class="p-6">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-3xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                            ¿Eliminar Item del Establecimiento?
+                        </h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                            ¿Está seguro de que desea eliminar este item del establecimiento? Esta acción no se puede deshacer.
+                        </p>
+                        <div id="item-info-eliminar" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm">
+                            <!-- Información del item se mostrará aquí -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer del Modal -->
+            <div class="flex justify-end space-x-3 px-6 py-4 bg-gray-50 dark:bg-slate-700 rounded-b-lg border-t border-gray-200 dark:border-gray-600">
+                <button onclick="cerrarModalConfirmarEliminar()"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                    Cancelar
+                </button>
+                <button onclick="confirmarEliminarItem()"
+                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
+                    <i class="fas fa-trash mr-2"></i>
+                    Eliminar Item
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detalles del Item -->
+<div id="modal-detalles-item" class="fixed inset-0 bg-opacity-0 overflow-y-auto h-full w-full hidden z-50 backdrop-blur-sm">
+    <div class="relative min-h-screen flex items-center justify-center p-4">
+        <div class="relative w-full max-w-2xl bg-white dark:bg-slate-800 rounded-lg shadow-xl mx-auto">
+            <!-- Header del Modal -->
+            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    <i class="fas fa-eye mr-2 text-blue-500"></i>
+                    Detalles del Item de Evaluación
+                </h3>
+                <button onclick="cerrarModalDetallesItem()"
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Contenido del Modal -->
+            <div class="p-6 max-h-[70vh] overflow-y-auto">
+                <div id="detalles-item-content">
+                    <!-- Los detalles del item se cargarán aquí -->
+                    <div class="flex flex-col items-center justify-center py-12">
+                        <i class="fas fa-spinner fa-spin text-gray-400 text-4xl mb-4"></i>
+                        <p class="text-gray-500 dark:text-gray-400">Cargando detalles del item...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer del Modal -->
+            <div class="flex justify-end px-6 py-4 bg-gray-50 dark:bg-slate-700 rounded-b-lg border-t border-gray-200 dark:border-gray-600">
+                <button onclick="cerrarModalDetallesItem()"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+const establecimientoId = {{ establecimiento.id }};
+let itemsActuales = [];
+let itemParaAgregar = null;
+let itemParaEliminar = null;
+let plantillasData = []; // Almacenar datos de plantillas
+
+// Inicializar página
+document.addEventListener('DOMContentLoaded', function() {
+    cargarItemsActuales();
+    cargarPlantillas();
+});
+
+// Función para cargar items actuales del establecimiento
+async function cargarItemsActuales() {
+    try {
+        const response = await fetch(`/api/establecimientos/${establecimientoId}/items/actuales`);
+        const data = await response.json();
+
+        if (data.success) {
+            itemsActuales = data.items;
+            mostrarItemsActuales(data.items);
+            actualizarEstadisticas(data.items);
+        } else {
+            mostrarError('Error al cargar items: ' + data.error);
+        }
+    } catch (error) {
+        mostrarError('Error de conexión: ' + error.message);
+    }
+}
+
+// Funciones para modales de confirmación
+function mostrarModalConfirmarAgregar(item) {
+    itemParaAgregar = item;
+    const infoContainer = document.getElementById('item-info-agregar');
+    const riesgo = item.riesgo || 'Medio'; // Valor por defecto si es undefined
+    const riesgoClass = getRiesgoClass(riesgo);
+    const riesgoIcon = getRiesgoIcon(riesgo);
+
+    infoContainer.innerHTML = `
+        <div class="flex items-center mb-2">
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${riesgoClass}">
+                ${riesgoIcon} ${riesgo}
+            </span>
+            <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                ${item.plantilla}
+            </span>
+        </div>
+        <h5 class="font-medium text-gray-900 dark:text-white mb-1">${item.descripcion}</h5>
+        <p class="text-xs text-gray-600 dark:text-gray-400">
+            Código: ${item.codigo} | Categoría: ${item.categoria}
+        </p>
+    `;
+
+    document.getElementById('modal-confirmar-agregar').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function cerrarModalConfirmarAgregar() {
+    document.getElementById('modal-confirmar-agregar').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+    itemParaAgregar = null;
+}
+
+function mostrarModalConfirmarEliminar(itemId) {
+    const item = itemsActuales.find(i => i.id === itemId);
+    if (!item) return;
+
+    itemParaEliminar = itemId;
+    const infoContainer = document.getElementById('item-info-eliminar');
+    const riesgo = item.riesgo || 'Medio'; // Valor por defecto si es undefined
+    const riesgoClass = getRiesgoClass(riesgo);
+    const riesgoIcon = getRiesgoIcon(riesgo);
+
+    infoContainer.innerHTML = `
+        <div class="flex items-center mb-2">
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${riesgoClass}">
+                ${riesgoIcon} ${riesgo}
+            </span>
+        </div>
+        <h5 class="font-medium text-red-900 dark:text-red-100 mb-1">${item.item_base.descripcion}</h5>
+        <p class="text-xs text-red-700 dark:text-red-300">
+            Código: ${item.item_base.codigo} | Categoría: ${item.item_base.categoria.nombre}
+        </p>
+    `;
+
+    document.getElementById('modal-confirmar-eliminar').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function cerrarModalConfirmarEliminar() {
+    document.getElementById('modal-confirmar-eliminar').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+    itemParaEliminar = null;
+}
+
+async function confirmarAgregarItem() {
+    if (!itemParaAgregar) return;
+
+    try {
+        const response = await fetch(`/api/establecimientos/${establecimientoId}/items`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                item_plantilla_id: itemParaAgregar.id
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarExito(data.message);
+            cerrarModalConfirmarAgregar();
+            // Cerrar modal principal si se abrió desde el modal
+            if (!document.getElementById('modal-agregar-item').classList.contains('hidden')) {
+                cerrarModalAgregarItem();
+            }
+            cargarItemsActuales();
+            document.getElementById('resultados-busqueda').classList.add('hidden');
+            document.getElementById('busqueda-items').value = '';
+        } else {
+            mostrarError('Error al agregar item: ' + data.error);
+        }
+    } catch (error) {
+        mostrarError('Error de conexión: ' + error.message);
+    }
+}
+
+async function confirmarEliminarItem() {
+    if (!itemParaEliminar) return;
+
+    try {
+        const response = await fetch(`/api/establecimientos/${establecimientoId}/items/${itemParaEliminar}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarExito(data.message);
+            cerrarModalConfirmarEliminar();
+            cargarItemsActuales();
+        } else {
+            mostrarError('Error al eliminar item: ' + data.error);
+        }
+    } catch (error) {
+        mostrarError('Error de conexión: ' + error.message);
+    }
+}
+
+// Función para mostrar items actuales
+function mostrarItemsActuales(items) {
+    const container = document.getElementById('items-container');
+
+    if (items.length === 0) {
+        container.innerHTML = `
+            <div class="px-6 py-12 text-center">
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-list text-gray-400 text-6xl mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No hay items configurados</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">
+                        Agregue items de evaluación desde plantillas disponibles.
+                    </p>
+                    <button onclick="abrirModalAgregarItem()"
+                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        <i class="fas fa-plus mr-2"></i>
+                        Agregar Primer Item
+                    </button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    items.forEach(item => {
+        const riesgoClass = getRiesgoClass(item.riesgo);
+        const riesgoIcon = getRiesgoIcon(item.riesgo);
+
+        // Manejo seguro de datos con fallbacks
+        const descripcion = item.item_base?.descripcion || item.descripcion || 'Sin descripción';
+        const codigo = item.item_base?.codigo || item.codigo || 'Sin código';
+        const categoriaNombre = item.item_base?.categoria?.nombre || item.categoria || 'Sin categoría';
+
+        html += `
+            <div class="px-6 py-4 hover:bg-gray-50 dark:hover:bg-slate-700">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${riesgoClass}">
+                                    ${riesgoIcon} ${item.riesgo || 'Medio'}
+                                </span>
+                            </div>
+                            <div class="ml-4">
+                                <h4 class="text-sm font-medium text-gray-900 dark:text-white">
+                                    ${descripcion}
+                                </h4>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">
+                                    Código: ${codigo} | Categoría: ${categoriaNombre}
+                                </p>
+                                ${item.descripcion_personalizada ? `<p class="text-xs text-blue-600 dark:text-blue-400 mt-1">${item.descripcion_personalizada}</p>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="verDetallesItem(${item.id})"
+                                class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 p-1">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button onclick="eliminarItem(${item.id})"
+                                class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1"
+                                title="Eliminar item">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+// Función para actualizar estadísticas
+function actualizarEstadisticas(items) {
+    const total = items.length;
+    const activos = items.filter(item => item.activo !== false).length; // Considera activo por defecto si no está definido
+    const altoRiesgo = items.filter(item => (item.riesgo || 'Medio') === 'Alto').length;
+    const criticos = items.filter(item => (item.riesgo || 'Medio') === 'Crítico').length;
+
+    document.getElementById('total-items').textContent = total;
+    document.getElementById('items-activos').textContent = activos;
+    document.getElementById('items-alto-riesgo').textContent = altoRiesgo;
+    document.getElementById('items-criticos').textContent = criticos;
+}
+
+// Función para cargar plantillas
+async function cargarPlantillas() {
+    try {
+        const response = await fetch('/api/plantillas');
+        const data = await response.json();
+
+        if (data.success) {
+            plantillasData = data.plantillas; // Almacenar datos globalmente
+            const select = document.getElementById('filtro-plantilla');
+            select.innerHTML = '<option value="">Todas las plantillas</option>';
+
+            data.plantillas.forEach(plantilla => {
+                select.innerHTML += `<option value="${plantilla.id}">${plantilla.nombre}</option>`;
+            });
+        } else {
+            console.error('Error al cargar plantillas:', data.error);
+        }
+    } catch (error) {
+        console.error('Error al cargar plantillas:', error);
+    }
+}
+
+// Función para buscar items disponibles
+async function buscarItemsDisponibles() {
+    const query = document.getElementById('busqueda-items').value.trim();
+    const plantillaId = document.getElementById('filtro-plantilla').value;
+
+    // Permitir búsqueda sin filtros (mostrar todos)
+    try {
+        let url = `/api/establecimientos/${establecimientoId}/items/disponibles?`;
+        if (query) url += `query=${encodeURIComponent(query)}&`;
+        if (plantillaId) url += `plantilla_id=${plantillaId}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarResultadosBusqueda(data.items);
+        } else {
+            mostrarError('Error en la búsqueda: ' + data.error);
+        }
+    } catch (error) {
+        mostrarError('Error de conexión: ' + error.message);
+    }
+}
+
+// Función para mostrar resultados de búsqueda
+function mostrarResultadosBusqueda(items) {
+    const container = document.getElementById('resultados-busqueda');
+    const lista = document.getElementById('lista-resultados');
+
+    if (items.length === 0) {
+        lista.innerHTML = `
+            <div class="px-6 py-8 text-center">
+                <i class="fas fa-search text-gray-400 text-3xl mb-2"></i>
+                <p class="text-gray-500 dark:text-gray-400">No se encontraron items disponibles</p>
+            </div>
+        `;
+    } else {
+        let html = '';
+        items.forEach(item => {
+            const riesgoClass = getRiesgoClass(item.riesgo);
+            const riesgoIcon = getRiesgoIcon(item.riesgo);
+            const yaAsignado = item.ya_asignado || false;
+            const buttonText = yaAsignado ? 'Ya asignado' : 'Agregar';
+            const buttonClass = yaAsignado 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-green-600 hover:bg-green-700';
+            const buttonDisabled = yaAsignado ? 'disabled' : '';
+
+            html += `
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-2">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${riesgoClass}">
+                                    ${riesgoIcon} ${item.riesgo || 'Medio'}
+                                </span>
+                                <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                                    ${item.plantilla || 'Sin plantilla'}
+                                </span>
+                                ${yaAsignado ? '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">Ya asignado</span>' : ''}
+                            </div>
+                            <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                                ${item.descripcion || 'Sin descripción'}
+                            </h4>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Código: ${item.codigo || 'Sin código'} | Categoría: ${item.categoria || 'Sin categoría'}
+                            </p>
+                            ${item.descripcion_personalizada ? `<p class="text-xs text-blue-600 dark:text-blue-400 mt-1">${item.descripcion_personalizada}</p>` : ''}
+                        </div>
+                        <button onclick="${yaAsignado ? '' : `agregarItem(${item.id})`}"
+                                class="ml-4 inline-flex items-center px-3 py-1 border border-transparent rounded-md text-xs font-medium text-white ${buttonClass} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors" ${buttonDisabled}>
+                            <i class="fas fa-${yaAsignado ? 'check' : 'plus'} mr-1"></i>
+                            ${buttonText}
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        lista.innerHTML = html;
+    }
+
+    container.classList.remove('hidden');
+}
+
+// Función para agregar item
+function agregarItem(itemPlantillaId) {
+    // Buscar el item en los resultados de búsqueda
+    const item = Array.from(document.querySelectorAll('#lista-resultados > div')).find(div => {
+        const button = div.querySelector('button[onclick*="agregarItem"]');
+        return button && button.getAttribute('onclick').includes(itemPlantillaId.toString());
+    });
+
+    if (item) {
+        // Extraer información del item del DOM con mejor manejo de errores
+        const riesgoText = item.querySelector('.inline-flex')?.textContent?.replace(/<[^>]*>/g, '').trim() || '';
+        const riesgo = riesgoText.split(' ')[1] || 'Medio'; // Extraer el riesgo o usar default
+
+        const itemData = {
+            id: itemPlantillaId,
+            descripcion: item.querySelector('h4')?.textContent?.trim() || 'Sin descripción',
+            codigo: item.querySelector('p')?.textContent?.match(/Código: ([^|]+)/)?.[1]?.trim() || 'Sin código',
+            categoria: item.querySelector('p')?.textContent?.match(/Categoría: (.+)/)?.[1]?.trim() || 'Sin categoría',
+            riesgo: riesgo,
+            plantilla: item.querySelector('.text-xs.text-gray-500')?.textContent?.trim() || 'Sin plantilla'
+        };
+        mostrarModalConfirmarAgregar(itemData);
+    }
+}
+
+// Función para eliminar item
+function eliminarItem(itemId) {
+    mostrarModalConfirmarEliminar(itemId);
+}
+
+// Función para abrir modal agregar item
+function abrirModalAgregarItem() {
+    // Mostrar modal primero
+    document.getElementById('modal-agregar-item').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    // Resetear estado
+    document.getElementById('modal-resultados-busqueda').classList.add('hidden');
+    document.getElementById('modal-estado-inicial').classList.remove('hidden');
+    document.getElementById('modal-busqueda-items').value = '';
+    document.getElementById('modal-filtro-plantilla').value = '';
+
+    // Cargar plantillas y hacer búsqueda inicial
+    cargarPlantillasModal().then(() => {
+        // Hacer búsqueda automática sin filtros para mostrar todos los items disponibles
+        buscarItemsModalSinFiltros();
+    });
+}
+
+// Función para cerrar modal agregar item
+function cerrarModalAgregarItem() {
+    document.getElementById('modal-agregar-item').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
+// Función para cargar plantillas en el modal
+async function cargarPlantillasModal() {
+    try {
+        const response = await fetch('/api/plantillas');
+        const data = await response.json();
+
+        if (data.success) {
+            const select = document.getElementById('modal-filtro-plantilla');
+            select.innerHTML = '<option value="">Todas las plantillas</option>';
+
+            data.plantillas.forEach(plantilla => {
+                select.innerHTML += `<option value="${plantilla.id}">${plantilla.nombre}</option>`;
+            });
+        } else {
+            console.error('Error al cargar plantillas en modal:', data.error);
+        }
+    } catch (error) {
+        console.error('Error al cargar plantillas en modal:', error);
+    }
+}
+
+// Función para buscar items en el modal sin filtros (muestra todos disponibles)
+async function buscarItemsModalSinFiltros() {
+    try {
+        // Hacer búsqueda sin parámetros para obtener todos los items disponibles
+        const url = `/api/establecimientos/${establecimientoId}/items/disponibles`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarResultadosModal(data.items);
+        } else {
+            mostrarError('Error al cargar items disponibles: ' + data.error);
+        }
+    } catch (error) {
+        mostrarError('Error de conexión: ' + error.message);
+    }
+}
+
+// Función para buscar items en el modal con filtros
+async function buscarItemsModal() {
+    const query = document.getElementById('modal-busqueda-items').value.trim();
+    const plantillaId = document.getElementById('modal-filtro-plantilla').value;
+
+    // Permitir búsqueda sin filtros (mostrar todos)
+    try {
+        let url = `/api/establecimientos/${establecimientoId}/items/disponibles?`;
+        if (query) url += `query=${encodeURIComponent(query)}&`;
+        if (plantillaId) url += `plantilla_id=${plantillaId}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarResultadosModal(data.items);
+        } else {
+            mostrarError('Error en la búsqueda: ' + data.error);
+        }
+    } catch (error) {
+        mostrarError('Error de conexión: ' + error.message);
+    }
+}
+
+// Función para mostrar resultados en el modal
+function mostrarResultadosModal(items) {
+    const container = document.getElementById('modal-resultados-busqueda');
+    const lista = document.getElementById('modal-lista-resultados');
+    const estadoInicial = document.getElementById('modal-estado-inicial');
+
+    estadoInicial.classList.add('hidden');
+
+    if (items.length === 0) {
+        lista.innerHTML = `
+            <div class="px-6 py-8 text-center">
+                <i class="fas fa-search text-gray-400 text-3xl mb-2"></i>
+                <p class="text-gray-500 dark:text-gray-400">No se encontraron items disponibles</p>
+            </div>
+        `;
+    } else {
+        let html = '';
+        items.forEach(item => {
+            const riesgoClass = getRiesgoClass(item.riesgo);
+            const riesgoIcon = getRiesgoIcon(item.riesgo);
+            const yaAsignado = item.ya_asignado || false;
+            const buttonText = yaAsignado ? 'Ya asignado' : 'Agregar';
+            const buttonClass = yaAsignado 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-green-600 hover:bg-green-700';
+            const buttonDisabled = yaAsignado ? 'disabled' : '';
+
+            html += `
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-2">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${riesgoClass}">
+                                    ${riesgoIcon} ${item.riesgo || 'Medio'}
+                                </span>
+                                <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                                    ${item.plantilla || 'Sin plantilla'}
+                                </span>
+                                ${yaAsignado ? '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">Ya asignado</span>' : ''}
+                            </div>
+                            <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                                ${item.descripcion || 'Sin descripción'}
+                            </h4>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Código: ${item.codigo || 'Sin código'} | Categoría: ${item.categoria || 'Sin categoría'}
+                            </p>
+                            ${item.descripcion_personalizada ? `<p class="text-xs text-blue-600 dark:text-blue-400 mt-1">${item.descripcion_personalizada}</p>` : ''}
+                        </div>
+                        <button onclick="${yaAsignado ? '' : `agregarItemDesdeModal(${item.id})`}"
+                                class="ml-4 inline-flex items-center px-3 py-1 border border-transparent rounded-md text-xs font-medium text-white ${buttonClass} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors" ${buttonDisabled}>
+                            <i class="fas fa-${yaAsignado ? 'check' : 'plus'} mr-1"></i>
+                            ${buttonText}
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        lista.innerHTML = html;
+    }
+
+    container.classList.remove('hidden');
+}
+
+// Función para agregar item desde el modal
+function agregarItemDesdeModal(itemPlantillaId) {
+    // Buscar el item en los resultados del modal
+    const item = Array.from(document.querySelectorAll('#modal-lista-resultados > div')).find(div => {
+        const button = div.querySelector('button[onclick*="agregarItemDesdeModal"]');
+        return button && button.getAttribute('onclick').includes(itemPlantillaId.toString());
+    });
+
+    if (item) {
+        // Extraer información del item del DOM con mejor manejo de errores
+        const riesgoText = item.querySelector('.inline-flex')?.textContent?.replace(/<[^>]*>/g, '').trim() || '';
+        const riesgo = riesgoText.split(' ')[1] || 'Medio'; // Extraer el riesgo o usar default
+
+        const itemData = {
+            id: itemPlantillaId,
+            descripcion: item.querySelector('h4')?.textContent?.trim() || 'Sin descripción',
+            codigo: item.querySelector('p')?.textContent?.match(/Código: ([^|]+)/)?.[1]?.trim() || 'Sin código',
+            categoria: item.querySelector('p')?.textContent?.match(/Categoría: (.+)/)?.[1]?.trim() || 'Sin categoría',
+            riesgo: riesgo,
+            plantilla: item.querySelector('.text-xs.text-gray-500')?.textContent?.trim() || 'Sin plantilla'
+        };
+        mostrarModalConfirmarAgregar(itemData);
+    }
+}
+
+// Funciones auxiliares para riesgos
+function getRiesgoClass(riesgo) {
+    const riesgoValue = riesgo || 'Medio';
+    switch (riesgoValue) {
+        case 'Bajo': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
+        case 'Medio': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
+        case 'Alto': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400';
+        case 'Crítico': return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
+        default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
+    }
+}
+
+function getRiesgoIcon(riesgo) {
+    const riesgoValue = riesgo || 'Medio';
+    switch (riesgoValue) {
+        case 'Bajo': return '<i class="fas fa-check-circle mr-1"></i>';
+        case 'Medio': return '<i class="fas fa-exclamation-triangle mr-1"></i>';
+        case 'Alto': return '<i class="fas fa-exclamation-circle mr-1"></i>';
+        case 'Crítico': return '<i class="fas fa-times-circle mr-1"></i>';
+        default: return '<i class="fas fa-question-circle mr-1"></i>';
+    }
+}
+
+// Función para ver detalles del item
+async function verDetallesItem(itemId) {
+    try {
+        // Mostrar modal con indicador de carga
+        document.getElementById('modal-detalles-item').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+
+        // Buscar el item en la lista de items actuales
+        const item = itemsActuales.find(i => i.id === itemId);
+        if (!item) {
+            mostrarError('Item no encontrado');
+            cerrarModalDetallesItem();
+            return;
+        }
+
+        // Mostrar detalles del item
+        mostrarDetallesItem(item);
+
+    } catch (error) {
+        mostrarError('Error al cargar detalles del item: ' + error.message);
+        cerrarModalDetallesItem();
+    }
+}
+
+// Función para mostrar detalles del item en el modal
+function mostrarDetallesItem(item) {
+    const container = document.getElementById('detalles-item-content');
+
+    const riesgoClass = getRiesgoClass(item.riesgo);
+    const riesgoIcon = getRiesgoIcon(item.riesgo);
+
+    // Manejo seguro de datos con fallbacks
+    const descripcion = item.item_base?.descripcion || item.descripcion || 'Sin descripción';
+    const codigo = item.item_base?.codigo || item.codigo || 'Sin código';
+    const categoriaNombre = item.item_base?.categoria?.nombre || item.categoria || 'Sin categoría';
+    const descripcionPersonalizada = item.descripcion_personalizada || 'Sin descripción personalizada';
+
+    container.innerHTML = `
+        <div class="space-y-6">
+            <!-- Información Principal -->
+            <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-4">
+                <div class="flex items-center mb-3">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${riesgoClass}">
+                        ${riesgoIcon} ${item.riesgo || 'Medio'}
+                    </span>
+                    <span class="ml-3 text-sm text-gray-500 dark:text-gray-400">
+                        Código: ${codigo}
+                    </span>
+                </div>
+                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    ${descripcion}
+                </h4>
+                ${descripcionPersonalizada !== 'Sin descripción personalizada' ?
+                    `<p class="text-sm text-blue-600 dark:text-blue-400 mb-3">
+                        <i class="fas fa-edit mr-1"></i>
+                        ${descripcionPersonalizada}
+                    </p>` : ''}
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="font-medium text-gray-700 dark:text-gray-300">Categoría:</span>
+                        <span class="ml-2 text-gray-900 dark:text-white">${categoriaNombre}</span>
+                    </div>
+                    <div>
+                        <span class="font-medium text-gray-700 dark:text-gray-300">Estado:</span>
+                        <span class="ml-2 ${item.activo ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">
+                            ${item.activo ? 'Activo' : 'Inactivo'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información de Evaluación -->
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <h5 class="text-md font-semibold text-blue-900 dark:text-blue-100 mb-3">
+                    <i class="fas fa-clipboard-check mr-2"></i>
+                    Información de Evaluación
+                </h5>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="font-medium text-blue-700 dark:text-blue-300">Puntaje Mínimo:</span>
+                        <span class="ml-2 text-blue-900 dark:text-blue-100">${item.puntaje_minimo || 'No definido'}</span>
+                    </div>
+                    <div>
+                        <span class="font-medium text-blue-700 dark:text-blue-300">Puntaje Máximo:</span>
+                        <span class="ml-2 text-blue-900 dark:text-blue-100">${item.puntaje_maximo || 'No definido'}</span>
+                    </div>
+                    <div class="col-span-2">
+                        <span class="font-medium text-blue-700 dark:text-blue-300">Factor de Ajuste:</span>
+                        <span class="ml-2 text-blue-900 dark:text-blue-100">${item.factor_ajuste || '1.0'}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información Técnica -->
+            <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-4">
+                <h5 class="text-md font-semibold text-gray-900 dark:text-white mb-3">
+                    <i class="fas fa-cogs mr-2"></i>
+                    Información Técnica
+                </h5>
+                <div class="grid grid-cols-1 gap-3 text-sm">
+                    <div>
+                        <span class="font-medium text-gray-700 dark:text-gray-300">ID del Item:</span>
+                        <span class="ml-2 text-gray-900 dark:text-white font-mono">${item.id}</span>
+                    </div>
+                    <div>
+                        <span class="font-medium text-gray-700 dark:text-gray-300">ID Base del Item:</span>
+                        <span class="ml-2 text-gray-900 dark:text-white font-mono">${item.item_base_id}</span>
+                    </div>
+                    <div>
+                        <span class="font-medium text-gray-700 dark:text-gray-300">ID de la Categoría:</span>
+                        <span class="ml-2 text-gray-900 dark:text-white font-mono">${item.item_base?.categoria?.id || 'No disponible'}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Función para cerrar modal de detalles del item
+function cerrarModalDetallesItem() {
+    document.getElementById('modal-detalles-item').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
+// Funciones para mostrar mensajes
+function mostrarExito(mensaje) {
+    mostrarAlerta('success', mensaje);
+}
+
+function mostrarError(mensaje) {
+    mostrarAlerta('error', mensaje);
+}
+
+function mostrarAlerta(tipo, mensaje) {
+    const container = document.getElementById('alert-container') || document.body;
+    const alertClass = tipo === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800';
+
+    const alert = document.createElement('div');
+    alert.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border ${alertClass} max-w-md`;
+    alert.innerHTML = `
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <i class="fas fa-${tipo === 'success' ? 'check-circle' : 'exclamation-circle'} text-lg"></i>
+            </div>
+            <div class="ml-3 flex-1">
+                <p class="text-sm font-medium">${mensaje}</p>
+            </div>
+            <div class="ml-auto pl-3">
+                <button onclick="this.parentElement.parentElement.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    `;
+
+    container.appendChild(alert);
+
+    setTimeout(() => {
+        if (alert.parentElement) {
+            alert.remove();
+        }
+    }, 5000);
+}
+
+// Event listeners
+document.getElementById('busqueda-items').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        buscarItemsDisponibles();
+    }
+});
+
+document.getElementById('filtro-plantilla').addEventListener('change', function() {
+    buscarItemsDisponibles();
+});
+
+// Función para cargar plantillas disponibles para agregar completas
+async function cargarPlantillas() {
+    try {
+        const response = await fetch('/api/plantillas');
+        const data = await response.json();
+
+        if (data.success) {
+            plantillasData = data.plantillas; // Almacenar datos globalmente
+            const select = document.getElementById('plantilla-completa');
+            select.innerHTML = '<option value="">Seleccionar plantilla...</option>';
+
+            data.plantillas.forEach(plantilla => {
+                select.innerHTML += `<option value="${plantilla.id}">${plantilla.nombre}</option>`;
+            });
+        } else {
+            console.error('Error al cargar plantillas:', data.error);
+        }
+    } catch (error) {
+        console.error('Error de conexión al cargar plantillas:', error);
+    }
+}
+
+// Función para manejar cambio en selección de plantilla
+function onPlantillaChange() {
+    const select = document.getElementById('plantilla-completa');
+    const plantillaId = select.value;
+    const infoContainer = document.getElementById('info-plantilla-completa');
+    const btnAgregar = document.getElementById('btn-agregar-plantilla-completa');
+
+    if (!plantillaId) {
+        infoContainer.classList.add('hidden');
+        btnAgregar.disabled = true;
+        return;
+    }
+
+    // Buscar la plantilla en la lista cargada para obtener información
+    const plantillaSeleccionada = plantillasData.find(p => p.id == plantillaId);
+    const selectedOption = select.options[select.selectedIndex];
+    const plantillaNombre = selectedOption.text;
+
+    if (plantillaSeleccionada) {
+        infoContainer.innerHTML = `
+            <div class="flex items-start space-x-3">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-layer-group text-purple-500 text-lg"></i>
+                </div>
+                <div class="flex-1">
+                    <h4 class="font-medium text-purple-900 dark:text-purple-100 mb-1">
+                        ${plantillaNombre}
+                    </h4>
+                    <p class="text-sm text-purple-700 dark:text-purple-300 mb-2">
+                        Plantilla completa de evaluación que incluye todos los items de inspección.
+                    </p>
+                    <div class="flex items-center space-x-4 text-xs text-purple-600 dark:text-purple-400">
+                        <span><i class="fas fa-list mr-1"></i>${plantillaSeleccionada.items_count || 0} items</span>
+                        <span><i class="fas fa-building mr-1"></i>${plantillaSeleccionada.tipo || 'Sin tipo'}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        // Fallback si no se encuentra la plantilla
+        infoContainer.innerHTML = `
+            <div class="flex items-start space-x-3">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-layer-group text-purple-500 text-lg"></i>
+                </div>
+                <div class="flex-1">
+                    <h4 class="font-medium text-purple-900 dark:text-purple-100 mb-1">
+                        ${plantillaNombre}
+                    </h4>
+                    <p class="text-sm text-purple-700 dark:text-purple-300 mb-2">
+                        Plantilla completa de evaluación que incluye todos los items de inspección.
+                    </p>
+                    <div class="text-xs text-purple-600 dark:text-purple-400">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Al agregar esta plantilla, se incluirán todos sus items de evaluación al establecimiento.
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    infoContainer.classList.remove('hidden');
+    btnAgregar.disabled = false;
+}
+
+// Función para agregar plantilla completa
+async function agregarPlantillaCompleta() {
+    const plantillaId = document.getElementById('plantilla-completa').value;
+
+    if (!plantillaId) {
+        mostrarError('Por favor seleccione una plantilla');
+        return;
+    }
+
+    // Mostrar indicador de carga
+    const btnAgregar = document.getElementById('btn-agregar-plantilla-completa');
+    const originalText = btnAgregar.innerHTML;
+    btnAgregar.disabled = true;
+    btnAgregar.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Agregando plantilla...';
+
+    try {
+        const response = await fetch(`/api/establecimientos/${establecimientoId}/plantillas/${plantillaId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarExito(data.message);
+            // Resetear formulario
+            document.getElementById('plantilla-completa').value = '';
+            document.getElementById('info-plantilla-completa').classList.add('hidden');
+            btnAgregar.disabled = true;
+            // Recargar items actuales
+            cargarItemsActuales();
+        } else {
+            mostrarError('Error al agregar plantilla: ' + data.error);
+        }
+    } catch (error) {
+        mostrarError('Error de conexión: ' + error.message);
+    } finally {
+        // Restaurar botón
+        btnAgregar.disabled = false;
+        btnAgregar.innerHTML = originalText;
+    }
+}
+
+// Event listener para cambio en selección de plantilla
+document.getElementById('plantilla-completa').addEventListener('change', onPlantillaChange);
+
+// Cerrar modales con Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (!document.getElementById('modal-agregar-item').classList.contains('hidden')) {
+            cerrarModalAgregarItem();
+        }
+        if (!document.getElementById('modal-confirmar-agregar').classList.contains('hidden')) {
+            cerrarModalConfirmarAgregar();
+        }
+        if (!document.getElementById('modal-confirmar-eliminar').classList.contains('hidden')) {
+            cerrarModalConfirmarEliminar();
+        }
+        if (!document.getElementById('modal-detalles-item').classList.contains('hidden')) {
+            cerrarModalDetallesItem();
+        }
+    }
+});
+
+// Cerrar modal al hacer click fuera
+document.getElementById('modal-agregar-item').addEventListener('click', function(e) {
+    if (e.target === this) {
+        cerrarModalAgregarItem();
+    }
+});
+
+document.getElementById('modal-confirmar-agregar').addEventListener('click', function(e) {
+    if (e.target === this) {
+        cerrarModalConfirmarAgregar();
+    }
+});
+
+document.getElementById('modal-confirmar-eliminar').addEventListener('click', function(e) {
+    if (e.target === this) {
+        cerrarModalConfirmarEliminar();
+    }
+});
+
+document.getElementById('modal-detalles-item').addEventListener('click', function(e) {
+    if (e.target === this) {
+        cerrarModalDetallesItem();
+    }
+});
+</script>
+
+{% endblock %}

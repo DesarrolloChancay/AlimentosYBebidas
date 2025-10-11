@@ -1,0 +1,515 @@
+<!-- ===== NAVEGACIÓN PRINCIPAL 100% MOBILE-FIRST ===== -->
+{% if session.user_id and session.get('cambiar_contrasena_obligatorio') != True %}
+<nav class="bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 shadow-xl border-b border-blue-500/20 dark:border-slate-700/30 backdrop-blur-xl sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
+        <div class="flex justify-between items-center h-16 sm:h-18 lg:h-20">
+
+            <!-- ===== LOGO Y BRANDING ===== -->
+            <div class="flex items-center gap-2 sm:gap-3 lg:gap-4">
+                <a href="{{ url_for('inspeccion.index') }}">
+                    <div class="flex items-center gap-2 cursor-pointer group">
+                        <img class="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 rounded-lg sm:rounded-xl shadow-md sm:shadow-lg ring-1 sm:ring-2 ring-white/20 sm:ring-white/30 group-hover:ring-blue-400/60 transition-all duration-300"
+                            src="{{ url_for('static', filename='img/cropped-CASTILLO-DE-CHANCAY-32x32.png') }}"
+                            alt="Castillo de Chancay">
+                        <div class="ml-1 sm:ml-2">
+                            <span class="text-lg sm:text-xl lg:text-2xl font-extrabold text-white tracking-tight group-hover:text-blue-200 transition-colors duration-300">Inspecciones</span>
+                            <p class="text-xs text-blue-200 dark:text-slate-400 font-medium hidden sm:block">Castillo de Chancay</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- ===== NAVEGACIÓN DESKTOP ===== -->
+            <div class="hidden lg:flex lg:items-center gap-1 xl:gap-2">
+                <!-- Dashboard -->
+                <a href="{{ url_for('inspeccion.dashboard_page') }}"
+                   class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base {% if request.endpoint == 'inspeccion.dashboard_page' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
+                    <span class="ph ph-chart-bar text-lg xl:text-xl"></span>
+                    <span class="hidden xl:inline">Dashboard</span>
+                </a>
+
+                {% if session.user_role in ['Inspector', 'Administrador'] %}
+                <a href="{{ url_for('inspeccion.index') }}"
+                   class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base {% if request.endpoint == 'inspeccion.index' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
+                    <span class="ph ph-plus-circle text-lg xl:text-xl"></span>
+                    <span class="hidden xl:inline">Nueva</span>
+                </a>
+
+                <!-- ===== GESTIÓN ===== -->
+                <div class="relative group">
+                    <button class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base group-hover:bg-white/10">
+                        <span class="ph ph-folder text-lg xl:text-xl"></span>
+                        <span class="hidden xl:inline">Gestión</span>
+                        <svg class="w-3 h-3 xl:w-4 xl:h-4 ml-1 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    <!-- Dropdown Menu Gestión -->
+                    <div class="absolute right-0 mt-2 w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right z-50">
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 py-2">
+                            <a href="{{ url_for('inspeccion.configuracion_sistema') }}#establecimientos"
+                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium">
+                                <span class="ph ph-buildings text-lg"></span>
+                                Establecimientos
+                            </a>
+                            <a href="{{ url_for('plantillas.listar_plantillas') }}"
+                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium">
+                                <span class="ph ph-clipboard text-lg"></span>
+                                Plantillas de Checklists
+                            </a>
+                            {% if session.user_role in ['Inspector', 'Administrador'] %}
+                            <a href="{{ url_for('inspector.gestionar_jefes_establecimiento') }}"
+                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'inspector.gestionar_jefes_establecimiento' or request.endpoint == 'inspector.crear_jefe_establecimiento' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-user-tie text-lg"></span>
+                                Jefes de Establecimiento
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <a href="{{ url_for('inspector.perfil') }}"
+                   class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base {% if request.endpoint == 'inspector.perfil' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
+                    <span class="ph ph-signature text-lg xl:text-xl"></span>
+                    <span class="hidden xl:inline">Mi Firma</span>
+                </a>
+                {% endif %}
+
+                <a href="{{ url_for('inspeccion.buscar_inspecciones') }}"
+                   class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base {% if request.endpoint == 'inspeccion.buscar_inspecciones' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
+                    <span class="ph ph-clipboard-text text-lg xl:text-xl"></span>
+                    <span class="hidden xl:inline">Historial</span>
+                </a>
+
+                {% if session.user_role == 'Jefe de Establecimiento' %}
+                <a href="{{ url_for('jefe.dashboard') }}"
+                   class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base {% if request.endpoint == 'jefe.dashboard' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
+                    <span class="ph ph-crown text-lg xl:text-xl"></span>
+                    <span class="hidden xl:inline">Panel Jefe</span>
+                </a>
+                <a href="{{ url_for('jefe.gestionar_encargados') }}"
+                   class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base {% if request.endpoint == 'jefe.gestionar_encargados' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
+                    <span class="ph ph-users text-lg xl:text-xl"></span>
+                    <span class="hidden xl:inline">Encargados</span>
+                </a>
+                {% endif %}
+
+                {% if session.user_role in ['Administrador', 'Inspector'] %}
+                <a href="{{ url_for('inspeccion.configuracion_sistema') }}"
+                   class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base {% if request.endpoint == 'inspeccion.configuracion_sistema' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
+                    <span class="ph ph-gear text-lg xl:text-xl"></span>
+                    <span class="hidden xl:inline">Config</span>
+                </a>
+                {% endif %}
+
+                {% if session.user_role == 'Administrador' %}
+                <!-- ===== PANEL DE ADMINISTRACIÓN ===== -->
+                <div class="relative group">
+                    <button class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base group-hover:bg-white/10">
+                        <span class="ph ph-crown text-lg xl:text-xl"></span>
+                        <span class="hidden xl:inline">Admin</span>
+                        <svg class="w-3 h-3 xl:w-4 xl:h-4 ml-1 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    <!-- Dropdown Menu Admin -->
+                    <div class="absolute right-0 mt-2 w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right z-50">
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 py-2">
+                            <a href="{{ url_for('admin.dashboard') }}"
+                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'admin.dashboard' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-chart-pie text-lg"></span>
+                                Dashboard Admin
+                            </a>
+                            <div class="border-t border-gray-100 dark:border-slate-700 my-2"></div>
+                            <a href="{{ url_for('admin.gestionar_usuarios') }}"
+                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'admin.gestionar_usuarios' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-users text-lg"></span>
+                                Gestión de Usuarios
+                            </a>
+                            <a href="{{ url_for('admin.gestionar_roles') }}"
+                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'admin.gestionar_roles' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-shield-check text-lg"></span>
+                                Roles y Permisos
+                            </a>
+                            <a href="{{ url_for('admin.gestionar_establecimientos') }}"
+                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'admin.gestionar_establecimientos' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-buildings text-lg"></span>
+                                Establecimientos
+                            </a>
+                            <a href="{{ url_for('admin.gestionar_jefes_establecimiento') }}"
+                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'admin.gestionar_jefes_establecimiento' or request.endpoint == 'admin.crear_jefe_establecimiento' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-user-tie text-lg"></span>
+                                Jefes de Establecimiento
+                            </a>
+                            <a href="{{ url_for('admin.gestionar_inspectores') }}"
+                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'admin.gestionar_inspectores' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-user-gear text-lg"></span>
+                                Inspectores
+                            </a>
+                            <div class="border-t border-gray-100 dark:border-slate-700 my-2"></div>
+                            <a href="{{ url_for('admin.configuraciones') }}"
+                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'admin.configuraciones' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-gear-six text-lg"></span>
+                                Configuraciones
+                            </a>
+                            <a href="{{ url_for('admin.auditoria') }}"
+                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'admin.auditoria' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-file-search text-lg"></span>
+                                Auditoría
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== REPORTES ===== -->
+                <div class="relative group">
+                    <button class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base group-hover:bg-white/10">
+                        <svg class="w-4 h-4 xl:w-5 xl:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <span class="hidden xl:inline">Reportes</span>
+                        <svg class="w-3 h-3 xl:w-4 xl:h-4 ml-1 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    <!-- Dropdown Menu -->
+                    <div class="absolute right-0 mt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right">
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 py-2">
+                            <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                                </svg>
+                                Reporte Semanal
+                            </a>
+                            <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                </svg>
+                                Dashboard Analítico
+                            </a>
+                            <div class="border-t border-gray-100 dark:border-slate-700 my-2"></div>
+                            <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                Exportar Datos
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ===== INFO USUARIO Y CONTROLES ===== -->
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <!-- Info de Usuario -->
+                <div class="hidden xl:flex items-center space-x-3 bg-white/10 dark:bg-slate-800/50 backdrop-blur-sm rounded-xl px-4 py-2">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                            <span class="text-white text-sm font-bold">
+                                {{ session.user_name[0].upper() if session.user_name else 'U' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-medium text-white">{{ session.user_name or 'Usuario' }}</p>
+                        <p class="text-xs text-blue-200 dark:text-slate-400">{{ session.user_role or 'Rol' }}</p>
+                    </div>
+                </div>
+
+                <!-- Botón de Logout -->
+                <button onclick="cerrarSesion()"
+                        class="flex items-center space-x-2 bg-red-500/20 hover:bg-red-500/30 text-red-100 hover:text-white px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl transition-all duration-300 border border-red-400/30 hover:border-red-400/50 min-h-[44px]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                    <span class="hidden xl:inline">Salir</span>
+                </button>
+
+                <!-- Botón Menu Mobile -->
+                <button type="button"
+                        class="lg:hidden bg-white/10 hover:bg-white/20 rounded-lg p-2 transition-colors duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                        id="mobile-menu-button">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== NAVEGACIÓN MOBILE ===== -->
+    <div class="lg:hidden hidden bg-gradient-to-b from-blue-700 to-blue-800 dark:from-slate-900 dark:to-slate-950 border-t border-blue-500/20 dark:border-slate-700/50" id="mobile-menu">
+        <div class="px-3 sm:px-4 pt-2 pb-3 space-y-1">
+
+            <!-- ===== INFO USUARIO MOBILE ===== -->
+            <div class="bg-white/10 dark:bg-slate-800/50 rounded-xl p-3 sm:p-4 mb-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                        <span class="text-white font-bold">{{ session.user_name[0].upper() if session.user_name else 'U' }}</span>
+                    </div>
+                    <div>
+                        <p class="font-medium text-white">{{ session.user_name or 'Usuario' }}</p>
+                        <p class="text-sm text-blue-200 dark:text-slate-400">{{ session.user_role or 'Rol' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== LINKS MOBILE ===== -->
+            <a href="{{ url_for('inspeccion.dashboard_page') }}"
+               class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'inspeccion.dashboard_page' %}bg-white/20 text-white{% endif %}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+                Dashboard
+            </a>
+
+            {% if session.user_role in ['Inspector', 'Administrador'] %}
+            <a href="{{ url_for('inspeccion.index') }}"
+               class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'inspeccion.index' %}bg-white/20 text-white{% endif %}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Nueva Inspección
+            </a>
+
+            <!-- ===== GESTIÓN ===== -->
+            <div class="relative">
+                <button class="flex items-center justify-between w-full px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] group"
+                        onclick="toggleGestionMenu()">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z"/>
+                        </svg>
+                        <span>Gestión</span>
+                    </div>
+                    <svg class="w-4 h-4 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+
+                <!-- Submenú Gestión Mobile -->
+                <div class="hidden bg-blue-800/50 dark:bg-slate-900/50 rounded-xl mt-1 ml-4" id="gestion-submenu-mobile">
+                    <a href="{{ url_for('inspeccion.configuracion_sistema') }}#establecimientos"
+                       class="flex items-center space-x-3 px-4 py-3 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'inspeccion.configuracion_sistema' and 'establecimientos' in request.url %}bg-white/20 text-white{% endif %}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                        </svg>
+                        Establecimientos
+                    </a>
+                    <a href="{{ url_for('plantillas.listar_plantillas') }}"
+                       class="flex items-center space-x-3 px-4 py-3 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint and request.endpoint.startswith('plantillas.') %}bg-white/20 text-white{% endif %}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Plantillas de Checklists
+                    </a>
+                    {% if session.user_role in ['Inspector', 'Administrador'] %}
+                    <a href="{{ url_for('inspector.gestionar_jefes_establecimiento') }}"
+                       class="flex items-center space-x-3 px-4 py-3 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'inspector.gestionar_jefes_establecimiento' or request.endpoint == 'inspector.crear_jefe_establecimiento' %}bg-white/20 text-white{% endif %}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                        Jefes de Establecimiento
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <a href="{{ url_for('inspector.perfil') }}"
+               class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'inspector.perfil' %}bg-white/20 text-white{% endif %}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                </svg>
+                Mi Firma
+            </a>
+            {% endif %}
+
+            <a href="{{ url_for('inspeccion.buscar_inspecciones') }}"
+               class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'inspeccion.buscar_inspecciones' %}bg-white/20 text-white{% endif %}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                </svg>
+                Historial de Inspecciones
+            </a>
+
+            {% if session.user_role == 'Jefe de Establecimiento' %}
+            <a href="{{ url_for('jefe.dashboard') }}"
+               class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'jefe.dashboard' %}bg-white/20 text-white{% endif %}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+                </svg>
+                Panel Jefe
+            </a>
+            <a href="{{ url_for('jefe.gestionar_encargados') }}"
+               class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'jefe.gestionar_encargados' %}bg-white/20 text-white{% endif %}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
+                </svg>
+                Gestionar Encargados
+            </a>
+            {% endif %}
+
+            {% if session.user_role in ['Administrador', 'Inspector'] %}
+            <a href="{{ url_for('inspeccion.configuracion_sistema') }}"
+               class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'inspeccion.configuracion_sistema' %}bg-white/20 text-white{% endif %}">
+                <span class="ph ph-gear text-xl"></span>
+                Configuración Sistema
+            </a>
+            {% endif %}
+
+            {% if session.user_role == 'Administrador' %}
+            <div class="pt-2 border-t border-blue-500/20 dark:border-slate-700/50">
+                <p class="text-blue-200 dark:text-slate-400 text-sm font-medium px-3 pb-2">Panel de Administración</p>
+
+                <a href="{{ url_for('admin.dashboard') }}"
+                   class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'admin.dashboard' %}bg-white/20 text-white{% endif %}">
+                    <span class="ph ph-chart-pie text-xl"></span>
+                    Dashboard Admin
+                </a>
+
+                <a href="{{ url_for('admin.gestionar_usuarios') }}"
+                   class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'admin.gestionar_usuarios' %}bg-white/20 text-white{% endif %}">
+                    <span class="ph ph-users text-xl"></span>
+                    Gestión de Usuarios
+                </a>
+
+                <a href="{{ url_for('admin.gestionar_roles') }}"
+                   class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'admin.gestionar_roles' %}bg-white/20 text-white{% endif %}">
+                    <span class="ph ph-shield-check text-xl"></span>
+                    Roles y Permisos
+                </a>
+
+                <a href="{{ url_for('admin.gestionar_establecimientos') }}"
+                   class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'admin.gestionar_establecimientos' %}bg-white/20 text-white{% endif %}">
+                    <span class="ph ph-buildings text-xl"></span>
+                    Establecimientos
+                </a>
+
+                <a href="{{ url_for('admin.gestionar_jefes_establecimiento') }}"
+                   class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'admin.gestionar_jefes_establecimiento' or request.endpoint == 'admin.crear_jefe_establecimiento' %}bg-white/20 text-white{% endif %}">
+                    <span class="ph ph-user-tie text-xl"></span>
+                    Jefes de Establecimiento
+                </a>
+
+                <a href="{{ url_for('admin.gestionar_inspectores') }}"
+                   class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'admin.gestionar_inspectores' %}bg-white/20 text-white{% endif %}">
+                    <span class="ph ph-user-gear text-xl"></span>
+                    Inspectores
+                </a>
+
+                <a href="{{ url_for('admin.configuraciones') }}"
+                   class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'admin.configuraciones' %}bg-white/20 text-white{% endif %}">
+                    <span class="ph ph-gear-six text-xl"></span>
+                    Configuraciones
+                </a>
+
+                <a href="{{ url_for('admin.auditoria') }}"
+                   class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'admin.auditoria' %}bg-white/20 text-white{% endif %}">
+                    <span class="ph ph-file-search text-xl"></span>
+                    Auditoría
+                </a>
+            </div>
+
+            <div class="pt-2 border-t border-blue-500/20 dark:border-slate-700/50">
+                <p class="text-blue-200 dark:text-slate-400 text-sm font-medium px-3 pb-2">Reportes (Admin)</p>
+                <a href="#" class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px]">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                    </svg>
+                    Reporte Semanal
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px]">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Exportar Datos
+                </a>
+            </div>
+            {% endif %}
+
+            <!-- ===== LOGOUT MOBILE ===== -->
+            <div class="pt-3 border-t border-blue-500/20 dark:border-slate-700/50">
+                <button onclick="cerrarSesion()" class="w-full text-left flex items-center space-x-3 px-3 py-3 rounded-xl text-red-200 hover:text-white hover:bg-red-500/20 transition-all duration-300 font-medium min-h-[44px]">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                    Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
+
+    if (mobileMenuButton && mobileMenu) {
+        mobileMenuButton.addEventListener('click', function() {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // Cerrar menú al hacer click fuera
+        document.addEventListener('click', function(event) {
+            if (!mobileMenuButton.contains(event.target) && !mobileMenu.contains(event.target)) {
+                mobileMenu.classList.add('hidden');
+            }
+        });
+
+        // Cerrar menú al cambiar tamaño de ventana
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 1024) {
+                mobileMenu.classList.add('hidden');
+            }
+        });
+    }
+});
+
+// ===== FUNCIÓN PARA TOGGLE GESTIÓN MENU =====
+function toggleGestionMenu() {
+    const submenu = document.getElementById('gestion-submenu-mobile');
+    if (submenu) {
+        submenu.classList.toggle('hidden');
+    }
+}
+
+// ===== FUNCIÓN LOGOUT MEJORADA =====
+async function cerrarSesion() {
+    try {
+        // Mostrar confirmación
+        if (!confirm('¿Está seguro que desea cerrar sesión?')) {
+            return;
+        }
+
+        // Hacer petición de logout
+        const response = await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        if (response.ok) {
+            // Limpiar datos locales
+            localStorage.clear();
+            sessionStorage.clear();
+
+            // Redirigir al login
+            window.location.href = '/login';
+        } else {
+            alert('Error al cerrar sesión. Por favor, inténtelo de nuevo.');
+        }
+    } catch (error) {
+        // Forzar redirección en caso de error
+        window.location.href = '/login';
+    }
+}
+</script>
+{% endif %}

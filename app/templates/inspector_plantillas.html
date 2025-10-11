@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Plantillas de Checklists - {{ current_user.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .template-card {
+        transition: all 0.3s ease;
+    }
+    .template-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+    .fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ===== PLANTILLAS MOBILE-FIRST ===== -->
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+
+    <!-- ===== HEADER MOBILE ===== -->
+    <header class="sticky top-0 z-40 bg-white/80 dark:bg-slate-800/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+
+                <!-- Logo y título -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <i class="fas fa-clipboard-list text-white font-bold text-lg"></i>
+                    </div>
+                    <div class="hidden sm:block">
+                        <h1 class="text-xl font-bold text-slate-800 dark:text-white">Plantillas de Checklists</h1>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Selecciona una plantilla</p>
+                    </div>
+                </div>
+
+                <!-- Botones de acción -->
+                <div class="flex items-center space-x-2">
+                    <!-- Botón refresh -->
+                    <button id="btn-refresh" class="p-2 text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-all duration-200">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </button>
+
+                    <!-- Botón volver -->
+                    <a href="{{ url_for('inspeccion.dashboard_page') }}"
+                       class="inline-flex items-center px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl shadow-sm text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        <span class="hidden sm:inline">Volver</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===== CONTENIDO PRINCIPAL ===== -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% if plantillas_por_tipo %}
+            <div class="space-y-8">
+                {% for tipo_establecimiento, plantillas in plantillas_por_tipo.items() %}
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden fade-in">
+
+                    <!-- Header de sección -->
+                    <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+                        <h2 class="text-xl font-semibold text-white flex items-center">
+                            <i class="fas fa-utensils mr-3"></i>
+                            {{ tipo_establecimiento }}
+                        </h2>
+                        <p class="mt-1 text-sm text-blue-100">
+                            Plantillas disponibles para {{ tipo_establecimiento|lower }}
+                        </p>
+                    </div>
+
+                    <!-- Grid de plantillas -->
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {% for plantilla in plantillas %}
+                            <div class="template-card bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl shadow-sm hover:shadow-xl overflow-hidden">
+
+                                <!-- Header de tarjeta -->
+                                <div class="bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-600 dark:to-slate-500 px-4 py-3 border-b border-slate-200 dark:border-slate-500">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex-1 min-w-0">
+                                            <h3 class="text-lg font-semibold text-slate-900 dark:text-white truncate">
+                                                {{ plantilla.nombre }}
+                                            </h3>
+                                            <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">
+                                                {{ plantilla.descripcion or 'Sin descripción' }}
+                                            </p>
+                                        </div>
+                                        {% if current_user.rol.nombre in ['Administrador', 'Inspector'] %}
+                                        <div class="ml-2 flex-shrink-0">
+                                            <button onclick="editarPlantilla({{ plantilla.id }})"
+                                                    class="p-1.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors duration-200"
+                                                    title="Editar plantilla">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- Contenido de tarjeta -->
+                                <div class="p-4">
+                                    <div class="space-y-3">
+                                        <div class="flex items-center text-sm text-slate-600 dark:text-slate-400">
+                                            <div class="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                                            <span class="capitalize font-medium">{{ plantilla.tamano_local }}</span>
+                                        </div>
+                                        {% if plantilla.tipo_restaurante %}
+                                        <div class="flex items-center text-sm text-slate-600 dark:text-slate-400">
+                                            <div class="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                                            <span class="capitalize">{{ plantilla.tipo_restaurante }}</span>
+                                        </div>
+                                        {% endif %}
+                                        <div class="flex items-center text-sm text-slate-600 dark:text-slate-400">
+                                            <div class="w-2 h-2 bg-purple-500 rounded-full mr-3"></div>
+                                            <span>{{ plantilla.items_plantilla|length }} items de evaluación</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Acciones -->
+                                    <div class="mt-6 flex space-x-3">
+                                        <a href="{{ url_for('plantillas.ver_plantilla', plantilla_id=plantilla.id) }}"
+                                           class="flex-1 inline-flex justify-center items-center px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl shadow-sm text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                                            <i class="fas fa-eye mr-2"></i>
+                                            Ver
+                                        </a>
+                                        <a href="{{ url_for('plantillas.crear_establecimiento_desde_plantilla', plantilla_id=plantilla.id) }}"
+                                           class="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                                            <i class="fas fa-plus mr-2"></i>
+                                            Usar
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <!-- Estado vacío -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-12 text-center fade-in">
+                <div class="mx-auto w-24 h-24 bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-600 dark:to-slate-500 rounded-full flex items-center justify-center mb-6">
+                    <i class="fas fa-clipboard-list text-4xl text-slate-400 dark:text-slate-500"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">No hay plantillas disponibles</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                    Actualmente no hay plantillas de checklist configuradas en el sistema.
+                </p>
+                <div class="flex justify-center space-x-3">
+                    <a href="{{ url_for('inspeccion.dashboard_page') }}"
+                       class="inline-flex items-center px-6 py-3 border border-slate-300 dark:border-slate-600 rounded-xl shadow-sm text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Volver al Dashboard
+                    </a>
+                    {% if current_user.rol.nombre in ['Administrador', 'Inspector'] %}
+                    <button onclick="crearNuevaPlantilla()"
+                            class="inline-flex items-center px-6 py-3 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200">
+                        <i class="fas fa-plus mr-2"></i>
+                        Crear Plantilla
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal para editar plantilla -->
+<div id="editarPlantillaModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Editar Plantilla</h3>
+                    <button onclick="cerrarModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <form id="editarPlantillaForm">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Nombre</label>
+                            <input type="text" id="editar-nombre" name="nombre" required
+                                   class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Descripción</label>
+                            <textarea id="editar-descripcion" name="descripcion" rows="3"
+                                      class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"></textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button type="button" onclick="cerrarModal()"
+                                class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600">
+                            Cancelar
+                        </button>
+                        <button type="submit"
+                                class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-medium">
+                            Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script>
+// Funcionalidad de edición de plantillas
+function editarPlantilla(plantillaId) {
+    // Redirigir a la página de edición
+    window.location.href = `/plantillas/${plantillaId}/editar`;
+}
+
+function cerrarModal() {
+    document.getElementById('editarPlantillaModal').classList.add('hidden');
+}
+
+function crearNuevaPlantilla() {
+    // Por ahora, mostrar mensaje
+    mostrarMensaje('Funcionalidad de crear plantilla próximamente disponible', 'info');
+}
+
+// Función para mostrar mensajes
+function mostrarMensaje(mensaje, tipo) {
+    const mensajeDiv = document.createElement('div');
+    mensajeDiv.className = `fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg transition-all duration-300 ${
+        tipo === 'success' ? 'bg-green-500 text-white' :
+        tipo === 'error' ? 'bg-red-500 text-white' :
+        tipo === 'info' ? 'bg-blue-500 text-white' : 'bg-gray-500 text-white'
+    }`;
+    mensajeDiv.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas ${
+                tipo === 'success' ? 'fa-check-circle' :
+                tipo === 'error' ? 'fa-exclamation-circle' :
+                tipo === 'info' ? 'fa-info-circle' : 'fa-bell'
+            } mr-2"></i>
+            <span>${mensaje}</span>
+        </div>
+    `;
+
+    document.body.appendChild(mensajeDiv);
+
+    setTimeout(() => {
+        mensajeDiv.remove();
+    }, 3000);
+}
+
+// Funcionalidad adicional
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Página de plantillas cargada');
+});
+</script>
+{% endblock %}

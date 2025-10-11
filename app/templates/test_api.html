@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de API de Configuración</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .result { margin: 10px 0; padding: 10px; border: 1px solid #ddd; }
+        .success { background-color: #d4edda; }
+        .error { background-color: #f8d7da; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Test de API de Configuración</h1>
+    
+    <button onclick="testApiGet()">Test GET /api/dashboard/configuracion-plan</button>
+    <button onclick="testApiPost()">Test PUT /api/dashboard/configuracion-plan</button>
+    <button onclick="checkSession()">Check Session</button>
+    
+    <div id="results"></div>
+
+    <script>
+        function addResult(message, isSuccess = true) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${isSuccess ? 'success' : 'error'}`;
+            resultDiv.innerHTML = `${new Date().toLocaleTimeString()}: ${message}`;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        async function checkSession() {
+            try {
+                const response = await fetch('/api/auth/check');
+                const data = await response.json();
+                addResult(`Session Check: ${JSON.stringify(data)}`, response.ok);
+            } catch (error) {
+                addResult(`Session Error: ${error.message}`, false);
+            }
+        }
+
+        async function testApiGet() {
+            try {
+                const response = await fetch('/api/dashboard/configuracion-plan');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(`GET Success: ${JSON.stringify(data, null, 2)}`, true);
+                } else {
+                    const text = await response.text();
+                    addResult(`GET Error ${response.status}: ${text.substring(0, 200)}...`, false);
+                }
+            } catch (error) {
+                addResult(`GET Network Error: ${error.message}`, false);
+            }
+        }
+
+        async function testApiPost() {
+            try {
+                const testData = {
+                    meta_semanal_default: 5,
+                    dias_recordatorio: [1, 3, 5],
+                    hora_recordatorio: '10:00'
+                };
+
+                const response = await fetch('/api/dashboard/configuracion-plan', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(`PUT Success: ${JSON.stringify(data)}`, true);
+                } else {
+                    const text = await response.text();
+                    addResult(`PUT Error ${response.status}: ${text.substring(0, 200)}...`, false);
+                }
+            } catch (error) {
+                addResult(`PUT Network Error: ${error.message}`, false);
+            }
+        }
+
+        // Auto-test al cargar
+        window.onload = function() {
+            addResult('Página de test cargada. Haz clic en los botones para probar la API.');
+            checkSession();
+        };
+    </script>
+</body>
+</html>

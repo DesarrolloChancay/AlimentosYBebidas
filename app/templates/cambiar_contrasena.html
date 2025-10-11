@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}Cambiar Contraseña{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <!-- Header -->
+        <div class="text-center">
+            <div class="mx-auto h-16 w-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                <i class="fas fa-key text-blue-600 dark:text-blue-400 text-2xl"></i>
+            </div>
+            <h2 class="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
+                Cambiar Contraseña
+            </h2>
+            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                Por seguridad, debes cambiar tu contraseña temporal
+            </p>
+        </div>
+
+        <!-- Formulario -->
+        <div class="bg-white dark:bg-slate-800 py-8 px-6 shadow-xl rounded-xl">
+            <form id="form-cambiar-contrasena" class="space-y-6">
+                <!-- Contraseña Actual -->
+                <div>
+                    <label for="contrasena_actual" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-lock mr-1"></i>
+                        Contraseña Actual
+                    </label>
+                    <div class="relative">
+                        <input type="password"
+                               id="contrasena_actual"
+                               name="contrasena_actual"
+                               required
+                               class="block w-full px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                               placeholder="Ingresa tu contraseña actual">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-lock text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nueva Contraseña -->
+                <div>
+                    <label for="contrasena_nueva" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-key mr-1"></i>
+                        Nueva Contraseña
+                    </label>
+                    <div class="relative">
+                        <input type="password"
+                               id="contrasena_nueva"
+                               name="contrasena_nueva"
+                               required
+                               class="block w-full px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                               placeholder="Mínimo 6 caracteres (solo letras y números)">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-key text-gray-400"></i>
+                        </div>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Solo letras y números, mínimo 6 caracteres
+                    </p>
+                </div>
+
+                <!-- Confirmar Nueva Contraseña -->
+                <div>
+                    <label for="confirmar_contrasena" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-check-circle mr-1"></i>
+                        Confirmar Nueva Contraseña
+                    </label>
+                    <div class="relative">
+                        <input type="password"
+                               id="confirmar_contrasena"
+                               name="confirmar_contrasena"
+                               required
+                               class="block w-full px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                               placeholder="Repite la nueva contraseña">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-check-circle text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Indicador de Fortaleza -->
+                <div id="password-strength" class="hidden">
+                    <div class="flex items-center space-x-2">
+                        <div class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div id="strength-bar" class="h-2 rounded-full transition-all duration-300"></div>
+                        </div>
+                        <span id="strength-text" class="text-xs font-medium"></span>
+                    </div>
+                </div>
+
+                <!-- Botones -->
+                <div class="flex space-x-3">
+                    <button type="button"
+                            onclick="logout()"
+                            class="flex-1 flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        <i class="fas fa-sign-out-alt mr-2"></i>
+                        Salir
+                    </button>
+                    <button type="submit"
+                            class="flex-1 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fas fa-save mr-2"></i>
+                        Cambiar Contraseña
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Información de Seguridad -->
+        <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-shield-alt text-yellow-400"></i>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                        Requisitos de Seguridad
+                    </h3>
+                    <div class="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>Mínimo 6 caracteres</li>
+                            <li>Solo letras y números</li>
+                            <li>No se permiten símbolos ni espacios</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Verificar si necesita cambio de contraseña
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        const response = await fetch('/api/auth/verificar-cambio-contrasena');
+        const data = await response.json();
+
+        if (!data.requiere_cambio) {
+            // Si no requiere cambio, redirigir al dashboard
+            window.location.href = '/';
+        }
+    } catch (error) {
+        console.error('Error verificando cambio de contraseña:', error);
+    }
+
+    // Configurar validación en tiempo real
+    configurarValidacionTiempoReal();
+});
+
+// Configurar validación en tiempo real
+function configurarValidacionTiempoReal() {
+    const nuevaContrasena = document.getElementById('contrasena_nueva');
+    const confirmarContrasena = document.getElementById('confirmar_contrasena');
+
+    nuevaContrasena.addEventListener('input', function() {
+        validarContrasena(this.value);
+        validarCoincidencia();
+    });
+
+    confirmarContrasena.addEventListener('input', validarCoincidencia);
+}
+
+// Validar contraseña
+function validarContrasena(contrasena) {
+    const strengthIndicator = document.getElementById('password-strength');
+    const strengthBar = document.getElementById('strength-bar');
+    const strengthText = document.getElementById('strength-text');
+
+    if (contrasena.length === 0) {
+        strengthIndicator.classList.add('hidden');
+        return true;
+    }
+
+    strengthIndicator.classList.remove('hidden');
+
+    // Validar formato (solo letras y números)
+    const formatoValido = /^[a-zA-Z0-9]+$/.test(contrasena);
+
+    if (!formatoValido) {
+        strengthBar.className = 'h-2 rounded-full bg-red-500';
+        strengthText.textContent = 'Solo letras y números';
+        strengthText.className = 'text-xs font-medium text-red-600';
+        return false;
+    }
+
+    // Validar longitud
+    if (contrasena.length < 6) {
+        strengthBar.className = 'h-2 rounded-full bg-red-500';
+        strengthBar.style.width = '33%';
+        strengthText.textContent = 'Muy corta';
+        strengthText.className = 'text-xs font-medium text-red-600';
+        return false;
+    } else if (contrasena.length < 8) {
+        strengthBar.className = 'h-2 rounded-full bg-yellow-500';
+        strengthBar.style.width = '66%';
+        strengthText.textContent = 'Aceptable';
+        strengthText.className = 'text-xs font-medium text-yellow-600';
+        return true;
+    } else {
+        strengthBar.className = 'h-2 rounded-full bg-green-500';
+        strengthBar.style.width = '100%';
+        strengthText.textContent = 'Fuerte';
+        strengthText.className = 'text-xs font-medium text-green-600';
+        return true;
+    }
+}
+
+// Validar que las contraseñas coincidan
+function validarCoincidencia() {
+    const nueva = document.getElementById('contrasena_nueva').value;
+    const confirmar = document.getElementById('confirmar_contrasena').value;
+    const confirmarInput = document.getElementById('confirmar_contrasena');
+
+    if (confirmar.length > 0) {
+        if (nueva === confirmar) {
+            confirmarInput.classList.remove('border-red-500');
+            confirmarInput.classList.add('border-green-500');
+        } else {
+            confirmarInput.classList.remove('border-green-500');
+            confirmarInput.classList.add('border-red-500');
+        }
+    } else {
+        confirmarInput.classList.remove('border-red-500', 'border-green-500');
+    }
+}
+
+// Enviar formulario
+document.getElementById('form-cambiar-contrasena').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const submitButton = this.querySelector('button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Cambiando...';
+
+    try {
+        const formData = {
+            contrasena_actual: document.getElementById('contrasena_actual').value,
+            contrasena_nueva: document.getElementById('contrasena_nueva').value
+        };
+
+        // Validaciones
+        if (!formData.contrasena_actual || !formData.contrasena_nueva) {
+            throw new Error('Todos los campos son obligatorios');
+        }
+
+        if (!validarContrasena(formData.contrasena_nueva)) {
+            throw new Error('La nueva contraseña no cumple con los requisitos');
+        }
+
+        if (formData.contrasena_nueva !== document.getElementById('confirmar_contrasena').value) {
+            throw new Error('Las contraseñas no coinciden');
+        }
+
+        const response = await fetch('/usuarios/api/cambiar-contrasena', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+
+        // Verificar si la respuesta HTTP fue exitosa
+        if (!response.ok) {
+            if (response.status === 401) {
+                throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+            } else if (response.status === 500) {
+                throw new Error('Error interno del servidor. Inténtalo de nuevo más tarde.');
+            } else {
+                throw new Error(`Error del servidor (${response.status}). Inténtalo de nuevo.`);
+            }
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarExito('Contraseña cambiada exitosamente');
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+        } else {
+            // Proporcionar mensaje de error más descriptivo
+            const errorMessage = data.error || data.message || 'Error desconocido al cambiar la contraseña';
+            throw new Error(errorMessage);
+        }
+
+    } catch (error) {
+        // Mejorar el manejo de errores de red y otros
+        let errorMessage = error.message;
+
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            errorMessage = 'Error de conexión. Verifica tu conexión a internet e inténtalo de nuevo.';
+        } else if (error.message === 'Failed to fetch') {
+            errorMessage = 'No se pudo conectar con el servidor. Inténtalo de nuevo.';
+        } else if (!errorMessage || errorMessage === 'error') {
+            errorMessage = 'Ocurrió un error inesperado. Inténtalo de nuevo.';
+        }
+
+        mostrarError(errorMessage);
+    } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalText;
+    }
+});
+
+// Función para hacer logout
+async function logout() {
+    try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/login';
+    } catch (error) {
+        console.error('Error al cerrar sesión:', error);
+        window.location.href = '/login';
+    }
+}
+
+// Funciones de notificación
+function mostrarExito(mensaje) {
+    mostrarNotificacion('success', mensaje);
+}
+
+function mostrarError(mensaje) {
+    mostrarNotificacion('error', mensaje);
+}
+
+function mostrarNotificacion(tipo, mensaje) {
+    const container = document.getElementById('alert-container') || document.body;
+    const alertClass = tipo === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800';
+
+    const alert = document.createElement('div');
+    alert.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border ${alertClass} max-w-md`;
+    alert.innerHTML = `
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <i class="fas ${tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} text-lg"></i>
+            </div>
+            <div class="ml-3 flex-1">
+                <p class="text-sm font-medium">${mensaje}</p>
+            </div>
+            <div class="ml-auto pl-3">
+                <button onclick="this.parentElement.parentElement.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    `;
+
+    container.appendChild(alert);
+
+    setTimeout(() => {
+        if (alert.parentElement) {
+            alert.remove();
+        }
+    }, 5000);
+}
+</script>
+
+{% endblock %}

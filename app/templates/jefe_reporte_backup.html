@@ -1,0 +1,1023 @@
+{% extends "base.html" %}
+
+{% block title %}Reporte de Establecimiento{% endblock %}
+
+{% block extra_css %}
+<!-- Configuración personalizada de Tailwind -->
+<script>
+tailwind.config = {
+    darkMode: 'class',
+    theme: {
+        extend: {
+            colors: {
+                'custom-blue': '#3B82F6',
+                'custom-green': '#10B981',
+                'custom-purple': '#8B5CF6',
+                'custom-orange': '#F59E0B'
+            }
+        }
+    }
+}
+</script>
+<style>
+/* Estilos adicionales para asegurar compatibilidad */
+.bg-gradient-to-r {
+    background-image: linear-gradient(to right, var(--tw-gradient-stops)) !important;
+}
+
+.shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.shadow-2xl {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+.transform {
+    transform: translateZ(0);
+}
+
+.hover\:-translate-y-2:hover {
+    transform: translateY(-0.5rem) !important;
+}
+
+.rounded-2xl {
+    border-radius: 1rem !important;
+}
+
+.transition-all {
+    transition: all 0.3s ease !important;
+}
+
+/* Efectos especiales para las tarjetas */
+.group:hover .group-hover\:text-blue-500\/30 {
+    color: rgba(59, 130, 246, 0.3) !important;
+}
+
+.group:hover .group-hover\:text-green-500\/30 {
+    color: rgba(16, 185, 129, 0.3) !important;
+}
+
+.group:hover .group-hover\:text-indigo-500\/30 {
+    color: rgba(99, 102, 241, 0.3) !important;
+}
+
+.group:hover .group-hover\:text-orange-500\/30 {
+    color: rgba(245, 158, 11, 0.3) !important;
+}
+
+/* Mejoras visuales adicionales */
+.backdrop-blur-sm {
+    backdrop-filter: blur(4px);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        
+        <!-- Header del Reporte Mejorado -->
+        <div class="relative overflow-hidden bg-gradient-to-r from-blue-600 via-teal-600 to-green-600 rounded-2xl shadow-2xl mb-8">
+            <!-- Patrón decorativo de fondo -->
+            <div class="absolute inset-0 bg-black opacity-10"></div>
+            <div class="absolute top-0 left-0 w-full h-full">
+                <div class="absolute top-0 left-0 w-20 h-20 bg-white opacity-10 rounded-full -translate-x-10 -translate-y-10"></div>
+                <div class="absolute top-10 right-10 w-32 h-32 bg-white opacity-5 rounded-full"></div>
+                <div class="absolute bottom-0 right-0 w-40 h-40 bg-white opacity-5 rounded-full translate-x-20 translate-y-20"></div>
+            </div>
+            
+            <div class="relative p-8 md:p-12">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                    <div class="mb-6 lg:mb-0">
+                        <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4">
+                                <i class="fas fa-chart-line text-white text-xl"></i>
+                            </div>
+                            <div>
+                                <h1 class="text-3xl lg:text-4xl font-bold text-white mb-1">
+                                    Reporte de Establecimiento
+                                </h1>
+                                <div class="h-1 w-20 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <h2 class="text-xl lg:text-2xl font-semibold text-white/90">
+                                {{ establecimiento.nombre }}
+                            </h2>
+                            <p class="text-white/75 flex items-center text-lg">
+                                <i class="fas fa-map-marker-alt mr-2"></i>
+                                {{ establecimiento.direccion }}
+                            </p>
+                            <p class="text-white/60 text-sm">
+                                <i class="fas fa-calendar-alt mr-2"></i>
+                                Generado el {{ fecha_actual }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button class="group bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-6 py-3 rounded-xl transition-all duration-300 flex items-center justify-center font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1" onclick="window.print()">
+                            <i class="fas fa-print mr-2 group-hover:scale-110 transition-transform duration-300"></i>
+                            Imprimir
+                        </button>
+                        <button class="group bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-6 py-3 rounded-xl transition-all duration-300 flex items-center justify-center font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1" onclick="exportarPDF()">
+                            <i class="fas fa-file-pdf mr-2 group-hover:scale-110 transition-transform duration-300"></i>
+                            Exportar PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navegación de Períodos Mejorada -->
+        <div class="mb-8">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-2">
+                <div class="flex flex-wrap gap-2">
+                    <button class="periodo-tab flex-1 min-w-0 px-6 py-4 rounded-xl font-medium transition-all duration-300 text-center bg-gradient-to-r from-blue-500 to-teal-600 text-white shadow-md" onclick="cambiarPeriodo('mes')" id="tab-mes">
+                        <i class="fas fa-calendar-day mr-2"></i>
+                        <span class="hidden sm:inline">Último </span>Mes
+                    </button>
+                    <button class="periodo-tab flex-1 min-w-0 px-6 py-4 rounded-xl font-medium transition-all duration-300 text-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" onclick="cambiarPeriodo('trimestre')" id="tab-trimestre">
+                        <i class="fas fa-calendar-week mr-2"></i>
+                        <span class="hidden sm:inline">Último </span>Trimestre
+                    </button>
+                    <button class="periodo-tab flex-1 min-w-0 px-6 py-4 rounded-xl font-medium transition-all duration-300 text-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" onclick="cambiarPeriodo('año')" id="tab-año">
+                        <i class="fas fa-calendar-alt mr-2"></i>
+                        <span class="hidden sm:inline">Último </span>Año
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Métricas por Período Mejoradas -->
+        <div id="metricas-mes" class="periodo-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+                <!-- Tarjeta Total Inspecciones -->
+                <div class="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-clipboard-list text-white text-lg"></i>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ reporte.mes.total_inspecciones or 0 }}</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Total Inspecciones</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta Completadas -->
+                <div class="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-check-circle text-white text-lg"></i>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ reporte.mes.completadas or 0 }}</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Completadas</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta Promedio Cumplimiento -->
+                <div class="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-teal-500 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-percent text-white text-lg"></i>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ reporte.mes.promedio_cumplimiento or 0 }}%</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Promedio Cumplimiento</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta Tasa Finalización -->
+                <div class="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-chart-line text-white text-lg"></i>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">
+                                {% if reporte.mes.total_inspecciones and reporte.mes.total_inspecciones > 0 %}
+                                    {{ ((reporte.mes.completadas / reporte.mes.total_inspecciones) * 100)|round(1) }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Tasa Finalización</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="metricas-trimestre" class="periodo-content hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+                <!-- Tarjeta Total Inspecciones Trimestre -->
+                <div class="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-clipboard-list text-white text-lg"></i>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ reporte.trimestre.total_inspecciones or 0 }}</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Total Inspecciones</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-check-circle text-white text-lg"></i>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ reporte.trimestre.completadas or 0 }}</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Completadas</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-teal-500 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-percent text-white text-lg"></i>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ reporte.trimestre.promedio_cumplimiento or 0 }}%</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Promedio Cumplimiento</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-chart-line text-white text-lg"></i>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">
+                                {% if reporte.trimestre.total_inspecciones and reporte.trimestre.total_inspecciones > 0 %}
+                                    {{ ((reporte.trimestre.completadas / reporte.trimestre.total_inspecciones) * 100)|round(1) }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Tasa Finalización</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="metricas-año" class="periodo-content hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+                <!-- Tarjeta Total Inspecciones Año -->
+                <div class="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-clipboard-list text-white text-lg"></i>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ reporte.año.total_inspecciones or 0 }}</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Total Inspecciones</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-check-circle text-white text-lg"></i>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ reporte.año.completadas or 0 }}</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Completadas</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-teal-500 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-percent text-white text-lg"></i>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ reporte.año.promedio_cumplimiento or 0 }}%</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Promedio Cumplimiento</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-chart-line text-white text-lg"></i>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">
+                                {% if reporte.año.total_inspecciones and reporte.año.total_inspecciones > 0 %}
+                                    {{ ((reporte.año.completadas / reporte.año.total_inspecciones) * 100)|round(1) }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Tasa Finalización</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico de Tendencias -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 mb-8 shadow-lg">
+            <h5 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                <i class="fas fa-chart-area mr-2"></i>
+                Tendencia de Inspecciones
+            </h5>
+            <div class="h-80">
+                <canvas id="chartTendencias"></canvas>
+            </div>
+        </div>
+
+        <!-- Resumen de Encargados -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
+                <h5 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                    <i class="fas fa-users mr-2"></i>
+                    Estado de Encargados
+                </h5>
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                        <div class="text-3xl font-bold text-green-600 mb-1">{{ estadisticas.encargados_activos }}</div>
+                        <div class="text-gray-600 dark:text-gray-400 text-sm uppercase tracking-wide font-medium">Activos</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-bold text-red-600 mb-1">{{ estadisticas.encargados_inactivos }}</div>
+                        <div class="text-gray-600 dark:text-gray-400 text-sm uppercase tracking-wide font-medium">Inactivos</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
+                <h5 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                    <i class="fas fa-signature mr-2"></i>
+                    Estado de Firmas
+                </h5>
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                        <div class="text-3xl font-bold text-blue-600 mb-1">{{ estadisticas.firmas_registradas }}</div>
+                        <div class="text-gray-600 dark:text-gray-400 text-sm uppercase tracking-wide font-medium">Registradas</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-bold text-orange-600 mb-1">{{ estadisticas.firmas_pendientes }}</div>
+                        <div class="text-gray-600 dark:text-gray-400 text-sm uppercase tracking-wide font-medium">Pendientes</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gestión de Firmas de Encargados -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 mb-8 shadow-lg">
+            <div class="flex justify-between items-center mb-6">
+                <h5 class="text-xl font-semibold text-gray-800 dark:text-white flex items-center">
+                    <i class="fas fa-pen-fancy mr-3 text-blue-600"></i>
+                    Gestión de Firmas de Encargados
+                </h5>
+                <button onclick="abrirModalAgregarFirma()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-plus mr-2"></i>
+                    Agregar Firma
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                        <tr>
+                            <th scope="col" class="px-6 py-3">Encargado</th>
+                            <th scope="col" class="px-6 py-3">Email</th>
+                            <th scope="col" class="px-6 py-3">Estado</th>
+                            <th scope="col" class="px-6 py-3">Firma</th>
+                            <th scope="col" class="px-6 py-3">Fecha Registro</th>
+                            <th scope="col" class="px-6 py-3">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaFirmas">
+                        <!-- Los datos se cargarán dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tabla de Inspecciones Recientes -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h5 class="text-lg font-semibold text-gray-800 dark:text-white flex items-center">
+                    <i class="fas fa-clipboard-list mr-2"></i>
+                    Inspecciones Recientes
+                </h5>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Inspector</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Estado</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Cumplimiento</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider print:hidden">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for inspeccion in inspecciones_recientes %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">#{{ inspeccion.id }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{{ inspeccion.fecha }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{{ inspeccion.inspector_nombre }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if inspeccion.estado == 'completada' %}
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                                        {{ inspeccion.estado|title }}
+                                    </span>
+                                {% elif inspeccion.estado == 'proceso' %}
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">
+                                        {{ inspeccion.estado|title }}
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
+                                        {{ inspeccion.estado|title }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                                {% if inspeccion.porcentaje_cumplimiento %}
+                                    <div class="flex items-center">
+                                        <div class="w-24 bg-gray-200 rounded-full h-2 mr-2">
+                                            <div class="bg-green-500 h-2 rounded-full" 
+                                                 style="width: {{ inspeccion.porcentaje_cumplimiento }}%"></div>
+                                        </div>
+                                        <span class="text-xs">{{ inspeccion.porcentaje_cumplimiento }}%</span>
+                                    </div>
+                                {% else %}
+                                    <span class="text-gray-400">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium print:hidden">
+                                <button class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300" 
+                                        onclick="verInspeccion({{ inspeccion.id }})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Agregar Firma -->
+<div id="modalAgregarFirma" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    <i class="fas fa-signature mr-2"></i>
+                    Agregar Firma de Encargado
+                </h3>
+                <button onclick="cerrarModalAgregarFirma()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="formAgregarFirma" enctype="multipart/form-data">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Seleccionar Encargado
+                    </label>
+                    <select id="selectEncargado" name="encargado_id" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600" required>
+                        <option value="">Seleccione un encargado...</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Subir Imagen de Firma
+                    </label>
+                    <input type="file" id="inputFirma" name="firma" accept="image/*" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600" required>
+                    <p class="text-xs text-gray-500 mt-1">Formatos permitidos: JPG, PNG, GIF. Máximo 2MB.</p>
+                </div>
+                
+                <div class="mb-4" id="previewFirma" style="display: none;">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Vista previa:
+                    </label>
+                    <img id="imagenPreview" src="" alt="Vista previa de firma" class="max-w-full h-32 object-contain border rounded">
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="cerrarModalAgregarFirma()" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-save mr-2"></i>
+                        Guardar Firma
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmar Eliminación -->
+<div id="modalConfirmarEliminar" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
+                    <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Confirmar eliminación</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Esta acción no se puede deshacer.</p>
+                </div>
+            </div>
+            
+            <p class="text-gray-700 dark:text-gray-300 mb-6">
+                ¿Está seguro que desea eliminar la firma de <strong id="nombreEncargadoEliminar"></strong>?
+            </p>
+            
+            <div class="flex justify-end space-x-3">
+                <button onclick="cerrarModalConfirmarEliminar()" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
+                    Cancelar
+                </button>
+                <button onclick="confirmarEliminarFirma()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                    <i class="fas fa-trash mr-2"></i>
+                    Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+<script src="{{ url_for('static', filename='js/jefe-reporte.js') }}"></script>
+<script>
+
+// ===== VARIABLES GLOBALES =====
+let chartTendencias = null;
+
+// ===== INICIALIZACIÓN =====
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Verificar que Chart.js está disponible
+    if (typeof Chart === 'undefined') {
+        return;
+    }
+    
+    // Verificar elementos DOM importantes
+    const elementos = {
+        chartTendencias: document.getElementById('chartTendencias'),
+        tabs: document.querySelectorAll('.periodo-tab'),
+        contenidos: document.querySelectorAll('.periodo-content')
+    };
+    
+
+// ===== FUNCIÓN DE CAMBIO DE PERÍODO =====
+function cambiarPeriodo(periodo) {
+    
+    try {
+        // Actualizar tabs con las nuevas clases de Tailwind
+        document.querySelectorAll('.periodo-tab').forEach(tab => {
+            // Remover clases activas
+            tab.classList.remove('bg-gradient-to-r', 'from-blue-500', 'to-teal-600', 'text-white', 'shadow-md');
+            // Agregar clases inactivas
+            tab.classList.add('text-slate-600', 'dark:text-slate-300', 'hover:bg-slate-100', 'dark:hover:bg-slate-700');
+        });
+        
+        const activeTab = document.getElementById(`tab-${periodo}`);
+        if (activeTab) {
+            // Remover clases inactivas
+            activeTab.classList.remove('text-slate-600', 'dark:text-slate-300', 'hover:bg-slate-100', 'dark:hover:bg-slate-700');
+            // Agregar clases activas
+            activeTab.classList.add('bg-gradient-to-r', 'from-blue-500', 'to-teal-600', 'text-white', 'shadow-md');
+        }
+        
+        // Mostrar contenido correspondiente
+        document.querySelectorAll('.periodo-content').forEach(content => {
+            content.classList.add('hidden');
+        });
+        
+        const targetContent = document.getElementById(`metricas-${periodo}`);
+        if (targetContent) {
+            targetContent.classList.remove('hidden');
+        } else {
+        }
+        // Actualizar gráfico con datos del período
+        actualizarGrafico(periodo);
+    } catch (error) {
+    }
+}
+
+// ===== DATOS DEL REPORTE DESDE BACKEND =====
+const datosReporte = {{ reporte.graficos|tojson|safe }};
+
+// ===== INICIALIZACIÓN DE GRÁFICOS =====
+let chartTendencias = null;
+
+function inicializarGraficos() {
+    try {
+        const ctx = document.getElementById('chartTendencias');
+        
+        if (!ctx) {
+            return;
+        }
+
+        const context = ctx.getContext('2d');
+        if (!context) {
+            return;
+        }
+
+        // Inicializar con datos del mes actual
+        const datosIniciales = datosReporte.mes || {labels: ['Sin datos'], totales: [0], completadas: [0]};
+
+        chartTendencias = new Chart(context, {
+            type: 'line',
+            data: {
+                labels: datosIniciales.labels,
+                datasets: [{
+                    label: 'Inspecciones Completadas',
+                    data: datosIniciales.completadas,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#10b981',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6
+                }, {
+                    label: 'Inspecciones Iniciadas',
+                    data: datosIniciales.totales,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#3b82f6',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20,
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        borderColor: '#374151',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: true,
+                            color: 'rgba(156, 163, 175, 0.1)'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Período'
+                        }
+                    },
+                    y: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Cantidad'
+                        },
+                        beginAtZero: true,
+                        grid: {
+                            display: true,
+                            color: 'rgba(156, 163, 175, 0.1)'
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
+        
+    } catch (error) {
+    }
+}
+
+// ===== ACTUALIZAR GRÁFICO =====
+function actualizarGrafico(periodo) {
+    if (!chartTendencias) {
+        return;
+    }
+    
+    try {
+        const datos = datosReporte[periodo] || {labels: ['Sin datos'], totales: [0], completadas: [0]};
+        
+        // Actualizar datos
+        chartTendencias.data.labels = datos.labels;
+        chartTendencias.data.datasets[0].data = datos.completadas;
+        chartTendencias.data.datasets[1].data = datos.totales;
+        
+        // Actualizar título del eje X según el período
+        let tituloEje = 'Período';
+        switch(periodo) {
+            case 'mes':
+                tituloEje = 'Últimos meses';
+                break;
+            case 'trimestre':
+                tituloEje = 'Últimos trimestres';
+                break;
+            case 'año':
+                tituloEje = 'Últimos años';
+                break;
+        }
+        chartTendencias.options.scales.x.title.text = tituloEje;
+        
+        // Actualizar gráfico
+        chartTendencias.update('active');
+}
+
+// ===== FUNCIÓN VER INSPECCIÓN =====
+function verInspeccion(inspeccionId) {
+    window.open(`/detalle-inspeccion/${inspeccionId}`, '_blank');
+}
+
+// ===== FUNCIÓN EXPORTAR PDF =====
+function exportarPDF() {
+    
+    try {
+        // Ocultar elementos que no queremos en el PDF
+        const elementosOcultar = document.querySelectorAll('button, .no-print');
+        elementosOcultar.forEach(elemento => {
+            elemento.style.visibility = 'hidden';
+        });
+        
+        // Configurar estilo para impresión
+        const estiloImpresion = document.createElement('style');
+        estiloImpresion.textContent = `
+            @media print {
+                body { margin: 0; padding: 20px; }
+                .no-print { display: none !important; }
+                .print-only { display: block !important; }
+                button { display: none !important; }
+                .bg-gradient-to-r { background: linear-gradient(to right, #3b82f6, #14b8a6) !important; }
+                * { color-adjust: exact !important; -webkit-print-color-adjust: exact !important; }
+            }
+        `;
+        document.head.appendChild(estiloImpresion);
+        
+        // Imprimir
+        window.print();
+        
+        // Restaurar elementos después de un delay
+        setTimeout(() => {
+            elementosOcultar.forEach(elemento => {
+                elemento.style.visibility = 'visible';
+            });
+            document.head.removeChild(estiloImpresion);
+        }, 1000);
+        
+    } catch (error) {
+    }
+}
+
+// ===== UTILIDADES =====
+function formatearFecha(fecha) {
+    const opciones = { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    };
+    return new Date(fecha).toLocaleDateString('es-ES', opciones);
+}
+
+// ===== GESTIÓN DE FIRMAS =====
+let firmaAEliminar = null;
+
+// Cargar encargados y firmas al inicializar
+function cargarEncargadosYFirmas() {
+    cargarEncargados();
+    cargarFirmas();
+}
+
+// Cargar lista de encargados para el select
+async function cargarEncargados() {
+    try {
+        const response = await fetch('/jefe/api/encargados');
+        const encargados = await response.json();
+        
+        const select = document.getElementById('selectEncargado');
+        select.innerHTML = '<option value="">Seleccione un encargado...</option>';
+        
+        encargados.forEach(encargado => {
+            const option = document.createElement('option');
+            option.value = encargado.id;
+            option.textContent = `${encargado.nombre} ${encargado.apellido} - ${encargado.email}`;
+            select.appendChild(option);
+        });
+    } catch (error) {
+    }
+}
+
+// Cargar tabla de firmas
+async function cargarFirmas() {
+    try {
+        const response = await fetch('/jefe/api/firmas');
+        const firmas = await response.json();
+        
+        const tbody = document.getElementById('tablaFirmas');
+        tbody.innerHTML = '';
+        
+        if (firmas.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                        No hay firmas registradas
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        firmas.forEach(firma => {
+            const tr = document.createElement('tr');
+            tr.className = 'bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600';
+            
+            const estadoBadge = firma.activa ? 
+                '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Activa</span>' :
+                '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Inactiva</span>';
+            
+            const imagenFirma = firma.path_firma ? 
+                `<img src="${firma.path_firma}" alt="Firma" class="h-8 w-auto object-contain">` :
+                '<span class="text-gray-400">Sin firma</span>';
+            
+            tr.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                    ${firma.encargado_nombre} ${firma.encargado_apellido}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                    ${firma.encargado_email}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    ${estadoBadge}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    ${imagenFirma}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                    ${formatearFecha(firma.fecha_firma)}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button onclick="eliminarFirma(${firma.id}, '${firma.encargado_nombre} ${firma.encargado_apellido}')" 
+                            class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 ml-2">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            
+            tbody.appendChild(tr);
+        });
+    } catch (error) {
+    }
+}
+
+// Abrir modal para agregar firma
+function abrirModalAgregarFirma() {
+    document.getElementById('modalAgregarFirma').classList.remove('hidden');
+    cargarEncargados();
+}
+
+// Cerrar modal agregar firma
+function cerrarModalAgregarFirma() {
+    document.getElementById('modalAgregarFirma').classList.add('hidden');
+    document.getElementById('formAgregarFirma').reset();
+    document.getElementById('previewFirma').style.display = 'none';
+}
+
+// Eliminar firma
+function eliminarFirma(firmaId, nombreEncargado) {
+    firmaAEliminar = firmaId;
+    document.getElementById('nombreEncargadoEliminar').textContent = nombreEncargado;
+    document.getElementById('modalConfirmarEliminar').classList.remove('hidden');
+}
+
+// Cerrar modal confirmar eliminación
+function cerrarModalConfirmarEliminar() {
+    document.getElementById('modalConfirmarEliminar').classList.add('hidden');
+    firmaAEliminar = null;
+}
+
+// Confirmar eliminación
+async function confirmarEliminarFirma() {
+    if (!firmaAEliminar) return;
+    
+    try {
+        const response = await fetch(`/jefe/api/firmas/${firmaAEliminar}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            alert('Firma eliminada exitosamente');
+            cerrarModalConfirmarEliminar();
+            cargarFirmas();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error al procesar la solicitud');
+    }
+}
+
+// ===== INICIALIZACIÓN AL CARGAR =====
+document.addEventListener('DOMContentLoaded', function() {
+    cambiarPeriodo('mes'); // Mostrar mes por defecto
+    inicializarGraficos();
+    cargarEncargadosYFirmas(); // Cargar gestión de firmas
+    
+    // Vista previa de imagen
+    const inputFirma = document.getElementById('inputFirma');
+    if (inputFirma) {
+        inputFirma.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('imagenPreview').src = e.target.result;
+                    document.getElementById('previewFirma').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    // Manejar envío del formulario
+    const form = document.getElementById('formAgregarFirma');
+    if (form) {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            
+            try {
+                const response = await fetch('/jefe/api/firmas', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Firma agregada exitosamente');
+                    cerrarModalAgregarFirma();
+                    cargarFirmas();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error al procesar la solicitud');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+
+

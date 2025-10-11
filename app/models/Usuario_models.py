@@ -25,6 +25,7 @@ class Usuario(db.Model):
     telefono = db.Column(db.String(30))
     dni = db.Column(db.String(20))
     ruta_firma = db.Column(db.String(500))
+    cambiar_contrasena = db.Column(db.Boolean, default=False, nullable=False)  # Indica si debe cambiar contraseña
     fecha_creacion = db.Column(db.TIMESTAMP, default=datetime.utcnow)
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
     updated_at = db.Column(db.TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)

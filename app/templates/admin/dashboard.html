@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+
+{% block title %}Panel de Administración - Sistema de Alimentos y Bebidas{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind-compiled.css') }}">
+<script src="https://unpkg.com/phosphor-icons"></script>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <!-- Header del Admin -->
+    <div class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center space-x-4">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                            <i class="ph ph-crown text-white text-xl"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Panel de Administración</h1>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Control total del sistema</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Notificaciones -->
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open" class="relative p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors">
+                            <i class="ph ph-bell text-xl"></i>
+                            {% if alertas %}
+                            <span class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+                            {% endif %}
+                        </button>
+                        
+                        <!-- Dropdown de notificaciones -->
+                        <div x-show="open" @click.away="open = false" 
+                             x-transition:enter="transition ease-out duration-100"
+                             x-transition:enter-start="transform opacity-0 scale-95"
+                             x-transition:enter-end="transform opacity-100 scale-100"
+                             x-transition:leave="transition ease-in duration-75"
+                             x-transition:leave-start="transform opacity-100 scale-100"
+                             x-transition:leave-end="transform opacity-0 scale-95"
+                             class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+                            
+                            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Alertas del Sistema</h3>
+                            </div>
+                            
+                            <div class="max-h-64 overflow-y-auto">
+                                {% if alertas %}
+                                    {% for alerta in alertas %}
+                                    <div class="p-4 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+                                        <div class="flex items-start space-x-3">
+                                            <div class="flex-shrink-0">
+                                                {% if alerta.tipo == 'danger' %}
+                                                <i class="ph ph-warning-circle text-red-500 text-lg"></i>
+                                                {% elif alerta.tipo == 'warning' %}
+                                                <i class="ph ph-warning text-yellow-500 text-lg"></i>
+                                                {% else %}
+                                                <i class="ph ph-info text-blue-500 text-lg"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ alerta.titulo }}</p>
+                                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ alerta.mensaje }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                <div class="p-4 text-center">
+                                    <p class="text-gray-500 dark:text-gray-400">No hay alertas activas</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Menú de usuario -->
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ session.user_name }}</span>
+                        <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                            <span class="text-white text-sm font-medium">{{ session.user_name[0].upper() }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navegación principal -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Tarjetas de navegación rápida -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Gestión de Usuarios -->
+            <a href="{{ url_for('admin.gestionar_usuarios') }}" class="group block">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-all duration-200 group-hover:scale-105">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                                <i class="ph ph-users text-white text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Gestión de Usuarios</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.total_usuarios or 0 }}</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">usuarios activos</p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Gestión de Roles -->
+            <a href="{{ url_for('admin.gestionar_roles') }}" class="group block">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-all duration-200 group-hover:scale-105">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                                <i class="ph ph-shield-check text-white text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Roles y Permisos</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white">4</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">roles del sistema</p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Gestión de Establecimientos -->
+            <a href="{{ url_for('admin.gestionar_establecimientos') }}" class="group block">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-all duration-200 group-hover:scale-105">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                                <i class="ph ph-buildings text-white text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Establecimientos</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.total_establecimientos or 0 }}</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">establecimientos</p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Configuración del Sistema -->
+            <a href="{{ url_for('admin.configuraciones') }}" class="group block">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-all duration-200 group-hover:scale-105">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                                <i class="ph ph-gear text-white text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Configuración</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white"><i class="ph ph-check-circle text-green-500"></i></p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">sistema</p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Segunda fila de navegación -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+
+            <!-- Auditoría -->
+            <a href="{{ url_for('admin.auditoria') }}" class="group block">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-all duration-200 group-hover:scale-105">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center">
+                                <i class="ph ph-magnifying-glass text-white text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Auditoría</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white"><i class="fas fa-search"></i></p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">registro de actividades</p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Jefes de Establecimiento -->
+            <a href="{{ url_for('admin.gestionar_jefes_establecimiento') }}" class="group block">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-all duration-200 group-hover:scale-105">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-gradient-to-r from-teal-500 to-teal-600 rounded-lg flex items-center justify-center">
+                                <i class="ph ph-user-tie text-white text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Jefes de Establecimiento</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.total_jefes or 0 }}</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">jefes asignados</p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Herramientas del Sistema -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                                <i class="ph ph-wrench text-white text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Sistema</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">herramientas admin</p>
+                        </div>
+                    </div>
+                    <button onclick="inicializarSistema()" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors">
+                        Inicializar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estadísticas detalladas -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- Estadísticas de usuarios por rol -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Usuarios por Rol</h3>
+                    <i class="ph ph-chart-bar text-gray-400"></i>
+                </div>
+                
+                <div class="space-y-4">
+                    {% if stats.usuarios_por_rol %}
+                        {% for rol, cantidad in stats.usuarios_por_rol.items() %}
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-3 h-3 rounded-full 
+                                    {% if rol == 'Administrador' %}bg-red-500
+                                    {% elif rol == 'Inspector' %}bg-blue-500
+                                    {% elif rol == 'Encargado' %}bg-green-500
+                                    {% else %}bg-gray-500{% endif %}"></div>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">{{ rol }}</span>
+                            </div>
+                            <span class="text-sm font-bold text-gray-900 dark:text-white">{{ cantidad }}</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <p class="text-gray-500 dark:text-gray-400 text-center">No hay datos disponibles</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Estado del sistema -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Estado del Sistema</h3>
+                    <i class="ph ph-pulse text-gray-400"></i>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Usuarios en línea</span>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">{{ stats.usuarios_en_linea or 0 }}</span>
+                            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Inspecciones este mes</span>
+                        <span class="text-sm font-medium text-gray-900 dark:text-white">{{ stats.inspecciones_mes or 0 }}</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Inspecciones pendientes</span>
+                        <span class="text-sm font-medium {% if stats.inspecciones_pendientes > 0 %}text-yellow-600{% else %}text-gray-900 dark:text-white{% endif %}">
+                            {{ stats.inspecciones_pendientes or 0 }}
+                        </span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Establecimientos con encargado</span>
+                        <span class="text-sm font-medium text-gray-900 dark:text-white">{{ stats.establecimientos_con_encargado or 0 }}/{{ stats.total_establecimientos or 0 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actividad reciente -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Últimas inspecciones -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Últimas Inspecciones</h3>
+                    <a href="{{ url_for('inspeccion.buscar_inspecciones') }}" class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                        Ver todas <i class="ph ph-arrow-right ml-1"></i>
+                    </a>
+                </div>
+                
+                <div class="space-y-4">
+                    {% if actividad_reciente.inspecciones %}
+                        {% for inspeccion in actividad_reciente.inspecciones %}
+                        <div class="flex items-center space-x-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 rounded-full flex items-center justify-center
+                                    {% if inspeccion.estado == 'completada' %}bg-green-100 text-green-600
+                                    {% elif inspeccion.estado == 'pendiente' %}bg-yellow-100 text-yellow-600
+                                    {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                    <i class="ph ph-clipboard-text text-sm"></i>
+                                </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ inspeccion.establecimiento }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                    {{ inspeccion.inspector_nombre }} • {{ inspeccion.fecha.strftime('%d/%m/%Y') }}
+                                </p>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full
+                                    {% if inspeccion.estado == 'completada' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                                    {% elif inspeccion.estado == 'pendiente' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                                    {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200{% endif %}">
+                                    {{ inspeccion.estado.capitalize() }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <p class="text-gray-500 dark:text-gray-400 text-center py-4">No hay inspecciones recientes</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Últimos usuarios -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Últimos Usuarios</h3>
+                    <a href="{{ url_for('admin.gestionar_usuarios') }}" class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                        Ver todos <i class="ph ph-arrow-right ml-1"></i>
+                    </a>
+                </div>
+                
+                <div class="space-y-4">
+                    {% if actividad_reciente.usuarios %}
+                        {% for usuario in actividad_reciente.usuarios %}
+                        <div class="flex items-center space-x-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                                    <span class="text-blue-600 dark:text-blue-400 text-sm font-medium">{{ usuario.nombre[0].upper() }}</span>
+                                </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ usuario.nombre }} {{ usuario.apellido or '' }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ usuario.correo }}</p>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <span class="text-xs text-gray-500 dark:text-gray-400">
+                                    {{ usuario.created_at.strftime('%d/%m') if usuario.created_at else 'N/A' }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <p class="text-gray-500 dark:text-gray-400 text-center py-4">No hay usuarios recientes</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+<script>
+// Función para inicializar sistema
+function inicializarSistema() {
+    if (confirm('¿Está seguro de que desea inicializar el sistema con configuraciones y permisos básicos? Esto puede sobrescribir configuraciones existentes.')) {
+        fetch('/admin/inicializar_sistema', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('<i class="fas fa-check text-green-600"></i> ' + data.message);
+                // Opcional: recargar la página para ver cambios
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                alert('<i class="fas fa-times text-red-600"></i> ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('<i class="fas fa-times text-red-600"></i> Error de conexión al inicializar sistema');
+        });
+    }
+}
+
+// Función para mostrar notificaciones
+function mostrarNotificacion(tipo, mensaje) {
+    // Crear elemento de notificación
+    const notificacion = document.createElement('div');
+    notificacion.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
+        tipo === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+    }`;
+    notificacion.innerHTML = `
+        <div class="flex items-center space-x-2">
+            <span>${mensaje}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-white hover:text-gray-200">✕</button>
+        </div>
+    `;
+    
+    document.body.appendChild(notificacion);
+    
+    // Auto-remover después de 5 segundos
+    setTimeout(() => {
+        if (notificacion.parentElement) {
+            notificacion.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

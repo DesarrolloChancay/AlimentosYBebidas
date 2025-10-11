@@ -1,57 +1,73 @@
-{% extends "base.html" %}
-{% block title %}Historial de Inspecciones{% endblock %}
+{% extends "base.html" %} 
+{% block title %}Historial de Inspecciones{% endblock %} 
 {% block content %}
 
 <section class="min-h-screen p-4 md:p-8">
   <!-- Header -->
-  <header class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+  <header class="mb-6">
     <div>
-      <h1 class="text-2xl md:text-3xl font-bold">Historial de Inspecciones</h1>
-      <p class="text-slate-600">Busque y revise inspecciones anteriores</p>
-    </div>
-    <div class="flex items-center gap-2">
-      <a href="/" class="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors">
-        Nueva Inspección
-      </a>
-      <button onclick="cerrarSesion()" class="px-4 py-2 rounded-xl bg-white border text-slate-600 hover:bg-slate-50 transition-colors">
-        Cerrar sesión
-      </button>
+      <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Historial de Inspecciones</h1>
+      <p class="text-slate-600 dark:text-slate-400">Busque y revise inspecciones anteriores</p>
     </div>
   </header>
 
   <!-- Filtros de búsqueda -->
   <div class="bg-white rounded-2xl shadow p-6 mb-6">
     <h2 class="text-lg font-semibold mb-4">Filtros de Búsqueda</h2>
-    <form id="filtros-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      
+    <form
+      id="filtros-form"
+      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+    >
       <!-- Establecimiento -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Establecimiento</label>
-        <select id="filtro-establecimiento" name="establecimiento_id" 
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        <label class="block text-sm font-medium text-gray-700 mb-1"
+          >Establecimiento</label
+        >
+        <select
+          id="filtro-establecimiento"
+          name="establecimiento_id"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        >
           <option value="">Todos los establecimientos</option>
         </select>
       </div>
 
       <!-- Fecha inicio -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha desde</label>
-        <input type="date" id="filtro-fecha-inicio" name="fecha_inicio"
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        <label class="block text-sm font-medium text-gray-700 mb-1"
+          >Fecha desde</label
+        >
+        <input
+          type="date"
+          id="filtro-fecha-inicio"
+          name="fecha_inicio"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
       </div>
 
       <!-- Fecha fin -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha hasta</label>
-        <input type="date" id="filtro-fecha-fin" name="fecha_fin"
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        <label class="block text-sm font-medium text-gray-700 mb-1"
+          >Fecha hasta</label
+        >
+        <input
+          type="date"
+          id="filtro-fecha-fin"
+          name="fecha_fin"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
       </div>
 
       <!-- Estado -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-        <select id="filtro-estado" name="estado"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        <label class="block text-sm font-medium text-gray-700 mb-1"
+          >Estado</label
+        >
+        <select
+          id="filtro-estado"
+          name="estado"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        >
           <option value="">Todos los estados</option>
           <option value="borrador">Borrador</option>
           <option value="en_proceso">En Proceso</option>
@@ -61,10 +77,17 @@
 
       <!-- Botones -->
       <div class="md:col-span-2 lg:col-span-4 flex gap-3">
-        <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+        <button
+          type="submit"
+          class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
           Buscar
         </button>
-        <button type="button" id="limpiar-filtros" class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+        <button
+          type="button"
+          id="limpiar-filtros"
+          class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+        >
           Limpiar Filtros
         </button>
       </div>
@@ -79,9 +102,11 @@
         Total de inspecciones encontradas: <span id="total-resultados">0</span>
       </p>
     </div>
-    
+
     <div id="loading" class="flex justify-center items-center py-12 hidden">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div
+        class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"
+      ></div>
       <span class="ml-2 text-gray-600">Buscando...</span>
     </div>
 
@@ -91,246 +116,29 @@
 
     <!-- Mensaje cuando no hay resultados -->
     <div id="sin-resultados" class="p-12 text-center text-gray-500 hidden">
-      <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      <svg
+        class="w-16 h-16 mx-auto mb-4 text-gray-300"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+        />
       </svg>
       <p class="text-lg font-medium mb-2">No se encontraron inspecciones</p>
       <p>Intente modificar los criterios de búsqueda</p>
     </div>
   </div>
 </section>
+{% endblock %}
 
-<script>
-// Variables globales
-let inspecciones = [];
-let userRole = '{{ user_role }}';
-
-// Función para cargar establecimientos en el filtro
-async function cargarEstablecimientosFiltro() {
-    try {
-        const response = await fetch('/api/establecimientos');
-        const establecimientos = await response.json();
-        
-        const select = document.getElementById('filtro-establecimiento');
-        select.innerHTML = '<option value="">Todos los establecimientos</option>';
-        
-        establecimientos.forEach(est => {
-            const option = document.createElement('option');
-            option.value = est.id;
-            option.textContent = est.nombre;
-            select.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Error cargando establecimientos:', error);
-    }
-}
-
-// Función para buscar inspecciones
-async function buscarInspecciones() {
-    const formData = new FormData(document.getElementById('filtros-form'));
-    const params = new URLSearchParams();
-    
-    for (let [key, value] of formData.entries()) {
-        if (value) {
-            params.append(key, value);
-        }
-    }
-    
-    // Mostrar loading
-    document.getElementById('loading').classList.remove('hidden');
-    document.getElementById('resultados-container').innerHTML = '';
-    document.getElementById('sin-resultados').classList.add('hidden');
-    
-    try {
-        const response = await fetch(`/api/inspecciones?${params.toString()}`);
-        const data = await response.json();
-        
-        if (response.ok) {
-            inspecciones = data;
-            mostrarResultados(data);
-        } else {
-            throw new Error(data.error || 'Error al buscar inspecciones');
-        }
-    } catch (error) {
-        console.error('Error buscando inspecciones:', error);
-        mostrarNotificacion('Error al buscar inspecciones: ' + error.message, 'error');
-    } finally {
-        document.getElementById('loading').classList.add('hidden');
-    }
-}
-
-// Función para mostrar resultados
-function mostrarResultados(inspecciones) {
-    const container = document.getElementById('resultados-container');
-    const totalElement = document.getElementById('total-resultados');
-    
-    totalElement.textContent = inspecciones.length;
-    
-    if (inspecciones.length === 0) {
-        document.getElementById('sin-resultados').classList.remove('hidden');
-        return;
-    }
-    
-    container.innerHTML = '';
-    
-    inspecciones.forEach(inspeccion => {
-        const div = document.createElement('div');
-        div.className = 'p-6 hover:bg-gray-50 transition-colors';
-        
-        const estadoClass = {
-            'borrador': 'bg-yellow-100 text-yellow-800',
-            'en_proceso': 'bg-blue-100 text-blue-800',
-            'completada': 'bg-green-100 text-green-800'
-        }[inspeccion.estado] || 'bg-gray-100 text-gray-800';
-        
-        div.innerHTML = `
-            <div class="flex justify-between items-start mb-3">
-                <div>
-                    <h3 class="font-semibold text-lg">${inspeccion.establecimiento}</h3>
-                    <p class="text-sm text-gray-600">ID: ${inspeccion.id}</p>
-                </div>
-                <span class="px-3 py-1 rounded-full text-sm font-medium ${estadoClass}">
-                    ${inspeccion.estado_label || inspeccion.estado}
-                </span>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                <div>
-                    <span class="font-medium text-gray-700">Fecha:</span>
-                    <span>${new Date(inspeccion.fecha).toLocaleDateString('es-ES')}</span>
-                </div>
-                <div>
-                    <span class="font-medium text-gray-700">Inspector:</span>
-                    <span>${inspeccion.inspector || 'N/A'}</span>
-                </div>
-                <div>
-                    <span class="font-medium text-gray-700">Puntaje:</span>
-                    <span>${inspeccion.puntaje_total || 0} / ${inspeccion.puntaje_maximo || 0}</span>
-                </div>
-                <div>
-                    <span class="font-medium text-gray-700">Cumplimiento:</span>
-                    <span class="font-semibold ${inspeccion.porcentaje_cumplimiento >= 80 ? 'text-green-600' : inspeccion.porcentaje_cumplimiento >= 60 ? 'text-yellow-600' : 'text-red-600'}">
-                        ${inspeccion.porcentaje_cumplimiento || 0}%
-                    </span>
-                </div>
-            </div>
-            
-            ${inspeccion.observaciones ? `
-                <div class="mt-3">
-                    <span class="font-medium text-gray-700">Observaciones:</span>
-                    <p class="text-sm text-gray-600 mt-1">${inspeccion.observaciones}</p>
-                </div>
-            ` : ''}
-            
-            <div class="flex justify-end gap-2 mt-4">
-                <button onclick="verDetalle(${inspeccion.id})" 
-                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                    Ver Detalle
-                </button>
-                ${inspeccion.estado === 'borrador' ? `
-                    <button onclick="editarInspeccion(${inspeccion.id})" 
-                            class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm">
-                        Continuar Editando
-                    </button>
-                ` : ''}
-            </div>
-        `;
-        
-        container.appendChild(div);
-    });
-}
-
-// Función para ver detalle de inspección
-function verDetalle(inspeccionId) {
-    // Aquí puedes implementar un modal o redirigir a una página de detalle
-    window.open(`/inspecciones/${inspeccionId}/detalle`, '_blank');
-}
-
-// Función para editar inspección
-function editarInspeccion(inspeccionId) {
-    window.location.href = `/?editar=${inspeccionId}`;
-}
-
-// Función para limpiar filtros
-function limpiarFiltros() {
-    document.getElementById('filtros-form').reset();
-    document.getElementById('resultados-container').innerHTML = '';
-    document.getElementById('sin-resultados').classList.add('hidden');
-    document.getElementById('total-resultados').textContent = '0';
-}
-
-// Función para mostrar notificaciones
-function mostrarNotificacion(mensaje, tipo = 'info') {
-    const notificacion = document.createElement('div');
-    notificacion.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transition-all duration-300 ${
-        tipo === 'success' ? 'bg-green-500 text-white' :
-        tipo === 'error' ? 'bg-red-500 text-white' :
-        tipo === 'warning' ? 'bg-yellow-500 text-black' :
-        'bg-blue-500 text-white'
-    }`;
-    notificacion.textContent = mensaje;
-    
-    document.body.appendChild(notificacion);
-    
-    setTimeout(() => {
-        notificacion.style.transform = 'translateX(100%)';
-        setTimeout(() => {
-            if (notificacion.parentNode) {
-                notificacion.parentNode.removeChild(notificacion);
-            }
-        }, 300);
-    }, 4000);
-}
-
-// Función para mostrar confirmación
-function mostrarConfirmacion(mensaje, callback) {
-    if (confirm(mensaje)) {
-        callback();
-    }
-}
-
-// Función para cerrar sesión correctamente
-async function cerrarSesion() {
-    mostrarConfirmacion(
-        '¿Estás seguro de que deseas cerrar sesión?',
-        async () => {
-            try {
-                // Realizar logout
-                const response = await fetch('/api/auth/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-                
-                // Redirigir al login independientemente de la respuesta
-                window.location.href = '/login';
-                
-            } catch (error) {
-                console.error('Error cerrando sesión:', error);
-                // Redirigir al login aunque haya error
-                window.location.href = '/login';
-            }
-        }
-    );
-}
-
-// Event listeners
-document.addEventListener('DOMContentLoaded', async function() {
-    await cargarEstablecimientosFiltro();
-    
-    // Cargar todas las inspecciones inicialmente
-    await buscarInspecciones();
-    
-    // Event listener para el formulario de filtros
-    document.getElementById('filtros-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        buscarInspecciones();
-    });
-    
-    // Event listener para limpiar filtros
-    document.getElementById('limpiar-filtros').addEventListener('click', limpiarFiltros);
-});
-</script>
-
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+<script src="{{ url_for('static', filename='js/inspecciones.js') }}"></script>
+<!-- Agregar rol de usuario para JavaScript -->
+<div data-user-role="{{ user_role }}" style="display: none;"></div>
 {% endblock %}

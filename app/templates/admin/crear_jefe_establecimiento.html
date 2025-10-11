@@ -1,0 +1,531 @@
+{% extends "base.html" %}
+
+{% block title %}Crear Jefe de Establecimiento{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Encabezado -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+                        Crear Jefe de Establecimiento
+                    </h1>
+                    <p class="text-lg text-gray-600 dark:text-gray-300">
+                        Asignar un jefe a un establecimiento disponible
+                    </p>
+                </div>
+                <a href="{{ url_for('admin.gestionar_jefes_establecimiento') }}"
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Volver
+                </a>
+            </div>
+        </div>
+
+        <!-- Formulario -->
+        <div class="max-w-4xl mx-auto">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                        <i class="fas fa-user-plus mr-2 text-blue-500"></i>
+                        Información del Nuevo Jefe
+                    </h2>
+                </div>
+
+                <form id="form-crear-jefe" class="p-6 space-y-6">
+                    <!-- Información Personal -->
+                    <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-6">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                            <i class="fas fa-user mr-2 text-blue-500"></i>
+                            Información Personal
+                        </h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="nombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Nombre *
+                                </label>
+                                <input type="text"
+                                       id="nombre"
+                                       name="nombre"
+                                       required
+                                       class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                       placeholder="Ingrese el nombre">
+                            </div>
+
+                            <div>
+                                <label for="apellido" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Apellido *
+                                </label>
+                                <input type="text"
+                                       id="apellido"
+                                       name="apellido"
+                                       required
+                                       class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                       placeholder="Ingrese el apellido">
+                            </div>
+
+                            <div>
+                                <label for="correo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Correo Electrónico *
+                                </label>
+                                <input type="email"
+                                       id="correo"
+                                       name="correo"
+                                       required
+                                       class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                       placeholder="correo@ejemplo.com">
+                            </div>
+
+                            <div>
+                                <label for="telefono" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Teléfono
+                                </label>
+                                <input type="tel"
+                                       id="telefono"
+                                       name="telefono"
+                                       class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                       placeholder="+51 999 999 999">
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label for="dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    DNI *
+                                </label>
+                                <input type="text"
+                                       id="dni"
+                                       name="dni"
+                                       required
+                                       maxlength="8"
+                                       pattern="[0-9]{8}"
+                                       class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                       placeholder="12345678">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Asignación de Establecimiento -->
+                    <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-6">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                            <i class="fas fa-building mr-2 text-green-500"></i>
+                            Asignación de Establecimiento
+                        </h3>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label for="establecimiento_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Establecimiento *
+                                </label>
+                                <select id="establecimiento_id"
+                                        name="establecimiento_id"
+                                        required
+                                        class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+                                    <option value="">Seleccione un establecimiento</option>
+                                    {% for est in establecimientos %}
+                                    <option value="{{ est.id }}">{{ est.nombre }} - {{ est.direccion }}</option>
+                                    {% endfor %}
+                                </select>
+                                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                    Solo se muestran establecimientos sin jefe asignado
+                                </p>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="fecha_inicio" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Fecha de Inicio *
+                                    </label>
+                                    <input type="date"
+                                           id="fecha_inicio"
+                                           name="fecha_inicio"
+                                           required
+                                           class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+                                </div>
+
+                                <div>
+                                    <label for="fecha_fin" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Fecha de Fin (Opcional)
+                                    </label>
+                                    <input type="date"
+                                           id="fecha_fin"
+                                           name="fecha_fin"
+                                           class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="comentario" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Comentario (Opcional)
+                                </label>
+                                <textarea id="comentario"
+                                          name="comentario"
+                                          rows="3"
+                                          class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                          placeholder="Comentarios adicionales sobre la asignación..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información Importante -->
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-info-circle text-blue-400"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-blue-800 dark:text-blue-300">
+                                    Información Importante
+                                </h3>
+                                <div class="mt-2 text-sm text-blue-700 dark:text-blue-400">
+                                    <ul class="list-disc pl-5 space-y-1">
+                                        <li>Se creará automáticamente un usuario con rol "Jefe de Establecimiento"</li>
+                                        <li>Se generará una contraseña temporal robusta que deberá ser cambiada en el primer inicio de sesión</li>
+                                        <li>El jefe podrá crear usuarios encargados para su establecimiento</li>
+                                        <li>Esta asignación puede tener una fecha de fin opcional</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <a href="{{ url_for('admin.gestionar_jefes_establecimiento') }}"
+                           class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                            Cancelar
+                        </a>
+                        <button type="submit"
+                                class="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fas fa-save mr-2"></i>
+                            Crear Jefe de Establecimiento
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Verificar si estamos en un contexto seguro
+console.log('Contexto seguro:', window.isSecureContext);
+console.log('Protocolo:', window.location.protocol);
+console.log('Clipboard API disponible:', !!navigator.clipboard);
+
+// Esperar a que el DOM esté completamente cargado
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM cargado, inicializando JavaScript...');
+
+    // Función para mostrar alertas
+    function mostrarAlerta(tipo, mensaje) {
+        console.log('Mostrando alerta:', tipo, mensaje);
+        const container = document.getElementById('alert-container') || document.body;
+        const alertClass = tipo === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800';
+
+        const alert = document.createElement('div');
+        alert.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border ${alertClass} max-w-md`;
+        alert.innerHTML = `
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <i class="fas ${tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} text-lg"></i>
+                </div>
+                <div class="ml-3 flex-1">
+                    <p class="text-sm font-medium">${mensaje}</p>
+                </div>
+                <div class="ml-auto pl-3">
+                    <button onclick="this.parentElement.parentElement.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(alert);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (alert.parentElement) {
+                alert.remove();
+            }
+        }, 5000);
+    }
+
+    // Validación del formulario
+    const form = document.getElementById('form-crear-jefe');
+    if (form) {
+        console.log('Formulario encontrado, agregando event listener...');
+        form.addEventListener('submit', async function(e) {
+            console.log('Formulario enviado, previniendo default...');
+            e.preventDefault();
+            console.log('Default prevenido correctamente');
+
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creando...';
+
+            try {
+                // Recopilar datos del formulario
+                const formData = {
+                    nombre: document.getElementById('nombre').value.trim(),
+                    apellido: document.getElementById('apellido').value.trim(),
+                    correo: document.getElementById('correo').value.trim(),
+                    telefono: document.getElementById('telefono').value.trim(),
+                    dni: document.getElementById('dni').value.trim(),
+                    establecimiento_id: document.getElementById('establecimiento_id').value,
+                    fecha_inicio: document.getElementById('fecha_inicio').value,
+                    fecha_fin: document.getElementById('fecha_fin').value || null,
+                    comentario: document.getElementById('comentario').value.trim()
+                };
+
+                console.log('Datos del formulario:', formData);
+
+                // Validaciones básicas
+                if (!formData.nombre || !formData.apellido || !formData.correo || !formData.dni || !formData.establecimiento_id || !formData.fecha_inicio) {
+                    throw new Error('Todos los campos marcados con * son obligatorios');
+                }
+
+                // Validar formato de email
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(formData.correo)) {
+                    throw new Error('El formato del correo electrónico no es válido');
+                }
+
+                // Validar DNI
+                if (!/^\d{8}$/.test(formData.dni)) {
+                    throw new Error('El DNI debe tener exactamente 8 dígitos');
+                }
+
+                console.log('Enviando datos al servidor...');
+
+                // Enviar datos
+                const response = await fetch('/admin/api/jefes-establecimiento', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                console.log('Respuesta del servidor:', response.status);
+
+                const data = await response.json();
+                console.log('Datos de respuesta:', data);
+
+                if (data.success) {
+                    console.log('Éxito, verificando contrasena_temporal:', data.contrasena_temporal);
+                    if (data.contrasena_temporal) {
+                        console.log('Mostrando modal de credenciales...');
+                        mostrarCredencialesUsuario(data.correo, data.contrasena_temporal);
+                    } else {
+                        console.log('No hay contrasena_temporal, mostrando alerta...');
+                        mostrarAlerta('success', data.message);
+
+                        // Redirigir después de 2 segundos
+                        setTimeout(() => {
+                            window.location.href = '{{ url_for("admin.gestionar_jefes_establecimiento") }}';
+                        }, 2000);
+                    }
+                } else {
+                    console.log('Error en respuesta:', data.message);
+                    throw new Error(data.message);
+                }
+
+            } catch (error) {
+                console.error('Error en el proceso:', error);
+                mostrarAlerta('error', error.message);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalText;
+            }
+        });
+        console.log('Event listener agregado correctamente');
+    } else {
+        console.error('Formulario no encontrado!');
+    }
+
+    // Validación en tiempo real del DNI
+    const dniInput = document.getElementById('dni');
+    if (dniInput) {
+        dniInput.addEventListener('input', function(e) {
+            // Solo permitir números
+            this.value = this.value.replace(/\D/g, '');
+
+            // Limitar a 8 caracteres
+            if (this.value.length > 8) {
+                this.value = this.value.slice(0, 8);
+            }
+        });
+    }
+
+    // Validación de fechas
+    const fechaInicio = document.getElementById('fecha_inicio');
+    const fechaFin = document.getElementById('fecha_fin');
+
+    if (fechaInicio) {
+        fechaInicio.addEventListener('change', function() {
+            if (fechaFin && fechaFin.value && this.value > fechaFin.value) {
+                fechaFin.value = '';
+                mostrarAlerta('error', 'La fecha de fin debe ser posterior a la fecha de inicio');
+            }
+        });
+    }
+
+    if (fechaFin) {
+        fechaFin.addEventListener('change', function() {
+            if (fechaInicio && fechaInicio.value && this.value < fechaInicio.value) {
+                this.value = '';
+                mostrarAlerta('error', 'La fecha de fin debe ser posterior a la fecha de inicio');
+            }
+        });
+    }
+
+    // Mostrar credenciales del usuario creado
+    function mostrarCredencialesUsuario(correo, contrasena) {
+        console.log('Creando modal de credenciales para:', correo, contrasena);
+
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full';
+        modal.style.zIndex = '9999'; // Asegurar que esté encima de todo
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.innerHTML = `
+            <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white dark:bg-slate-800">
+                <div class="mt-3">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                            <i class="fas fa-key mr-2 text-green-500"></i>
+                            Jefe de Establecimiento Creado Exitosamente
+                        </h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-check-circle text-green-400"></i>
+                                </div>
+                                <div class="ml-3 flex-1">
+                                    <h4 class="text-sm font-medium text-green-800 dark:text-green-200">
+                                        Credenciales Generadas
+                                    </h4>
+                                    <p class="text-sm text-green-700 dark:text-green-300 mt-1">
+                                        El jefe de establecimiento ha sido creado exitosamente. Comparta estas credenciales de forma segura.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Texto completo de credenciales -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-copy mr-1"></i>
+                                Credenciales para compartir
+                            </label>
+                            <div class="relative">
+                                <textarea id="credenciales-texto" readonly
+                                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-sm font-mono"
+                                          rows="4">${`Correo: ${correo}\nContraseña temporal: ${contrasena}`}</textarea>
+                                <button onclick="copiarTextoCompleto()"
+                                        class="absolute top-2 right-2 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                                        title="Copiar todo el texto">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Información adicional -->
+                        <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <h4 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                                        Importante
+                                    </h4>
+                                    <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                                        El jefe deberá cambiar esta contraseña en su primer inicio de sesión.
+                                        Asegúrese de compartir estas credenciales de forma segura.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end pt-4">
+                            <button onclick="this.closest('.fixed').remove(); setTimeout(() => window.location.href = '{{ url_for('admin.gestionar_jefes_establecimiento') }}', 1000);"
+                                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                                <i class="fas fa-check mr-2"></i>
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        console.log('Agregando modal al DOM...');
+        document.body.appendChild(modal);
+        console.log('Modal agregado al DOM');
+
+        // Asegurar que sea visible
+        modal.style.display = 'block';
+        modal.style.visibility = 'visible';
+
+        console.log('Modal debería ser visible ahora');
+    }
+
+    // Copiar al portapapeles
+    async function copiarAlPortapapeles(texto) {
+        try {
+            await navigator.clipboard.writeText(texto);
+            mostrarAlerta('success', 'Copiado al portapapapeles');
+        } catch (error) {
+            console.warn('Clipboard API no disponible, usando fallback...');
+            // Fallback para navegadores que no soportan clipboard API
+            const textArea = document.createElement('textarea');
+            textArea.value = texto;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-9999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                mostrarAlerta('success', 'Copiado al portapapeles');
+            } catch (fallbackError) {
+                console.error('Fallback copy failed:', fallbackError);
+                mostrarAlerta('error', 'No se pudo copiar al portapapeles');
+            }
+            document.body.removeChild(textArea);
+        }
+    }
+
+    // Copiar texto completo de credenciales
+    async function copiarTextoCompleto() {
+        const textarea = document.getElementById('credenciales-texto');
+        if (textarea) {
+            const texto = textarea.value;
+            await copiarAlPortapapeles(texto);
+        } else {
+            console.error('Textarea de credenciales no encontrada');
+        }
+    }
+
+    // Hacer las funciones globales para que puedan ser llamadas desde HTML
+    window.mostrarCredencialesUsuario = mostrarCredencialesUsuario;
+    window.copiarTextoCompleto = copiarTextoCompleto;
+    window.copiarAlPortapapeles = copiarAlPortapapeles;
+
+    console.log('JavaScript inicializado correctamente');
+});
+</script>
+
+{% endblock %}

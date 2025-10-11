@@ -1,0 +1,1281 @@
+{% extends "base.html" %} {% block title %}Detalle de Inspección{% endblock %}
+{% block head %}
+<style>
+/* Estilos de impresión optimizados para MINIMIZAR PAPEL - VERSIÓN ULTRA COMPACTA */
+@media print {
+    /* Configuración extrema de página para máximo ahorro */
+    @page {
+        margin: 0.3in 0.3in 0.3in 0.3in;
+        size: A4;
+    }
+
+    /* Ocultar TODOS los elementos no esenciales */
+    .no-print,
+    button,
+    .sticky,
+    nav[aria-label="Breadcrumb"],
+    .flex.items-center.justify-between .inline-flex.items-center.justify-center,
+    .bg-gradient-to-br,
+    .shadow-lg,
+    .hover\\:shadow-xl,
+    .transition-all,
+    .transform,
+    .hover\\:scale-105,
+    .backdrop-blur-xl,
+    .bg-white\\/80,
+    .dark\\:bg-gray-900\\/80 {
+        display: none !important;
+    }
+
+    /* Layout ULTRA compacto */
+    body {
+        font-size: 7px !important;
+        line-height: 1.1 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Header prácticamente invisible */
+    .min-h-screen {
+        min-height: auto !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Contenedor sin espacios */
+    .px-4.py-6.sm\\:px-6.lg\\:px-8 {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Cards sin bordes ni sombras */
+    .bg-white.dark\\:bg-gray-800,
+    .bg-gradient-to-br {
+        background: white !important;
+        box-shadow: none !important;
+        border: none !important;
+        margin: 0 !important;
+        padding: 2px !important;
+        border-radius: 0 !important;
+    }
+
+    /* Headers mínimos */
+    .px-6.py-4.border-b {
+        padding: 1px 2px !important;
+        margin: 0 !important;
+        border-bottom: 1px solid #ccc !important;
+    }
+
+    .text-lg.font-semibold {
+        font-size: 8px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Layout de 3 columnas para primera página */
+    .grid.grid-cols-1.lg\\:grid-cols-2 {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr 1fr !important;
+        gap: 1px !important;
+        page-break-inside: avoid !important;
+    }
+
+    .grid.grid-cols-1.lg\\:grid-cols-2 > div {
+        page-break-inside: avoid !important;
+    }
+
+    /* Información en columnas ultra compactas */
+    .space-y-4 > .flex.items-center {
+        margin: 0 !important;
+        padding: 1px !important;
+    }
+
+    /* Items de evaluación ULTRA compactos */
+    .space-y-4 > .bg-gradient-to-r {
+        margin: 0 !important;
+        padding: 1px !important;
+        page-break-inside: avoid !important;
+        border: 1px solid #eee !important;
+        background: white !important;
+    }
+
+    /* Layout horizontal forzado para items */
+    .flex.flex-col.sm\\:flex-row.sm\\:items-start.sm\\:justify-between {
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        margin: 0 !important;
+    }
+
+    .flex-1.min-w-0 {
+        flex: 1 !important;
+        margin: 0 2px !important;
+    }
+
+    /* Opciones de calificación mínimas */
+    .flex.flex-wrap.gap-2 {
+        gap: 0 !important;
+        margin: 0 !important;
+        flex-wrap: nowrap !important;
+        justify-content: flex-start !important;
+    }
+
+    .flex.items-center {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Observaciones mínimas */
+    .bg-yellow-50 {
+        padding: 1px !important;
+        margin: 1px 0 !important;
+        background: #fff !important;
+        border: 1px solid #ccc !important;
+    }
+
+    /* Firmas ultra compactas */
+    .grid.grid-cols-1.md\\:grid-cols-2.gap-6 {
+        gap: 1px !important;
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    .grid.grid-cols-1.md\\:grid-cols-2.gap-6 > div {
+        page-break-inside: avoid !important;
+    }
+
+    /* Evidencias en grid ultra denso */
+    .grid.grid-cols-2.sm\\:grid-cols-3.md\\:grid-cols-4 {
+        display: grid !important;
+        grid-template-columns: repeat(6, 1fr) !important;
+        gap: 0 !important;
+    }
+
+    .aspect-square {
+        aspect-ratio: 1 !important;
+        height: 25px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Texto ultra pequeño */
+    .text-sm { font-size: 6px !important; }
+    .text-xs { font-size: 5px !important; }
+    .text-2xl { font-size: 9px !important; }
+    .text-lg { font-size: 8px !important; }
+    .text-xl { font-size: 10px !important; }
+
+    /* Espaciado prácticamente eliminado */
+    .mb-1, .mb-2, .mb-3, .mb-4, .mb-6, .mb-8 { margin-bottom: 0 !important; }
+    .mt-0\\.5 { margin-top: 0 !important; }
+    .p-3, .p-4, .p-6 { padding: 1px !important; }
+    .px-6 { padding-left: 2px !important; padding-right: 2px !important; }
+    .py-4 { padding-top: 1px !important; padding-bottom: 1px !important; }
+
+    /* Evitar saltos de página */
+    .bg-gradient-to-r.from-purple-50,
+    .bg-gradient-to-r.from-gray-50 {
+        page-break-inside: avoid !important;
+    }
+
+    /* Título mínimo */
+    .text-xl.sm\\:text-2xl {
+        font-size: 9px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Información resumida en 3 columnas */
+    .grid.grid-cols-1.sm\\:grid-cols-3 {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr 1fr !important;
+        gap: 1px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .grid.grid-cols-1.sm\\:grid-cols-3 > div {
+        padding: 0 1px !important;
+        margin: 0 !important;
+    }
+
+    /* Barra de progreso mínima */
+    .w-full.bg-gray-200 {
+        height: 3px !important;
+        margin: 1px 0 !important;
+    }
+
+    /* Modal oculto */
+    #modalVistaPrevia {
+        display: none !important;
+    }
+
+    /* Información detallada en 2 columnas */
+    .grid.grid-cols-1.md\\:grid-cols-2 {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 1px !important;
+    }
+
+    /* Espaciado de contenedor principal */
+    .px-4.py-6.sm\\:px-6.lg\\:px-8.space-y-6 {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .space-y-6 > * + * {
+        margin-top: 1px !important;
+    }
+
+    /* Contenido principal compacto */
+    .print\\:space-y-2.print\\:px-2.print\\:py-1 {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Grid de información básica */
+    .grid.grid-cols-1.sm\\:grid-cols-2 {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 0 !important;
+    }
+
+    /* Horarios compactos */
+    .grid.grid-cols-1.sm\\:grid-cols-2.gap-4 {
+        gap: 0 !important;
+        grid-template-columns: 1fr 1fr !important;
+    }
+}
+
+/* Estilos adicionales para mejor legibilidad en impresión */
+@media print {
+    * {
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+
+    /* Asegurar que los colores se mantengan */
+    .text-green-600 { color: #059669 !important; }
+    .text-red-600 { color: #dc2626 !important; }
+    .text-yellow-600 { color: #d97706 !important; }
+    .text-blue-600 { color: #2563eb !important; }
+    .bg-green-500 { background-color: #10b981 !important; }
+    .bg-red-500 { background-color: #ef4444 !important; }
+    .bg-yellow-500 { background-color: #f59e0b !important; }
+}
+</style>
+
+<!-- Librería html2pdf para generar PDFs con nombre personalizado -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+{% endblock %} {% block content %}
+<!-- Header Mobile-First -->
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-slate-900 dark:to-gray-900">
+    <!-- Header con backdrop-blur -->
+    <div class="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 no-print">
+        <div class="px-4 py-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col space-y-4">
+                <!-- Breadcrumbs Mobile-First -->
+                <nav class="flex" aria-label="Breadcrumb">
+                    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                        <li class="inline-flex items-center">
+                            <a href="/"
+                                class="inline-flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                                <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+                                </svg>
+                                <span class="hidden sm:inline">Inicio</span>
+                            </a>
+                        </li>
+                        <li>
+                            <div class="flex items-center">
+                                <svg class="w-4 h-4 text-gray-400 mx-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                                </svg>
+                                <a href="/buscar"
+                                    class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                                    <span class="hidden sm:inline">Buscar Inspecciones</span>
+                                    <span class="sm:hidden">Buscar</span>
+                                </a>
+                            </div>
+                        </li>
+                        <li aria-current="page">
+                            <div class="flex items-center">
+                                <svg class="w-4 h-4 text-gray-400 mx-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span class="text-sm font-medium text-gray-500 dark:text-gray-400">#{{
+                                    inspeccion.id }}</span>
+                            </div>
+                        </li>
+                    </ol>
+                </nav>
+
+                <!-- Título principal y acciones -->
+                <div class="flex flex-col space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Inspección #{{ inspeccion.id }}</h1>
+                                <p class="text-sm text-gray-600 dark:text-gray-300">{{ inspeccion.establecimiento.nombre }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Estado de la inspección -->
+                        <div class="flex items-center space-x-2">
+                            {% if inspeccion.estado == 'completada' %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                Completada
+                            </span>
+                            {% elif inspeccion.estado == 'en_proceso' %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">
+                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                En Proceso
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+                                {{ inspeccion.estado|title }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Información resumida -->
+                    <div class="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                            <div class="flex items-center space-x-2">
+                                <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                                <span class="text-gray-600 dark:text-gray-300">Inspector:</span>
+                                <span class="font-medium text-gray-900 dark:text-white">{{ inspeccion.inspector.nombre }}</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <span class="text-gray-600 dark:text-gray-300">Fecha:</span>
+                                <span class="font-medium text-gray-900 dark:text-white">{{ inspeccion.fecha }}</span>
+                            </div>
+                            {% if inspeccion.encargado %}
+                            <div class="flex items-center space-x-2">
+                                <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                </svg>
+                                <span class="text-gray-600 dark:text-gray-300">Encargado:</span>
+                                <span class="font-medium text-gray-900 dark:text-white">{{ inspeccion.encargado.nombre }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Botones de acción -->
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between space-y-3 sm:space-y-0 sm:space-x-3">
+                        <div class="flex items-center space-x-3">
+                            <button onclick="window.print()"
+                                    class="inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-gray-500 to-slate-600 hover:from-gray-600 hover:to-slate-700 text-white text-sm font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                                </svg>
+                                Generar PDF
+                            </button>
+                            {% if user_role == 'Administrador' %}
+                            <button onclick="window.location.href='/inspecciones/{{ inspeccion.id }}/editar'"
+                                    class="inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                                Editar
+                            </button>
+                            {% endif %}
+                        </div>
+
+                        <button onclick="window.location.href='/buscar'"
+                                class="inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white text-sm font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                            </svg>
+                            Volver
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Layout de impresión ULTRA COMPACTO: 3 columnas en primera página -->
+    <div class="px-4 py-6 sm:px-6 lg:px-8 space-y-6 print:space-y-0 print:px-0 print:py-0">
+        <!-- PRIMERA PÁGINA: Resumen + Info General + Observaciones en 3 columnas -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 print:gap-1 print:grid-cols-3 print:page-break-after-avoid">
+            <!-- Columna 1: Resumen de Calificación -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden print:shadow-none print:border-none print:rounded-none print:bg-white print:p-1">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 print:px-1 print:py-0 print:border-b print:border-gray-300">
+                    <div class="flex items-center space-x-3 print:space-x-1">
+                        <div class="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center print:w-4 print:h-4 print:rounded">
+                            <svg class="w-5 h-5 text-white print:w-3 print:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white print:text-xs print:font-bold">RESUMEN</h3>
+                    </div>
+                </div>
+
+                <div class="p-6 print:p-1">
+                    <!-- Estadísticas ultra compactas en 2x2 grid -->
+                    <div class="grid grid-cols-2 gap-2 mb-3 print:gap-0 print:mb-1">
+                        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 text-center print:p-1 print:rounded print:bg-white print:border print:border-gray-300">
+                            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1 print:text-sm print:mb-0 print:font-bold">
+                                {{ (inspeccion.puntaje_total or 0) | sin_decimales }}
+                            </div>
+                            <div class="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide print:text-xs">
+                                Puntos
+                            </div>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 text-center print:p-1 print:rounded print:bg-white print:border print:border-gray-300">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white mb-1 print:text-sm print:mb-0 print:font-bold">
+                                {{ (inspeccion.puntaje_maximo_posible or 0) | sin_decimales }}
+                            </div>
+                            <div class="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide print:text-xs">
+                                Máximo
+                            </div>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 text-center print:p-1 print:rounded print:bg-white print:border print:border-gray-300">
+                            <div class="text-2xl font-bold {% if inspeccion.porcentaje_cumplimiento >= 90 %}text-green-600 dark:text-green-400{% elif inspeccion.porcentaje_cumplimiento >= 70 %}text-yellow-600 dark:text-yellow-400{% else %}text-red-600 dark:text-red-400{% endif %} mb-1 print:text-sm print:mb-0 print:font-bold">
+                                {{ (inspeccion.porcentaje_cumplimiento or 0) | sin_decimales }}%
+                            </div>
+                            <div class="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide print:text-xs">
+                                Cumplimiento
+                            </div>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-red-50 to-pink-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 text-center print:p-1 print:rounded print:bg-white print:border print:border-gray-300">
+                            <div class="text-2xl font-bold {% if (inspeccion.puntos_criticos_perdidos or 0) > 0 %}text-red-600 dark:text-red-400{% else %}text-green-600 dark:text-green-400{% endif %} mb-1 print:text-sm print:mb-0 print:font-bold">
+                                {{ (inspeccion.puntos_criticos_perdidos or 0) | sin_decimales }}
+                            </div>
+                            <div class="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide print:text-xs">
+                                Críticos
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Barra de progreso mínima -->
+                    <div class="bg-gray-100 dark:bg-gray-700 rounded-xl p-4 print:p-1 print:rounded print:bg-white print:border print:border-gray-300">
+                        <div class="flex items-center justify-between mb-2 print:mb-0 print:flex print:flex-col print:items-start">
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300 print:text-xs print:font-bold">PROGRESO</span>
+                            <span class="text-sm font-bold text-gray-900 dark:text-white print:text-xs print:font-bold">{{ (inspeccion.porcentaje_cumplimiento or 0) | sin_decimales }}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3 print:h-2">
+                            <div class="h-3 print:h-2 rounded-full transition-all duration-500 {% if inspeccion.porcentaje_cumplimiento >= 90 %}bg-green-500 dark:bg-green-600{% elif inspeccion.porcentaje_cumplimiento >= 70 %}bg-yellow-500 dark:bg-yellow-600{% else %}bg-red-500 dark:bg-red-600{% endif %}"
+                                 style="width: {{ inspeccion.porcentaje_cumplimiento or 0 }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna 2: Información General -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden print:shadow-none print:border-none print:rounded-none print:bg-white print:p-1">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 print:px-1 print:py-0 print:border-b print:border-gray-300">
+                    <div class="flex items-center space-x-3 print:space-x-1">
+                        <div class="w-8 h-8 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center print:w-4 print:h-4 print:rounded">
+                            <svg class="w-5 h-5 text-white print:w-3 print:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white print:text-xs print:font-bold">INFO GENERAL</h3>
+                    </div>
+                </div>
+
+                <div class="p-6 print:p-1">
+                    <!-- Información ultra compacta en lista vertical -->
+                    <div class="space-y-2 print:space-y-0">
+                        <div class="flex items-center justify-between p-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 rounded print:p-0 print:bg-white print:flex print:flex-col print:items-start print:border-b print:border-gray-200">
+                            <span class="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide print:text-xs print:font-bold">Establecimiento</span>
+                            <span class="text-sm font-medium text-gray-900 dark:text-white print:text-xs">{{ inspeccion.establecimiento.nombre }}</span>
+                        </div>
+
+                        <div class="flex items-center justify-between p-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-700 dark:to-gray-600 rounded print:p-0 print:bg-white print:flex print:flex-col print:items-start print:border-b print:border-gray-200">
+                            <span class="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide print:text-xs print:font-bold">Inspector</span>
+                            <span class="text-sm font-medium text-gray-900 dark:text-white print:text-xs">{{ inspeccion.inspector.nombre }}</span>
+                        </div>
+
+                        <div class="flex items-center justify-between p-2 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-700 dark:to-gray-600 rounded print:p-0 print:bg-white print:flex print:flex-col print:items-start print:border-b print:border-gray-200">
+                            <span class="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide print:text-xs print:font-bold">Fecha</span>
+                            <span class="text-sm font-medium text-gray-900 dark:text-white print:text-xs">{{ inspeccion.fecha }}</span>
+                        </div>
+
+                        {% if inspeccion.encargado %}
+                        <div class="flex items-center justify-between p-2 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-gray-700 dark:to-gray-600 rounded print:p-0 print:bg-white print:flex print:flex-col print:items-start print:border-b print:border-gray-200">
+                            <span class="text-xs font-medium text-purple-600 dark:text-purple-400 uppercase tracking-wide print:text-xs print:font-bold">Encargado</span>
+                            <span class="text-sm font-medium text-gray-900 dark:text-white print:text-xs">{{ inspeccion.encargado.nombre }}</span>
+                        </div>
+                        {% endif %}
+
+                        {% if inspeccion.hora_inicio %}
+                        <div class="flex items-center justify-between p-2 bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-gray-700 dark:to-gray-600 rounded print:p-0 print:bg-white print:flex print:flex-col print:items-start print:border-b print:border-gray-200">
+                            <span class="text-xs font-medium text-indigo-600 dark:text-indigo-400 uppercase tracking-wide print:text-xs print:font-bold">Inicio</span>
+                            <span class="text-sm font-medium text-gray-900 dark:text-white print:text-xs">{{ inspeccion.hora_inicio }}</span>
+                        </div>
+                        {% endif %}
+
+                        {% if inspeccion.hora_fin %}
+                        <div class="flex items-center justify-between p-2 bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-gray-700 dark:to-gray-600 rounded print:p-0 print:bg-white print:flex print:flex-col print:items-start">
+                            <span class="text-xs font-medium text-teal-600 dark:text-teal-400 uppercase tracking-wide print:text-xs print:font-bold">Fin</span>
+                            <span class="text-sm font-medium text-gray-900 dark:text-white print:text-xs">{{ inspeccion.hora_fin }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna 3: Observaciones (si existen) -->
+            {% if inspeccion.observaciones %}
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden print:shadow-none print:border-none print:rounded-none print:bg-white print:p-1">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 print:px-1 print:py-0 print:border-b print:border-gray-300">
+                    <div class="flex items-center space-x-3 print:space-x-1">
+                        <div class="w-8 h-8 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-lg flex items-center justify-center print:w-4 print:h-4 print:rounded">
+                            <svg class="w-5 h-5 text-white print:w-3 print:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white print:text-xs print:font-bold">OBSERVACIONES</h3>
+                </div>
+            </div>
+
+            <div class="p-6 print:p-1">
+                <div class="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 print:bg-white print:border print:border-gray-300 print:p-1 print:rounded">
+                    <p class="text-sm text-yellow-700 dark:text-yellow-300 leading-relaxed print:text-xs print:leading-tight">{{ inspeccion.observaciones }}</p>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <!-- Si no hay observaciones, mantener 2 columnas -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden print:shadow-none print:border-none print:rounded-none print:bg-white print:p-1 print:col-span-1">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 print:px-1 print:py-0 print:border-b print:border-gray-300">
+                <div class="flex items-center space-x-3 print:space-x-1">
+                    <div class="w-8 h-8 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-lg flex items-center justify-center print:w-4 print:h-4 print:rounded">
+                        <svg class="w-5 h-5 text-white print:w-3 print:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white print:text-xs print:font-bold">SIN OBSERVACIONES</h3>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>        <!-- Items de Evaluación ULTRA COMPACTOS - SEGUNDA PÁGINA -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden print:shadow-none print:border-none print:rounded-none print:bg-white">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 print:px-1 print:py-0 print:border-b print:border-gray-300">
+                <div class="flex items-center space-x-3 print:space-x-1">
+                    <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center print:w-4 print:h-4 print:rounded">
+                        <svg class="w-5 h-5 text-white print:w-3 print:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white print:text-xs print:font-bold">EVALUACIONES</h3>
+                </div>
+            </div>
+
+            <div class="p-6 print:p-1">
+                {% if inspeccion.categorias and inspeccion.categorias|length > 0 %}
+                {% for categoria in inspeccion.categorias %}
+                <!-- Header de categoría ultra compacto -->
+                <div class="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 mt-4 print:bg-gray-100 print:p-1 print:mb-1 print:rounded print:border print:border-gray-300">
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 print:text-xs print:mb-0 print:font-bold">{{ categoria.nombre }}</h4>
+                    <div class="flex items-center space-x-4 text-sm print:space-x-2 print:text-xs">
+                        <span class="text-gray-600 dark:text-gray-300 print:text-xs print:font-bold">
+                            {{ categoria.evaluaciones|length }} items
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Items ULTRA COMPACTOS en lista vertical mínima -->
+                <div class="space-y-1 print:space-y-0">
+                    {% for evaluacion_item in categoria.evaluaciones %}
+                    <!-- Item en UNA SOLA LÍNEA horizontal -->
+                    <div class="bg-white dark:bg-gray-700 rounded p-2 border border-gray-200 dark:border-gray-600 print:bg-white print:border print:border-gray-300 print:p-0 print:rounded-none print:flex print:items-center print:justify-between print:py-0.5">
+                        <!-- Información del item en línea horizontal -->
+                        <div class="flex items-center space-x-2 print:space-x-1 print:flex-1">
+                            <!-- Código -->
+                            <span class="text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900 px-1 py-0.5 rounded print:text-xs print:px-0.5 print:py-0 print:bg-white print:border print:border-purple-300 print:font-bold">
+                                {{ evaluacion_item.codigo }}
+                            </span>
+
+                            <!-- Riesgo -->
+                            {% if evaluacion_item.riesgo == 'Crítico' %}
+                            <span class="text-xs font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900 px-1 py-0.5 rounded print:text-xs print:px-0.5 print:py-0 print:bg-white print:border print:border-red-300 print:font-bold">
+                                CRÍT
+                            </span>
+                            {% elif evaluacion_item.riesgo == 'Mayor' %}
+                            <span class="text-xs font-bold text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900 px-1 py-0.5 rounded print:text-xs print:px-0.5 print:py-0 print:bg-white print:border print:border-yellow-300 print:font-bold">
+                                MAY
+                            </span>
+                            {% else %}
+                            <span class="text-xs font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900 px-1 py-0.5 rounded print:text-xs print:px-0.5 print:py-0 print:bg-white print:border print:border-green-300 print:font-bold">
+                                MIN
+                            </span>
+                            {% endif %}
+
+                            <!-- Descripción truncada con puntaje máximo al costado -->
+                            <span class="text-xs font-medium text-gray-900 dark:text-white print:text-xs print:flex-1 print:truncate">
+                                {{ evaluacion_item.descripcion }}
+                                <span class="text-xs text-gray-600 dark:text-gray-300 print:text-xs print:font-bold print:ml-1">
+                                    ({{ evaluacion_item.puntaje_maximo }})
+                                </span>
+                            </span>
+                        </div>
+
+                        <!-- Calificación y opciones en el extremo derecho -->
+                        <div class="flex items-center space-x-2 print:space-x-1">
+                            <!-- Estado de calificación -->
+                            {% if evaluacion_item.detalle %}
+                            <span class="text-xs font-bold text-green-600 dark:text-green-400 print:text-xs print:font-bold">
+                                {{ evaluacion_item.detalle.rating }}
+                            </span>
+                            {% else %}
+                            <span class="text-xs font-bold text-red-600 dark:text-red-400 print:text-xs print:font-bold">
+                                N/C
+                            </span>
+                            {% endif %}
+
+                            <!-- Opciones de calificación OCULTAS en impresión -->
+                            <div class="flex space-x-0.5 print:hidden">
+                                {% for rating in range(evaluacion_item.puntaje_minimo, evaluacion_item.puntaje_maximo + 1) %}
+                                <div class="flex items-center print:hidden">
+                                    <input type="radio" name="item_{{ evaluacion_item.id }}"
+                                           value="{{ rating }}"
+                                           {% if evaluacion_item.detalle and evaluacion_item.detalle.rating==rating %}checked{% endif %}
+                                           disabled
+                                           class="w-2 h-2 text-blue-600 dark:text-blue-400 appearance-none rounded-full border border-gray-400 checked:bg-blue-500 checked:border-blue-500 disabled:checked:bg-blue-300 disabled:checked:border-blue-300 disabled:cursor-not-allowed print:hidden">
+                                    <label class="ml-0.5 text-xs text-gray-700 dark:text-gray-300 print:hidden">{{ rating }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Observación del item (solo si existe) -->
+                    {% if evaluacion_item.detalle and evaluacion_item.detalle.observacion_item %}
+                    <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-1 print:bg-gray-50 print:border print:border-gray-300 print:p-0.5 print:rounded-none print:ml-4 print:border-l-2 print:border-l-yellow-400">
+                        <p class="text-xs text-yellow-700 dark:text-yellow-300 leading-tight print:text-xs print:font-bold">{{ evaluacion_item.detalle.observacion_item[:100] }}{% if evaluacion_item.detalle.observacion_item|length > 100 %}...{% endif %}</p>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center py-4 print:py-1">
+                    <p class="text-gray-600 dark:text-gray-300 font-medium text-sm print:text-xs print:font-bold">SIN EVALUACIONES</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Firmas ULTRA COMPACTAS (si existen) -->
+        {% if inspeccion.estado == 'completada' %}
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden print:shadow-none print:border-none print:rounded-none print:bg-white">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 print:px-1 print:py-0 print:border-b print:border-gray-300">
+                <div class="flex items-center space-x-3 print:space-x-1">
+                    <div class="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center print:w-4 print:h-4 print:rounded">
+                        <svg class="w-5 h-5 text-white print:w-3 print:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white print:text-xs print:font-bold">FIRMAS</h3>
+                </div>
+            </div>
+
+            <div class="p-6 print:p-1">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 print:gap-1 print:grid-cols-2">
+                    {% if inspeccion.firma_encargado %}
+                    <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 print:p-1 print:rounded print:bg-white print:border print:border-gray-300">
+                        <div class="flex items-center space-x-3 mb-3 print:space-x-1 print:mb-0">
+                            <svg class="w-5 h-5 text-green-600 dark:text-green-400 print:w-3 print:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                            <h4 class="text-sm font-semibold text-green-800 dark:text-green-200 print:text-xs print:font-bold">ENCARGADO</h4>
+                        </div>
+                        <div class="border border-green-200 dark:border-green-800 rounded-lg p-3 bg-white dark:bg-gray-800 mb-3 print:p-1 print:rounded print:border print:border-gray-300 print:mb-0">
+                            <img src="{{ inspeccion.firma_encargado }}" alt="Firma del Encargado"
+                                 class="max-w-full h-20 object-contain cursor-pointer hover:opacity-80 transition-opacity print:h-12 print:object-contain"
+                                 onclick="abrirVistaPrevia('{{ inspeccion.firma_encargado }}')" />
+                        </div>
+                        {% if inspeccion.fecha_firma_encargado %}
+                        <p class="text-xs text-gray-600 dark:text-gray-300 print:text-xs print:font-bold">
+                            {{ inspeccion.fecha_firma_encargado.strftime('%d/%m/%Y %H:%M') }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if inspeccion.firma_inspector %}
+                    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 print:p-1 print:rounded print:bg-white print:border print:border-gray-300">
+                        <div class="flex items-center space-x-3 mb-3 print:space-x-1 print:mb-0">
+                            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 print:w-3 print:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                            <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-200 print:text-xs print:font-bold">INSPECTOR</h4>
+                        </div>
+                        <div class="border border-blue-200 dark:border-blue-800 rounded-lg p-3 bg-white dark:bg-gray-800 mb-3 print:p-1 print:rounded print:border print:border-gray-300 print:mb-0">
+                            <img src="{{ inspeccion.firma_inspector }}" alt="Firma del Inspector"
+                                 class="max-w-full h-20 object-contain cursor-pointer hover:opacity-80 transition-opacity print:h-12 print:object-contain"
+                                 onclick="abrirVistaPrevia('{{ inspeccion.firma_inspector }}')" />
+                        </div>
+                        {% if inspeccion.fecha_firma_inspector %}
+                        <p class="text-xs text-gray-600 dark:text-gray-300 print:text-xs print:font-bold">
+                            {{ inspeccion.fecha_firma_inspector.strftime('%d/%m/%Y %H:%M') }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Evidencias Fotográficas ULTRA COMPACTAS -->
+        {% if inspeccion.evidencias and inspeccion.evidencias|length > 0 %}
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden print:shadow-none print:border-none print:rounded-none print:bg-white">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 print:px-1 print:py-0 print:border-b print:border-gray-300">
+                <div class="flex items-center space-x-3 print:space-x-1">
+                    <div class="w-8 h-8 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg flex items-center justify-center print:w-4 print:h-4 print:rounded">
+                        <svg class="w-5 h-5 text-white print:w-3 print:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white print:text-xs print:font-bold">EVIDENCIAS ({{ inspeccion.evidencias|length }})</h3>
+                </div>
+            </div>
+
+            <div class="p-6 print:p-1">
+                <!-- Grid ULTRA DENSO: 8 columnas para máxima compresión -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 print:grid-cols-8 print:gap-0.5">
+                    {% for evidencia in inspeccion.evidencias %}
+                    <div class="group bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-3 border border-gray-200 dark:border-gray-600 hover:shadow-lg transition-all duration-200 cursor-pointer print:bg-white print:border print:border-gray-300 print:p-0.5 print:rounded print:shadow-none print:cursor-default"
+                         onclick="abrirVistaPrevia('{{ evidencia.url_archivo }}')">
+                        <!-- Imagen ultra pequeña -->
+                        <div class="aspect-square rounded-lg overflow-hidden mb-2 print:aspect-square print:rounded print:mb-0">
+                            <img src="{{ evidencia.url_archivo }}" alt="Evidencia"
+                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200 print:w-full print:h-full print:object-cover" />
+                        </div>
+                        <!-- Descripción mínima -->
+                        {% if evidencia.descripcion %}
+                        <p class="text-xs text-gray-600 dark:text-gray-300 line-clamp-2 print:text-xs print:line-clamp-1 print:font-bold print:text-center">
+                            {{ evidencia.descripcion[:20] }}{% if evidencia.descripcion|length > 20 %}...{% endif %}
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de Generación de PDF -->
+<div id="modalPDF" class="fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-sm shadow-lg rounded-md bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+        <!-- Header del Modal -->
+        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                <svg class="w-6 h-6 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Generar PDF
+            </h3>
+            <button onclick="cerrarModalPDF()" class="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Contenido del Modal -->
+        <div class="p-4">
+            <!-- Información de la Inspección -->
+            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-4">
+                <div class="text-sm text-gray-600 dark:text-gray-300 mb-1">Establecimiento:</div>
+                <div class="font-medium text-gray-900 dark:text-white mb-2">{{ inspeccion.establecimiento.nombre }}</div>
+                <div class="text-sm text-gray-600 dark:text-gray-300 mb-1">Fecha de Inspección:</div>
+                <div class="font-medium text-gray-900 dark:text-white mb-2">{{ inspeccion.fecha }}</div>
+                <div class="text-sm text-gray-600 dark:text-gray-300 mb-1">Archivo:</div>
+                <div class="font-mono text-sm bg-white dark:bg-gray-600 px-2 py-1 rounded border text-blue-600 dark:text-blue-400 border-gray-300 dark:border-gray-500">
+                    {{ inspeccion.establecimiento.nombre | replace('[^a-zA-Z0-9\s]', '') | trim }}_{{ inspeccion.fecha }}.pdf
+                </div>
+            </div>
+
+            <!-- Estado de Generación -->
+            <div id="estadoGeneracion" class="hidden bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <div class="text-sm text-blue-800 dark:text-blue-200">
+                        <div class="font-medium">Generando PDF...</div>
+                        <div class="text-xs">Esto puede tomar unos segundos</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información Adicional -->
+            <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 mb-4">
+                <div class="flex items-start">
+                    <svg class="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div class="text-sm text-green-800 dark:text-green-200">
+                        <div class="font-medium mb-1"><i class="fas fa-check text-green-600"></i> Listo para descargar</div>
+                        <div class="text-xs">
+                            El PDF se descargará automáticamente con el nombre personalizado
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer del Modal -->
+        <div class="flex items-center justify-end p-4 border-t border-gray-200 dark:border-gray-700 space-x-3">
+            <button onclick="cerrarModalPDF()" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors">
+                Cancelar
+            </button>
+            <button onclick="generarPDFDirecto()" id="btnGenerarPDF" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Generar PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Vista Previa de Imágenes -->
+<div id="modalVistaPrevia" class="fixed inset-0 bg-black bg-opacity-75 hidden z-50 flex items-center justify-center p-4">
+    <div class="relative max-w-4xl max-h-full">
+        <button onclick="cerrarVistaPrevia()"
+                class="absolute top-4 right-4 z-10 w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-200">
+            <svg class="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+        <img id="imagenVistaPrevia" src="" alt="Vista previa" class="max-w-full max-h-full object-contain rounded-lg" />
+    </div>
+</div>
+
+<script>
+const HTML2PDF_CDN_URL = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+let html2pdfLoaderPromise = null;
+let html2pdfFallbackAdvertido = false;
+let html2pdfCachedFn = null;
+const COLOR_CACHE_OKLCH = new Map();
+const nativeGetComputedStyleRoot = window.getComputedStyle.bind(window);
+
+function convertirColorOklch(valor) {
+    if (!valor || typeof valor !== 'string' || !valor.includes('oklch(')) {
+        return valor;
+    }
+
+    if (COLOR_CACHE_OKLCH.has(valor)) {
+        return COLOR_CACHE_OKLCH.get(valor);
+    }
+
+    const temp = document.createElement('span');
+    temp.style.color = valor;
+    document.body.appendChild(temp);
+    const computado = nativeGetComputedStyleRoot(temp).color;
+    temp.remove();
+
+    const fallback = computado && computado !== valor ? computado : '#000000';
+    COLOR_CACHE_OKLCH.set(valor, fallback);
+    return fallback;
+}
+
+function proxificarEstilo(estilo) {
+    if (!estilo) return estilo;
+
+    return new Proxy(estilo, {
+        get(target, prop, receiver) {
+            if (prop === 'getPropertyValue') {
+                return function(nombre) {
+                    const valor = target.getPropertyValue.call(target, nombre);
+                    return convertirColorOklch(valor);
+                };
+            }
+
+            // Usar el objeto original como receiver para evitar "Illegal invocation"
+            let valor;
+            try {
+                valor = Reflect.get(target, prop, target);
+            } catch (e) {
+                // Fallback seguro: acceder directamente
+                valor = target[prop];
+            }
+
+            if (typeof valor === 'string') {
+                return convertirColorOklch(valor);
+            }
+
+            if (typeof valor === 'function') {
+                try {
+                    return valor.bind(target);
+                } catch (e) {
+                    // Si no es posible bindear, devolver una versión segura
+                    return function(...args) { return Function.prototype.apply.call(valor, target, args); };
+                }
+            }
+
+            return valor;
+        }
+    });
+}
+
+function parchearVentanaParaColores(targetWindow) {
+    if (!targetWindow || typeof targetWindow.getComputedStyle !== 'function') {
+        return () => {};
+    }
+
+    const originalGetComputedStyle = targetWindow.getComputedStyle.bind(targetWindow);
+    const patched = function(element, pseudo) {
+        const estilo = originalGetComputedStyle(element, pseudo);
+        return proxificarEstilo(estilo);
+    };
+
+    targetWindow.getComputedStyle = patched;
+
+    return () => {
+        targetWindow.getComputedStyle = originalGetComputedStyle;
+    };
+}
+
+function crearHtml2PdfFallback() {
+    return function () {
+        const pipeline = {
+            set() { return pipeline; },
+            from() { return pipeline; },
+            save() {
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        window.print();
+                        resolve();
+                    }, 200);
+                });
+            }
+        };
+        return pipeline;
+    };
+}
+
+function obtenerHtml2PdfFn() {
+    if (html2pdfCachedFn) {
+        return html2pdfCachedFn;
+    }
+
+    const candidatos = [
+        window.html2pdf,
+        window.html2pdfModule,
+        window.html2pdf?.default,
+        window.html2pdfModule?.default
+    ];
+
+    const fn = candidatos.find(c => typeof c === 'function') || null;
+    if (fn) {
+        html2pdfCachedFn = fn;
+    }
+    return fn;
+}
+
+async function ensureHtml2PdfDisponible() {
+    if (obtenerHtml2PdfFn()) {
+        return true;
+    }
+
+    if (!html2pdfLoaderPromise) {
+        html2pdfLoaderPromise = new Promise((resolve) => {
+            let scriptExistente = document.querySelector('script[src*="html2pdf.bundle"]');
+
+            if (scriptExistente) {
+                if (scriptExistente.dataset.loaded === 'true' || scriptExistente.readyState === 'complete') {
+                    resolve(!!obtenerHtml2PdfFn());
+                    return;
+                }
+                scriptExistente.addEventListener('load', () => resolve(true), { once: true });
+                scriptExistente.addEventListener('error', () => resolve(false), { once: true });
+                return;
+            }
+
+            scriptExistente = document.createElement('script');
+            scriptExistente.src = HTML2PDF_CDN_URL;
+            scriptExistente.async = true;
+            scriptExistente.defer = true;
+            scriptExistente.dataset.loader = 'html2pdf';
+            scriptExistente.onload = () => {
+                scriptExistente.dataset.loaded = 'true';
+                resolve(true);
+            };
+            scriptExistente.onerror = () => resolve(false);
+            (document.head || document.body).appendChild(scriptExistente);
+        });
+    }
+
+    const cargado = await html2pdfLoaderPromise;
+
+    if (cargado && obtenerHtml2PdfFn()) {
+        return true;
+    }
+
+    if (!obtenerHtml2PdfFn()) {
+        if (!html2pdfFallbackAdvertido) {
+            html2pdfFallbackAdvertido = true;
+            alert('No se pudo cargar la librería de PDF. Se usará la impresión del navegador como alternativa.');
+        }
+        window.html2pdf = crearHtml2PdfFallback();
+        html2pdfCachedFn = window.html2pdf;
+        return false;
+    }
+
+    return true;
+}
+
+// Función para detectar si estamos en un dispositivo móvil
+function esDispositivoMovil() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (window.innerWidth <= 768 && window.innerHeight <= 1024);
+}
+
+// Función para cerrar el modal de PDF
+function cerrarModalPDF() {
+    document.getElementById('modalPDF').classList.add('hidden');
+}
+
+// Función para generar PDF directo (único método)
+async function generarPDFDirecto() {
+
+    // Mostrar estado de generación
+    document.getElementById('estadoGeneracion').classList.remove('hidden');
+
+    // Deshabilitar botón
+    const btnGenerar = document.getElementById('btnGenerarPDF');
+    btnGenerar.disabled = true;
+    btnGenerar.innerHTML = '<svg class="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>Generando...';
+
+    try {
+        // Obtener datos de la inspección
+        const establecimientoNombre = "{{ inspeccion.establecimiento.nombre }}".replace(/[^a-zA-Z0-9\s]/g, '').trim();
+        const fechaInspeccion = "{{ inspeccion.fecha }}";
+        const nombreArchivo = `${establecimientoNombre}_${fechaInspeccion}.pdf`;
+
+        );
+
+        // Detectar dispositivo y usar método apropiado
+        if (esDispositivoMovil()) {
+            await generarPDFMovilDirecto(nombreArchivo);
+        } else {
+            await generarPDFDesktopDirecto(nombreArchivo);
+        }
+
+    } catch (error) {
+        alert('Error al generar el PDF. Intente nuevamente.');
+
+        // Restaurar botón
+        btnGenerar.disabled = false;
+        btnGenerar.innerHTML = '<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>Generar PDF';
+
+        // Ocultar estado de generación
+        document.getElementById('estadoGeneracion').classList.add('hidden');
+    }
+}
+
+// Función para móviles - descarga directa
+function generarPDFMovilDirecto(nombreArchivo) {
+    try {
+        // Cambiar el título de la página temporalmente para que aparezca en el PDF
+        const tituloOriginal = document.title;
+        document.title = nombreArchivo.replace('.pdf', '');
+
+        // Ocultar elementos que no queremos en el PDF
+        const elementosOcultar = document.querySelectorAll('button, .no-print, nav[aria-label="Breadcrumb"]');
+        elementosOcultar.forEach(elemento => {
+            elemento.style.display = 'none';
+        });
+
+        // Cerrar modal antes de imprimir
+        cerrarModalPDF();
+
+        // Usar impresión nativa (esto descarga directamente en móviles)
+        setTimeout(() => {
+            window.print();
+
+            // Restaurar título y elementos después de un tiempo
+            setTimeout(() => {
+                document.title = tituloOriginal;
+                elementosOcultar.forEach(elemento => {
+                    elemento.style.display = '';
+                });
+
+                // Restaurar botón
+                const btnGenerar = document.getElementById('btnGenerarPDF');
+                btnGenerar.disabled = false;
+                btnGenerar.innerHTML = '<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>Generar PDF';
+
+                // Ocultar estado de generación
+                document.getElementById('estadoGeneracion').classList.add('hidden');
+            }, 2000);
+        }, 500);
+
+    } catch (error) {
+        alert('Error al generar PDF en dispositivo móvil. Intente desde un navegador de escritorio.');
+        cerrarModalPDF();
+
+        // Restaurar botón
+        const btnGenerar = document.getElementById('btnGenerarPDF');
+        btnGenerar.disabled = false;
+        btnGenerar.innerHTML = '<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>Generar PDF';
+
+        // Ocultar estado de generación
+        document.getElementById('estadoGeneracion').classList.add('hidden');
+    }
+}
+
+// Función para desktop - descarga directa con html2pdf
+async function generarPDFDesktopDirecto(nombreArchivo) {
+    const disponible = await ensureHtml2PdfDisponible();
+    let restaurarColoresVentanaPrincipal = () => {};
+    let restaurarColoresVentanaClonada = () => {};
+
+    // Configurar opciones de html2pdf
+    const opciones = {
+        margin: [0.3, 0.3, 0.3, 0.3], // Márgenes en pulgadas
+        filename: nombreArchivo,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#ffffff',
+            width: 794, // A4 width in pixels at 96 DPI
+            height: 1123, // A4 height in pixels at 96 DPI
+            onclone: (clonedDoc) => {
+                restaurarColoresVentanaClonada = parchearVentanaParaColores(clonedDoc?.defaultView || window);
+            }
+        },
+        jsPDF: {
+            unit: 'in',
+            format: 'a4',
+            orientation: 'portrait',
+            compress: true
+        }
+    };
+
+    // Seleccionar el elemento a convertir (todo el contenido principal)
+    const elemento = document.querySelector('.min-h-screen');
+
+    // Ocultar elementos que no queremos en el PDF
+    const elementosOcultar = document.querySelectorAll('button, .no-print, nav[aria-label="Breadcrumb"]');
+    elementosOcultar.forEach(elemento => {
+        elemento.style.display = 'none';
+    });
+
+    restaurarColoresVentanaPrincipal = parchearVentanaParaColores(window);
+
+    const html2pdfFn = obtenerHtml2PdfFn();
+    if (!html2pdfFn) {
+        cerrarModalPDF();
+        setTimeout(() => window.print(), 100);
+        elementosOcultar.forEach(elemento => elemento.style.display = '');
+        document.getElementById('estadoGeneracion').classList.add('hidden');
+        const btnGenerar = document.getElementById('btnGenerarPDF');
+        btnGenerar.disabled = false;
+        btnGenerar.innerHTML = '<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>Generar PDF';
+        restaurarColoresVentanaPrincipal();
+        return false;
+    }
+
+    // Generar el PDF
+    return html2pdfFn()
+        .set(opciones)
+        .from(elemento)
+        .save()
+        .then(() => {
+
+            // Cerrar modal
+            cerrarModalPDF();
+
+            // Restaurar elementos ocultos
+            elementosOcultar.forEach(elemento => {
+                elemento.style.display = '';
+            });
+
+            // Restaurar botón
+            const btnGenerar = document.getElementById('btnGenerarPDF');
+            btnGenerar.disabled = false;
+            btnGenerar.innerHTML = '<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>Generar PDF';
+
+            // Ocultar estado de generación
+            document.getElementById('estadoGeneracion').classList.add('hidden');
+            return disponible;
+        })
+        .catch((error) => {
+
+            // Restaurar elementos en caso de error
+            elementosOcultar.forEach(elemento => {
+                elemento.style.display = '';
+            });
+
+            // Fallback a impresión normal
+            alert('Error al generar PDF. Usando impresión normal...');
+            cerrarModalPDF();
+            setTimeout(() => window.print(), 500);
+
+            // Restaurar botón
+            const btnGenerar = document.getElementById('btnGenerarPDF');
+            btnGenerar.disabled = false;
+            btnGenerar.innerHTML = '<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>Generar PDF';
+
+            // Ocultar estado de generación
+            document.getElementById('estadoGeneracion').classList.add('hidden');
+            return false;
+        })
+        .finally(() => {
+            try {
+                restaurarColoresVentanaClonada();
+            } catch (_) {}
+            try {
+                restaurarColoresVentanaPrincipal();
+            } catch (_) {}
+        });
+}
+
+// Función para abrir vista previa de imágenes
+function abrirVistaPrevia(url) {
+    document.getElementById('imagenVistaPrevia').src = url;
+    document.getElementById('modalVistaPrevia').classList.remove('hidden');
+}
+
+// Función para cerrar vista previa
+function cerrarVistaPrevia() {
+    document.getElementById('modalVistaPrevia').classList.add('hidden');
+    document.getElementById('imagenVistaPrevia').src = '';
+}
+
+// Cerrar modal con Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        cerrarVistaPrevia();
+        cerrarModalPDF();
+    }
+});
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/detalle-inspeccion.js') }}"></script>
+{% endblock %}
