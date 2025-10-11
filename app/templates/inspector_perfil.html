@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block title %}Mi Firma - Inspector - Castillo de Chancay{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-card {
+        transition: all 0.3s ease;
+    }
+    .profile-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Encabezado -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6 fade-in">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                        Mi Perfil - Inspector
+                    </h1>
+                    <p class="text-gray-600 dark:text-gray-400">
+                        Gestiona tu firma digital
+                    </p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Usuario</p>
+                    <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ current_user.nombre }} {{ current_user.apellido }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta de Firma -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 fade-in profile-card">
+            <div class="flex items-center mb-6">
+                <svg class="w-8 h-8 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                </svg>
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+                    Mi Firma Digital
+                </h2>
+            </div>
+
+            <!-- Firma Actual -->
+            <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Firma Actual</h3>
+                <div id="firma-actual-container" class="min-h-[150px] flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                    {% if usuario.ruta_firma %}
+                    <img src="/static/{{ usuario.ruta_firma }}" 
+                         alt="Firma actual" 
+                         class="max-h-[200px] object-contain"
+                         onerror="this.parentElement.innerHTML='<p class=\'text-red-500\'>Error al cargar la firma</p>'">
+                    {% else %}
+                    <p class="text-gray-500 dark:text-gray-400">No tiene firma registrada</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Formulario para Subir Nueva Firma -->
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    {% if usuario.ruta_firma %}Actualizar Firma{% else %}Subir Firma{% endif %}
+                </h3>
+                
+                <form id="formSubirFirma" enctype="multipart/form-data" class="space-y-4">
+                    <!-- Input File -->
+                    <div>
+                        <label for="inputFirma" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Seleccionar Imagen de Firma
+                        </label>
+                        <input 
+                            type="file" 
+                            id="inputFirma" 
+                            name="firma" 
+                            accept="image/png,image/jpeg,image/jpg" 
+                            class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Formatos permitidos: PNG, JPG, JPEG. Tamaño máximo: 2MB
+                        </p>
+                    </div>
+
+                    <!-- Preview -->
+                    <div id="preview-container" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Vista Previa
+                        </label>
+                        <div class="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800 flex items-center justify-center min-h-[150px]">
+                            <img id="preview-imagen" src="" alt="Vista previa" class="max-h-[200px] object-contain">
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="flex gap-3 justify-end pt-4">
+                        <button 
+                            type="button" 
+                            onclick="window.location.href='/'" 
+                            class="px-6 py-2.5 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200">
+                            Cancelar
+                        </button>
+                        <button 
+                            type="button" 
+                            id="btnGuardar"
+                            onclick="guardarFirma()"
+                            class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Guardar Firma
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Información Adicional -->
+        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mt-6 fade-in">
+            <div class="flex">
+                <svg class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div>
+                    <p class="text-sm text-gray-700 dark:text-gray-300">
+                        <strong>Importante:</strong> Esta firma se usara automaticamente en todas sus inspecciones. 
+                        Asegurese de que la imagen sea clara y legible.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contenedor para notificaciones -->
+<div id="notification-container" class="fixed top-4 right-4 z-50"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Preview de la imagen al seleccionar
+    document.getElementById('inputFirma').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            // Validar tamaño (2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                mostrarNotificacion('El archivo es demasiado grande. Tamaño máximo: 2MB', 'error');
+                this.value = '';
+                return;
+            }
+
+            // Validar tipo
+            if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+                mostrarNotificacion('Formato no válido. Use PNG, JPG o JPEG', 'error');
+                this.value = '';
+                return;
+            }
+
+            // Mostrar preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('preview-imagen').src = e.target.result;
+                document.getElementById('preview-container').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+});
+
+// Función para guardar firma
+async function guardarFirma() {
+
+    const fileInput = document.getElementById('inputFirma');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        mostrarNotificacion('Por favor, seleccione una imagen', 'error');
+        return;
+    }
+
+    const btnGuardar = document.getElementById('btnGuardar');
+    const textoOriginal = btnGuardar.innerHTML;
+
+    try {
+        // Deshabilitar botón
+        btnGuardar.disabled = true;
+        btnGuardar.innerHTML = '<svg class="animate-spin h-5 w-5 mr-2 inline" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Guardando...';
+
+        // Crear FormData
+        const formData = new FormData();
+        formData.append('firma', file);
+
+        // Enviar petición
+        const response = await fetch('/inspector/guardar-firma', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarNotificacion('Firma guardada exitosamente', 'success');
+            
+            // Actualizar vista de firma actual
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            mostrarNotificacion(data.message || 'Error al guardar la firma', 'error');
+        }
+
+    } catch (error) {
+        mostrarNotificacion('Error al guardar la firma', 'error');
+    } finally {
+        // Rehabilitar botón
+        btnGuardar.disabled = false;
+        btnGuardar.innerHTML = textoOriginal;
+    }
+}
+
+/**
+ * Mostrar notificación temporal
+ */
+function mostrarNotificacion(mensaje, tipo = 'info') {
+    const container = document.getElementById('notification-container');
+    
+    const colores = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        info: 'bg-blue-500',
+        warning: 'bg-yellow-500'
+    };
+
+    const iconos = {
+        success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>',
+        error: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>',
+        info: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>',
+        warning: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>'
+    };
+
+    const notificacion = document.createElement('div');
+    notificacion.className = `${colores[tipo] || colores.info} text-white px-6 py-4 rounded-lg shadow-lg mb-4 flex items-center animate-fade-in`;
+    notificacion.innerHTML = `
+        <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            ${iconos[tipo] || iconos.info}
+        </svg>
+        <span>${mensaje}</span>
+    `;
+
+    container.appendChild(notificacion);
+
+    // Auto-eliminar después de 4 segundos
+    setTimeout(() => {
+        notificacion.style.opacity = '0';
+        notificacion.style.transform = 'translateX(100%)';
+        notificacion.style.transition = 'all 0.3s ease';
+        setTimeout(() => notificacion.remove(), 300);
+    }, 4000);
+}
+</script>
+
+<style>
+    @keyframes fade-in {
+        from {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    .animate-fade-in {
+        animation: fade-in 0.3s ease;
+    }
+</style>
+{% endblock %}

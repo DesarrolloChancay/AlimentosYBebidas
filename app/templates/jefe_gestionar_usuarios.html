@@ -1,0 +1,821 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Encargados - Jefe de Establecimiento{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Encabezado -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+                        Gestión de Encargados
+                    </h1>
+                    <p class="text-lg text-gray-600 dark:text-gray-300">
+                        <i class="fas fa-user-tie mr-2 text-green-500"></i>
+                        Panel de Jefe de Establecimiento
+                    </p>
+                </div>
+                <div class="flex space-x-3">
+                    <button onclick="abrirModalCrearUsuario()"
+                            class="inline-flex items-center px-6 py-3 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 transform hover:scale-105">
+                        <i class="fas fa-user-plus mr-2"></i>
+                        Crear Encargado
+                    </button>
+                    <a href="/"
+                       class="inline-flex items-center px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm text-base font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Volver
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-user-tie text-green-600 dark:text-green-400 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Encargados Totales</h3>
+                        <p class="text-2xl font-bold text-green-600 dark:text-green-400" id="total-encargados">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-user-check text-blue-600 dark:text-blue-400 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Activos</h3>
+                        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="total-activos">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-building text-purple-600 dark:text-purple-400 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Mi Establecimiento</h3>
+                        <p class="text-2xl font-bold text-purple-600 dark:text-purple-400" id="mi-establecimiento">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros y Búsqueda -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Buscar por nombre/correo -->
+                <div>
+                    <label for="busqueda" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-search mr-1"></i>
+                        Buscar
+                    </label>
+                    <input type="text"
+                           id="busqueda"
+                           placeholder="Nombre, apellido o correo..."
+                           class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+                </div>
+
+                <!-- Filtrar por estado -->
+                <div>
+                    <label for="filtro-estado" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-toggle-on mr-1"></i>
+                        Estado
+                    </label>
+                    <select id="filtro-estado"
+                            class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+                        <option value="">Todos</option>
+                        <option value="true">Activos</option>
+                        <option value="false">Inactivos</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex justify-end mt-4">
+                <button onclick="aplicarFiltros()"
+                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                    <i class="fas fa-filter mr-2"></i>
+                    Aplicar Filtros
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabla de Encargados -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                    <i class="fas fa-user-tie mr-2 text-green-500"></i>
+                    Encargados de Mi Establecimiento
+                </h2>
+            </div>
+
+            <div id="encargados-container" class="divide-y divide-gray-200 dark:divide-gray-700">
+                <!-- Los encargados se cargarán aquí vía JavaScript -->
+                <div class="px-6 py-12 text-center">
+                    <div class="flex flex-col items-center">
+                        <i class="fas fa-spinner fa-spin text-gray-400 text-4xl mb-4"></i>
+                        <p class="text-gray-500 dark:text-gray-400">Cargando encargados...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Crear Encargado -->
+<div id="modal-crear-encargado" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white dark:bg-slate-800">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                    <i class="fas fa-user-plus mr-2 text-green-500"></i>
+                    Crear Encargado
+                </h3>
+                <button onclick="cerrarModalCrearUsuario()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="form-crear-encargado" class="space-y-4">
+                <!-- Nombre -->
+                <div>
+                    <label for="nombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-user mr-1"></i>
+                        Nombre *
+                    </label>
+                    <input type="text"
+                           id="nombre"
+                           name="nombre"
+                           required
+                           class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                           placeholder="Ingrese el nombre">
+                </div>
+
+                <!-- Apellido -->
+                <div>
+                    <label for="apellido" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-user mr-1"></i>
+                        Apellido *
+                    </label>
+                    <input type="text"
+                           id="apellido"
+                           name="apellido"
+                           required
+                           class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                           placeholder="Ingrese el apellido">
+                </div>
+
+                <!-- DNI -->
+                <div>
+                    <label for="dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-id-card mr-1"></i>
+                        DNI *
+                    </label>
+                    <input type="text"
+                           id="dni"
+                           name="dni"
+                           required
+                           maxlength="8"
+                           pattern="[0-9]{8}"
+                           class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                           placeholder="12345678">
+                </div>
+
+                <!-- Correo -->
+                <div>
+                    <label for="correo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-envelope mr-1"></i>
+                        Correo Electrónico *
+                    </label>
+                    <input type="email"
+                           id="correo"
+                           name="correo"
+                           required
+                           class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                           placeholder="encargado@ejemplo.com">
+                </div>
+
+                <!-- Teléfono -->
+                <div>
+                    <label for="telefono" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-phone mr-1"></i>
+                        Teléfono
+                    </label>
+                    <input type="tel"
+                           id="telefono"
+                           name="telefono"
+                           class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                           placeholder="+51 999 999 999">
+                </div>
+
+                <!-- Información de contraseña -->
+                <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-info-circle text-green-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h4 class="text-sm font-medium text-green-800 dark:text-green-200">
+                                Contraseña Automática
+                            </h4>
+                            <p class="text-sm text-green-700 dark:text-green-300 mt-1">
+                                Se generará automáticamente una contraseña temporal robusta y segura.
+                                El encargado deberá cambiarla en su primer inicio de sesión.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button"
+                            onclick="cerrarModalCrearUsuario()"
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fas fa-save mr-2"></i>
+                        Crear Encargado
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+let encargadosData = [];
+
+// Inicializar página
+document.addEventListener('DOMContentLoaded', function() {
+    cargarEncargados();
+});
+
+// Cargar encargados
+async function cargarEncargados() {
+    try {
+        const response = await fetch('/usuarios/api/listar');
+        const data = await response.json();
+
+        if (data.success) {
+            // Filtrar solo encargados (rol_id = 2)
+            encargadosData = data.usuarios.filter(u => u.rol_id === 2);
+            mostrarEncargados(encargadosData);
+            actualizarEstadisticas(encargadosData);
+        } else {
+            mostrarError('Error al cargar encargados: ' + data.error);
+        }
+    } catch (error) {
+        mostrarError('Error de conexión: ' + error.message);
+    }
+}
+
+// Mostrar encargados
+function mostrarEncargados(encargados) {
+    const container = document.getElementById('encargados-container');
+
+    if (encargados.length === 0) {
+        container.innerHTML = `
+            <div class="px-6 py-12 text-center">
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-user-tie text-gray-400 text-6xl mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No hay encargados registrados</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">
+                        Comienza creando el primer encargado para tu establecimiento.
+                    </p>
+                    <button onclick="abrirModalCrearUsuario()"
+                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                        <i class="fas fa-plus mr-2"></i>
+                        Crear Primer Encargado
+                    </button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    encargados.forEach(encargado => {
+        const estadoClass = encargado.activo
+            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+            : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
+        const estadoText = encargado.activo ? 'Activo' : 'Inactivo';
+
+        html += `
+            <div class="px-6 py-4 hover:bg-gray-50 dark:hover:bg-slate-700">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
+                                    <i class="fas fa-user-tie text-green-600 dark:text-green-400"></i>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                    ${encargado.nombre} ${encargado.apellido || ''}
+                                </div>
+                                <div class="text-sm text-gray-500 dark:text-gray-400">
+                                    ${encargado.correo}
+                                </div>
+                                <div class="flex items-center space-x-4 mt-1">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${estadoClass}">
+                                        <i class="fas fa-${encargado.activo ? 'check' : 'times'} mr-1"></i>
+                                        ${estadoText}
+                                    </span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                                        Último acceso: ${encargado.ultimo_acceso ? new Date(encargado.ultimo_acceso).toLocaleDateString() : 'Nunca'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="verDetallesEncargado(${encargado.id})"
+                                class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 p-2"
+                                title="Ver detalles">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        ${encargado.cambiar_contrasena ? `
+                        <button onclick="verCredencialesUsuario(${encargado.id}, '${encargado.nombre} ${encargado.apellido}')"
+                                class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 p-2"
+                                title="Ver credenciales temporales">
+                            <i class="fas fa-key"></i>
+                        </button>
+                        ` : ''}
+                        <button onclick="resetearContrasena(${encargado.id}, '${encargado.nombre} ${encargado.apellido}')"
+                                class="text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300 p-2"
+                                title="Resetear contraseña">
+                            <i class="fas fa-key"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+// Actualizar estadísticas
+function actualizarEstadisticas(encargados) {
+    const total = encargados.length;
+    const activos = encargados.filter(e => e.activo).length;
+
+    document.getElementById('total-encargados').textContent = total;
+    document.getElementById('total-activos').textContent = activos;
+    // Por ahora, no calculamos el establecimiento desde aquí
+    document.getElementById('mi-establecimiento').textContent = '-';
+}
+
+// Aplicar filtros
+function aplicarFiltros() {
+    const busqueda = document.getElementById('busqueda').value.toLowerCase();
+    const filtroEstado = document.getElementById('filtro-estado').value;
+
+    let encargadosFiltrados = encargadosData;
+
+    // Filtrar por búsqueda
+    if (busqueda) {
+        encargadosFiltrados = encargadosFiltrados.filter(encargado =>
+            `${encargado.nombre} ${encargado.apellido} ${encargado.correo}`.toLowerCase().includes(busqueda)
+        );
+    }
+
+    // Filtrar por estado
+    if (filtroEstado) {
+        const estadoBool = filtroEstado === 'true';
+        encargadosFiltrados = encargadosFiltrados.filter(encargado =>
+            encargado.activo === estadoBool
+        );
+    }
+
+    mostrarEncargados(encargadosFiltrados);
+}
+
+// Modal crear encargado
+function abrirModalCrearUsuario() {
+    document.getElementById('modal-crear-encargado').classList.remove('hidden');
+}
+
+function cerrarModalCrearUsuario() {
+    document.getElementById('modal-crear-encargado').classList.add('hidden');
+    document.getElementById('form-crear-encargado').reset();
+}
+
+// Ver detalles de encargado
+function verDetallesEncargado(encargadoId) {
+    const encargado = encargadosData.find(e => e.id === encargadoId);
+    if (!encargado) return;
+
+    alert(`Detalles de ${encargado.nombre} ${encargado.apellido || ''}\\n\\nRol: ${encargado.rol}\\nCorreo: ${encargado.correo}\\nEstado: ${encargado.activo ? 'Activo' : 'Inactivo'}\\nÚltimo acceso: ${encargado.ultimo_acceso || 'Nunca'}`);
+}
+
+// Ver credenciales temporales de usuario
+function verCredencialesUsuario(encargadoId, nombreEncargado) {
+    const encargado = encargadosData.find(e => e.id === encargadoId);
+    if (!encargado) return;
+
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50';
+    modal.style.zIndex = '9999';
+    modal.innerHTML = `
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white dark:bg-slate-800">
+            <div class="mt-3">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                        <i class="fas fa-key mr-2 text-blue-500"></i>
+                        Credenciales Temporales
+                    </h3>
+                    <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-info-circle text-blue-400"></i>
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <h4 class="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                    Usuario: ${encargado.nombre} ${encargado.apellido || ''}
+                                </h4>
+                                <p class="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                                    Este usuario tiene una contraseña temporal asignada.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información sobre credenciales -->
+                    <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <h4 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                                    Credenciales No Disponibles
+                                </h4>
+                                <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                                    Por seguridad, las credenciales temporales originales no se almacenan en texto plano.
+                                    Si necesita compartir las credenciales con el usuario, debe resetear la contraseña.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Correo electrónico -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-envelope mr-1"></i>
+                            Correo Electrónico
+                        </label>
+                        <div class="flex">
+                            <input type="text"
+                                   value="${encargado.correo}"
+                                   readonly
+                                   class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-md shadow-sm bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-sm">
+                            <button onclick="copiarAlPortapapeles('${encargado.correo}')"
+                                    class="px-3 py-2 border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600 rounded-r-md transition-colors"
+                                    title="Copiar correo">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button onclick="this.closest('.fixed').remove()"
+                                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                            Cancelar
+                        </button>
+                        <button onclick="resetearContrasenaDesdeModal(${encargado.id}, '${encargado.nombre} ${encargado.apellido}', this.closest('.fixed'))"
+                                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors">
+                            <i class="fas fa-key mr-2"></i>
+                            Resetear Contraseña
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.style.display = 'block';
+    modal.style.visibility = 'visible';
+}
+
+// Resetear contraseña desde el modal de credenciales
+async function resetearContrasenaDesdeModal(encargadoId, nombreEncargado, modalElement) {
+    if (!confirm(`¿Está seguro de resetear la contraseña de "${nombreEncargado}"?\n\nSe generará una nueva contraseña temporal robusta y el encargado deberá cambiarla en su próximo inicio de sesión.`)) {
+        return;
+    }
+
+    // Cerrar el modal actual
+    if (modalElement) {
+        modalElement.remove();
+    }
+
+    try {
+        const response = await fetch(`/usuarios/api/resetear-contrasena/${encargadoId}`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarCredencialesUsuario(data.correo, data.contrasena_temporal);
+        } else {
+            mostrarError('Error al resetear contraseña: ' + data.error);
+        }
+    } catch (error) {
+        mostrarError('Error de conexión: ' + error.message);
+    }
+}
+
+// Resetear contraseña
+async function resetearContrasena(encargadoId, nombreEncargado) {
+    if (!confirm(`¿Está seguro de resetear la contraseña de "${nombreEncargado}"?\n\nSe generará una nueva contraseña temporal robusta y el encargado deberá cambiarla en su próximo inicio de sesión.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/usuarios/api/resetear-contrasena/${encargadoId}`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarCredencialesUsuario(data.correo, data.contrasena_temporal);
+        } else {
+            mostrarError('Error al resetear contraseña: ' + data.error);
+        }
+    } catch (error) {
+        mostrarError('Error de conexión: ' + error.message);
+    }
+}
+
+// Validación del formulario
+document.getElementById('form-crear-encargado').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const submitButton = this.querySelector('button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creando...';
+
+    try {
+        const formData = {
+            rol_id: 2, // Encargado
+            nombre: document.getElementById('nombre').value.trim(),
+            apellido: document.getElementById('apellido').value.trim(),
+            dni: document.getElementById('dni').value.trim(),
+            correo: document.getElementById('correo').value.trim(),
+            telefono: document.getElementById('telefono').value.trim()
+        };
+
+        // Validaciones
+        if (!formData.nombre || !formData.apellido || !formData.dni || !formData.correo) {
+            throw new Error('Todos los campos obligatorios deben estar completos');
+        }
+
+        if (!/^\d{8}$/.test(formData.dni)) {
+            throw new Error('El DNI debe tener exactamente 8 dígitos');
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.correo)) {
+            throw new Error('Formato de correo inválido');
+        }
+
+        const response = await fetch('/jefe/agregar-encargado', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarCredencialesUsuario(data.correo, data.contrasena_temporal);
+            cerrarModalCrearUsuario();
+            cargarEncargados();
+        } else {
+            throw new Error(data.error);
+        }
+
+    } catch (error) {
+        mostrarError(error.message);
+    } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalText;
+    }
+});
+
+// Validación en tiempo real del DNI
+document.getElementById('dni').addEventListener('input', function(e) {
+    this.value = this.value.replace(/\D/g, '');
+    if (this.value.length > 8) {
+        this.value = this.value.slice(0, 8);
+    }
+});
+
+// Funciones de notificación
+function mostrarExito(mensaje) {
+    mostrarNotificacion('success', mensaje);
+}
+
+function mostrarError(mensaje) {
+    mostrarNotificacion('error', mensaje);
+}
+
+// Mostrar credenciales del usuario creado
+function mostrarCredencialesUsuario(correo, contrasena) {
+    const textoCredenciales = `Correo: ${correo}\nContraseña temporal: ${contrasena}`;
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50';
+    modal.innerHTML = `
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white dark:bg-slate-800">
+            <div class="mt-3">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                        <i class="fas fa-key mr-2 text-green-500"></i>
+                        Encargado Creado Exitosamente
+                    </h3>
+                    <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-check-circle text-green-400"></i>
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <h4 class="text-sm font-medium text-green-800 dark:text-green-200">
+                                    Credenciales Generadas
+                                </h4>
+                                <p class="text-sm text-green-700 dark:text-green-300 mt-1">
+                                    El encargado ha sido creado exitosamente. Copie las credenciales para compartirlas.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Área de texto con credenciales -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-copy mr-1"></i>
+                            Credenciales para compartir
+                        </label>
+                        <div class="relative">
+                            <textarea id="credenciales-textarea" 
+                                      readonly 
+                                      rows="3"
+                                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-sm font-mono"
+                                      style="resize: none;">${textoCredenciales}</textarea>
+                            <button onclick="copiarCredencialesCompletas()"
+                                    class="absolute top-2 right-2 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                                    title="Copiar todo">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Información adicional -->
+                    <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h4 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                                    Importante
+                                </h4>
+                                <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                                    El encargado deberá cambiar esta contraseña en su primer inicio de sesión.
+                                    Guarde estas credenciales en un lugar seguro.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end pt-4">
+                        <button onclick="this.closest('.fixed').remove()"
+                                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                            <i class="fas fa-check mr-2"></i>
+                            Entendido
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+}
+
+// Copiar credenciales completas
+async function copiarCredencialesCompletas() {
+    const textarea = document.getElementById('credenciales-textarea');
+    const texto = textarea.value;
+    
+    try {
+        await navigator.clipboard.writeText(texto);
+        mostrarNotificacion('success', 'Credenciales copiadas al portapapeles');
+    } catch (error) {
+        // Fallback para navegadores que no soportan clipboard API
+        textarea.select();
+        document.execCommand('copy');
+        mostrarNotificacion('success', 'Credenciales copiadas al portapapeles');
+    }
+}
+
+// Copiar al portapapeles
+async function copiarAlPortapapeles(texto) {
+    try {
+        await navigator.clipboard.writeText(texto);
+        mostrarNotificacion('success', 'Copiado al portapapeles');
+    } catch (error) {
+        // Fallback para navegadores que no soportan clipboard API
+        const textArea = document.createElement('textarea');
+        textArea.value = texto;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        mostrarNotificacion('success', 'Copiado al portapapapeles');
+    }
+}
+
+// Toggle visibilidad de contraseña
+function togglePasswordVisibility() {
+    const passwordInput = document.getElementById('temp-password-display');
+    const eyeIcon = document.getElementById('password-eye-icon');
+
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        eyeIcon.className = 'fas fa-eye-slash';
+    } else {
+        passwordInput.type = 'password';
+        eyeIcon.className = 'fas fa-eye';
+    }
+}
+
+function mostrarNotificacion(tipo, mensaje) {
+    const container = document.getElementById('alert-container') || document.body;
+    const alertClass = tipo === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800';
+
+    const alert = document.createElement('div');
+    alert.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border ${alertClass} max-w-md`;
+    alert.innerHTML = `
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <i class="fas ${tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} text-lg"></i>
+            </div>
+            <div class="ml-3 flex-1">
+                <p class="text-sm font-medium">${mensaje}</p>
+            </div>
+            <div class="ml-auto pl-3">
+                <button onclick="this.parentElement.parentElement.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    `;
+
+    container.appendChild(alert);
+
+    setTimeout(() => {
+        if (alert.parentElement) {
+            alert.remove();
+        }
+    }, 5000);
+}
+</script>
+
+{% endblock %}

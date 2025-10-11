@@ -1,0 +1,1252 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Plantilla - {{ plantilla.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .item-card {
+        transition: all 0.2s ease;
+    }
+    .item-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .drag-handle {
+        cursor: grab;
+    }
+    .drag-handle:active {
+        cursor: grabbing;
+    }
+    .sortable-ghost {
+        opacity: 0.4;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ===== EDITAR PLANTILLA ===== -->
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+
+    <!-- ===== HEADER ===== -->
+    <header class="sticky top-0 z-40 bg-white/80 dark:bg-slate-800/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-700">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <i class="fas fa-edit text-white font-bold text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-slate-800 dark:text-white">Editar Plantilla</h1>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">{{ plantilla.nombre }}</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="agregarItemModal()"
+                            class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200">
+                        <i class="fas fa-plus mr-2"></i>
+                        Agregar Item
+                    </button>
+                    <a href="{{ url_for('plantillas.listar_plantillas') }}"
+                       class="inline-flex items-center px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl shadow-sm text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Volver
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===== CONTENIDO ===== -->
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="space-y-8">
+
+            <!-- ===== INFORMACIÓN DE LA PLANTILLA ===== -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-white flex items-center">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        Información de la Plantilla
+                    </h2>
+                </div>
+
+                <form id="editarPlantillaForm" class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- ID oculto -->
+                        <input type="hidden" name="plantilla_id" value="{{ plantilla.id }}">
+
+                        <!-- Nombre -->
+                        <div>
+                            <label for="nombre" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                Nombre de la Plantilla *
+                            </label>
+                            <input type="text" id="nombre" name="nombre" value="{{ plantilla.nombre }}"
+                                   required maxlength="100"
+                                   class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200">
+                        </div>
+
+                        <!-- Descripción -->
+                        <div>
+                            <label for="descripcion" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                Descripción
+                            </label>
+                            <input type="text" id="descripcion" name="descripcion" value="{{ plantilla.descripcion or '' }}"
+                                   maxlength="255"
+                                   class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200"
+                                   placeholder="Describe brevemente el propósito...">
+                        </div>
+                    </div>
+
+                    <!-- Información del Sistema -->
+                    <div class="mt-6 bg-slate-50 dark:bg-slate-700 rounded-xl p-4 border border-slate-200 dark:border-slate-600">
+                        <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Información del Sistema</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                                <span class="text-slate-500 dark:text-slate-400">Tipo:</span>
+                                <span class="ml-2 font-medium text-slate-900 dark:text-white">{{ plantilla.tipo_establecimiento.nombre }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 dark:text-slate-400">Tamaño:</span>
+                                <span class="ml-2 font-medium text-slate-900 dark:text-white capitalize">{{ plantilla.tamano_local }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 dark:text-slate-400">Items:</span>
+                                <span class="ml-2 font-medium text-slate-900 dark:text-white" id="items-count">{{ plantilla.items_plantilla|length }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 dark:text-slate-400">Estado:</span>
+                                <span class="ml-2 font-medium text-green-600 dark:text-green-400">Activa</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botón Guardar -->
+                    <div class="mt-6 flex justify-end">
+                        <button type="submit"
+                                class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-lg">
+                            <i class="fas fa-save mr-2"></i>
+                            Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ===== ITEMS DEL CHECKLIST ===== -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div class="bg-gradient-to-r from-purple-500 to-pink-600 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-white flex items-center justify-between">
+                        <span class="flex items-center">
+                            <i class="fas fa-list-check mr-2"></i>
+                            Items del Checklist
+                        </span>
+                        <span class="text-sm bg-white/20 px-3 py-1 rounded-full" id="items-header-count">
+                            {{ plantilla.items_plantilla|length }} items
+                        </span>
+                    </h2>
+                    <p class="text-sm text-purple-100 mt-1">
+                        Gestiona los items de evaluación de esta plantilla
+                    </p>
+                </div>
+
+                <div class="p-6">
+                    <!-- Lista de Items -->
+                    <div id="items-container" class="space-y-4">
+                        <!-- Los items se cargarán aquí dinámicamente -->
+                        <div class="text-center py-8 text-slate-500 dark:text-slate-400">
+                            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p>Cargando items...</p>
+                        </div>
+                    </div>
+
+                    <!-- Mensaje cuando no hay items -->
+                    <div id="no-items-message" class="hidden text-center py-8 text-slate-500 dark:text-slate-400">
+                        <i class="fas fa-list text-4xl mb-4 opacity-50"></i>
+                        <h3 class="text-lg font-medium mb-2">No hay items en esta plantilla</h3>
+                        <p class="mb-4">Agrega items para crear el checklist de evaluación</p>
+                        <button onclick="agregarItemModal()"
+                                class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                            <i class="fas fa-plus mr-2"></i>
+                            Agregar Primer Item
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar item -->
+<div id="modal-editar-item" class="fixed inset-0 bg-transparent hidden z-50" style="backdrop-filter: blur(4px);">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Editar Item del Checklist</h3>
+                    <button onclick="cerrarModalEditar()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <form id="form-editar-item" class="space-y-6">
+                    <!-- Información del item base (solo lectura) -->
+                    <div class="bg-slate-50 dark:bg-slate-700 rounded-xl p-4 border border-slate-200 dark:border-slate-600">
+                        <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Información del Criterio Base</h4>
+                        <div id="item-base-info" class="text-sm text-slate-600 dark:text-slate-400">
+                            <!-- Información del item base se cargará aquí -->
+                        </div>
+                        <div id="puntaje-base-info" class="mt-2 p-2 bg-slate-100 dark:bg-slate-600 rounded text-xs font-mono">
+                            <!-- Información de puntajes base -->
+                        </div>
+                    </div>
+
+                    <!-- Editar descripción base -->
+                    <div>
+                        <label for="editar-descripcion-base" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            Descripción Base del Item
+                        </label>
+                        <textarea id="editar-descripcion-base" name="descripcion_base" rows="3" maxlength="1000"
+                                  class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200"
+                                  placeholder="Edita la descripción base del criterio de evaluación..."></textarea>
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Esta descripción se actualizará para todas las plantillas que usen este item.
+                        </p>
+                    </div>
+
+                    <!-- Descripción personalizada -->
+                    <div>
+                        <label for="editar-descripcion-personalizada" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            Descripción Personalizada
+                        </label>
+                        <textarea id="editar-descripcion-personalizada" name="descripcion_personalizada" rows="3"
+                                  class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200"
+                                  placeholder="Agrega una descripción específica para este establecimiento (opcional)..."></textarea>
+                    </div>
+
+                    <!-- Puntaje Mínimo -->
+                    <div>
+                        <label for="editar-puntaje-minimo" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            Puntaje Mínimo
+                        </label>
+                        <input type="number" id="editar-puntaje-minimo" name="puntaje_minimo" min="0" max="100"
+                               class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200">
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            Puntaje mínimo posible (0-100). Dejar vacío para usar el valor base.
+                        </p>
+                    </div>
+
+                    <!-- Puntaje Máximo -->
+                    <div>
+                        <label for="editar-puntaje-maximo" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            Puntaje Máximo
+                        </label>
+                        <input type="number" id="editar-puntaje-maximo" name="puntaje_maximo" min="0" max="100"
+                               class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200">
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            Puntaje máximo posible (0-100). Dejar vacío para usar el valor base.
+                        </p>
+                    </div>
+
+                    <!-- Factor de ajuste -->
+                    <div>
+                        <label for="editar-factor-ajuste" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            Factor de Ajuste
+                        </label>
+                        <input type="number" id="editar-factor-ajuste" name="factor_ajuste" step="0.1" min="0.1" max="5.0"
+                               class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200">
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            Factor multiplicador para el cálculo del puntaje (0.1 - 5.0).
+                        </p>
+                    </div>
+
+                    <!-- Obligatorio -->
+                    <div class="flex items-center">
+                        <input type="checkbox" id="editar-obligatorio" name="obligatorio"
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 rounded">
+                        <label for="editar-obligatorio" class="ml-2 block text-sm text-slate-700 dark:text-slate-300">
+                            Item obligatorio en la evaluación
+                        </label>
+                    </div>
+
+                    <!-- Acciones -->
+                    <div class="flex justify-end space-x-4 pt-4 border-t border-slate-200 dark:border-slate-600">
+                        <button type="button" onclick="cerrarModalEditar()"
+                                class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200">
+                            Cancelar
+                        </button>
+                        <button type="submit"
+                                class="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                            <i class="fas fa-save mr-2"></i>
+                            Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="modal-agregar-item" class="fixed inset-0 bg-transparent hidden z-50" style="backdrop-filter: blur(4px);">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Agregar Item al Checklist</h3>
+                    <button onclick="cerrarModalAgregar()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <form id="form-agregar-item" class="space-y-6">
+                    <!-- Selector de tipo de item -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                            Tipo de Item *
+                        </label>
+                        <div class="flex space-x-1 bg-slate-100 dark:bg-slate-700 p-1 rounded-xl">
+                            <button type="button" id="tab-item-base" onclick="cambiarTipoItem('base')"
+                                    class="flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-all duration-200 bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm">
+                                Item Base Existente
+                            </button>
+                            <button type="button" id="tab-item-nuevo" onclick="cambiarTipoItem('nuevo')"
+                                    class="flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-all duration-200 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                                Crear Item Nuevo
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Contenido para Item Base -->
+                    <div id="contenido-item-base" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                Buscar Item Base *
+                            </label>
+                            <div class="relative">
+                                <input type="text" id="buscar-item-base" placeholder="Escribe para buscar items base..."
+                                       class="w-full px-4 py-3 pl-10 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200">
+                                <i class="fas fa-search absolute left-3 top-3.5 text-slate-400"></i>
+                            </div>
+                            <div id="resultados-busqueda" class="mt-2 max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-600 rounded-xl hidden">
+                                <!-- Resultados de búsqueda aparecerán aquí -->
+                            </div>
+                            <input type="hidden" id="item-base-seleccionado" name="item_base_id">
+                            <div id="item-seleccionado-info" class="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg hidden">
+                                <!-- Información del item seleccionado -->
+                            </div>
+                        </div>
+
+                        <!-- Descripción personalizada (solo para items base) -->
+                        <div>
+                            <label for="descripcion-personalizada" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                Descripción Personalizada
+                            </label>
+                            <textarea id="descripcion-personalizada" name="descripcion_personalizada" rows="3"
+                                      class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200"
+                                      placeholder="Agrega una descripción específica para este establecimiento (opcional)..."></textarea>
+                        </div>
+
+                        <!-- Puntaje Mínimo Personalizado (solo para items base) -->
+                        <div>
+                            <label for="puntaje-minimo" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                Puntaje Mínimo Personalizado
+                            </label>
+                            <input type="number" id="puntaje-minimo" name="puntaje_minimo_personalizado" min="0" max="100"
+                                   class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200">
+                            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                Puntaje mínimo personalizado (0-100). Dejar vacío para usar el valor base.
+                            </p>
+                        </div>
+
+                        <!-- Puntaje Máximo Personalizado (solo para items base) -->
+                        <div>
+                            <label for="puntaje-maximo" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                Puntaje Máximo Personalizado
+                            </label>
+                            <input type="number" id="puntaje-maximo" name="puntaje_maximo_personalizado" min="0" max="100"
+                                   class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200">
+                            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                Puntaje máximo personalizado (0-100). Dejar vacío para usar el valor base.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Contenido para Item Nuevo -->
+                    <div id="contenido-item-nuevo" class="space-y-4 hidden">
+                        <div>
+                            <label for="nuevo-descripcion" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                Descripción del Item *
+                            </label>
+                            <textarea id="nuevo-descripcion" name="descripcion" rows="3" maxlength="1000"
+                                      class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200"
+                                      placeholder="Describe claramente el criterio de evaluación..."></textarea>
+                            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                Descripción detallada del criterio de evaluación (máximo 1000 caracteres)
+                            </p>
+                        </div>
+
+                        <div>
+                            <label for="nuevo-categoria" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                Categoría *
+                            </label>
+                            <select id="nuevo-categoria" name="categoria_id"
+                                    class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200">
+                                <option value="">Selecciona una categoría...</option>
+                                <!-- Las categorías se cargarán dinámicamente -->
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="nuevo-riesgo" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                Nivel de Riesgo *
+                            </label>
+                            <select id="nuevo-riesgo" name="riesgo"
+                                    class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200">
+                                <option value="Menor">Menor</option>
+                                <option value="Mayor">Mayor</option>
+                                <option value="Crítico">Crítico</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="nuevo-puntaje-minimo" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    Puntaje Mínimo *
+                                </label>
+                                <input type="number" id="nuevo-puntaje-minimo" name="puntaje_minimo" min="0" max="100" value="0"
+                                       class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200">
+                            </div>
+                            <div>
+                                <label for="nuevo-puntaje-maximo" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    Puntaje Máximo *
+                                </label>
+                                <input type="number" id="nuevo-puntaje-maximo" name="puntaje_maximo" min="0" max="100" value="4"
+                                       class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Obligatorio -->
+                    <div class="flex items-center">
+                        <input type="checkbox" id="obligatorio" name="obligatorio" checked
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 rounded">
+                        <label for="obligatorio" class="ml-2 block text-sm text-slate-700 dark:text-slate-300">
+                            Item obligatorio en la evaluación
+                        </label>
+                    </div>
+
+                    <!-- Acciones -->
+                    <div class="flex justify-end space-x-4 pt-4 border-t border-slate-200 dark:border-slate-600">
+                        <button type="button" onclick="cerrarModalAgregar()"
+                                class="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200">
+                            Cancelar
+                        </button>
+                        <button type="submit"
+                                class="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200">
+                            <i class="fas fa-plus mr-2"></i>
+                            Agregar Item
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script>
+// Variables globales
+let itemsPlantilla = [];
+let itemBaseSeleccionado = null;
+let tipoItemActual = 'base'; // 'base' o 'nuevo'
+
+// Cargar items al iniciar
+document.addEventListener('DOMContentLoaded', function() {
+    cargarItemsPlantilla();
+    cargarCategorias();
+
+    // Formulario de plantilla
+    const formPlantilla = document.getElementById('editarPlantillaForm');
+    formPlantilla.addEventListener('submit', guardarCambiosPlantilla);
+
+    // Formulario de agregar item
+    const formItem = document.getElementById('form-agregar-item');
+    formItem.addEventListener('submit', agregarItem);
+
+    // Formulario de editar item
+    const formEditarItem = document.getElementById('form-editar-item');
+    formEditarItem.addEventListener('submit', guardarCambiosItem);
+
+    // Event listeners para previews dinámicos
+    const editarPuntajeMinimo = document.getElementById('editar-puntaje-minimo');
+    if (editarPuntajeMinimo) {
+        editarPuntajeMinimo.addEventListener('input', actualizarPreviewEditar);
+    }
+
+    const editarPuntajeMaximo = document.getElementById('editar-puntaje-maximo');
+    if (editarPuntajeMaximo) {
+        editarPuntajeMaximo.addEventListener('input', actualizarPreviewEditar);
+    }
+
+    const puntajeMinimo = document.getElementById('puntaje-minimo');
+    if (puntajeMinimo) {
+        puntajeMinimo.addEventListener('input', actualizarPreviewAgregar);
+    }
+
+    const puntajeMaximo = document.getElementById('puntaje-maximo');
+    if (puntajeMaximo) {
+        puntajeMaximo.addEventListener('input', actualizarPreviewAgregar);
+    }
+
+    const nuevoPuntajeMinimo = document.getElementById('nuevo-puntaje-minimo');
+    if (nuevoPuntajeMinimo) {
+        nuevoPuntajeMinimo.addEventListener('input', actualizarPreviewAgregar);
+    }
+
+    const nuevoPuntajeMaximo = document.getElementById('nuevo-puntaje-maximo');
+    if (nuevoPuntajeMaximo) {
+        nuevoPuntajeMaximo.addEventListener('input', actualizarPreviewAgregar);
+    }
+
+    // Buscador de items base
+    const buscarInput = document.getElementById('buscar-item-base');
+    if (buscarInput) {
+        buscarInput.addEventListener('input', buscarItemsBase);
+    }
+
+    // Event listeners para cerrar modales con click en el fondo
+    const modalEditar = document.getElementById('modal-editar-item');
+    if (modalEditar) {
+        modalEditar.addEventListener('click', function(e) {
+            if (e.target === this) {
+                cerrarModalEditar();
+            }
+        });
+    }
+
+    const modalAgregar = document.getElementById('modal-agregar-item');
+    if (modalAgregar) {
+        modalAgregar.addEventListener('click', function(e) {
+            if (e.target === this) {
+                cerrarModalAgregar();
+            }
+        });
+    }
+});
+
+// ===== FUNCIONES PARA PLANTILLA =====
+async function guardarCambiosPlantilla(e) {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+        const response = await fetch('{{ url_for("plantillas.guardar_edicion_plantilla") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            mostrarMensaje(result.message, 'success');
+        } else {
+            mostrarMensaje(result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarMensaje('Error al guardar los cambios', 'error');
+    }
+}
+
+// ===== FUNCIONES PARA ITEMS =====
+async function cargarItemsPlantilla() {
+    try {
+        const response = await fetch(`{{ url_for('plantillas.obtener_items_plantilla', plantilla_id=plantilla.id) }}`);
+        const data = await response.json();
+
+        if (data.success) {
+            itemsPlantilla = data.items;
+            renderizarItems();
+        } else {
+            mostrarMensaje('Error al cargar los items', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarMensaje('Error al cargar los items', 'error');
+    }
+}
+
+function renderizarItems() {
+    const container = document.getElementById('items-container');
+    const noItemsMessage = document.getElementById('no-items-message');
+    const itemsCount = document.getElementById('items-count');
+    const itemsHeaderCount = document.getElementById('items-header-count');
+
+    if (itemsPlantilla.length === 0) {
+        container.innerHTML = '';
+        noItemsMessage.classList.remove('hidden');
+        itemsCount.textContent = '0';
+        itemsHeaderCount.textContent = '0 items';
+        return;
+    }
+
+    noItemsMessage.classList.add('hidden');
+    itemsCount.textContent = itemsPlantilla.length;
+    itemsHeaderCount.textContent = `${itemsPlantilla.length} items`;
+
+    // Agrupar por categoría
+    const itemsPorCategoria = {};
+    itemsPlantilla.forEach(item => {
+        if (!itemsPorCategoria[item.categoria]) {
+            itemsPorCategoria[item.categoria] = [];
+        }
+        itemsPorCategoria[item.categoria].push(item);
+    });
+
+    container.innerHTML = Object.keys(itemsPorCategoria).map(categoria => `
+        <div class="bg-slate-50 dark:bg-slate-700 rounded-xl p-4 border border-slate-200 dark:border-slate-600">
+            <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center">
+                <i class="fas fa-folder mr-2 text-blue-500"></i>
+                ${categoria}
+            </h3>
+            <div class="space-y-3" id="categoria-${categoria.replace(/\s+/g, '-').toLowerCase()}">
+                ${itemsPorCategoria[categoria].map(item => renderizarItem(item)).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderizarItem(item) {
+    const riesgoClass = {
+        'Menor': 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
+        'Mayor': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400',
+        'Crítico': 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+    };
+
+    // Determinar si el riesgo es personalizado
+    const esRiesgoPersonalizado = item.riesgo !== item.riesgo_base;
+    const riesgoDisplay = esRiesgoPersonalizado ?
+        `${item.riesgo} <span class="text-xs text-blue-600 dark:text-blue-400">(personalizado)</span>` :
+        item.riesgo;
+
+    return `
+        <div class="item-card bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600 p-4" data-item-id="${item.id}">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="drag-handle text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                            <i class="fas fa-grip-vertical"></i>
+                        </div>
+                        <h4 class="font-medium text-slate-900 dark:text-white">${item.descripcion_base}</h4>
+                        <span class="px-2 py-1 text-xs rounded-full ${riesgoClass[item.riesgo]}">
+                            ${riesgoDisplay}
+                        </span>
+                    </div>
+
+                    ${item.descripcion_personalizada ? `
+                        <p class="text-sm text-slate-600 dark:text-slate-400 mb-2 ml-7">
+                            <i class="fas fa-quote-left mr-1 opacity-50"></i>
+                            ${item.descripcion_personalizada}
+                        </p>
+                    ` : ''}
+
+                    <div class="flex items-center space-x-4 text-sm text-slate-500 dark:text-slate-400 ml-7">
+                        <span><i class="fas fa-star mr-1"></i>Puntaje: ${item.puntaje_minimo}-${item.puntaje_maximo}</span>
+                        <span><i class="fas fa-times mr-1"></i>Factor: ${item.factor_ajuste}</span>
+                        ${!item.obligatorio ? '<span class="text-orange-600 dark:text-orange-400"><i class="fas fa-exclamation-triangle mr-1"></i>Opcional</span>' : ''}
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2 ml-4">
+                    <button onclick="editarItem(${item.id})"
+                            class="p-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="eliminarItem(${item.id})"
+                            class="p-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ===== FUNCIONES PARA AGREGAR ITEMS =====
+function cambiarTipoItem(tipo) {
+    tipoItemActual = tipo;
+
+    const tabBase = document.getElementById('tab-item-base');
+    const tabNuevo = document.getElementById('tab-item-nuevo');
+    const contenidoBase = document.getElementById('contenido-item-base');
+    const contenidoNuevo = document.getElementById('contenido-item-nuevo');
+
+    if (tipo === 'base') {
+        tabBase.classList.remove('text-slate-600', 'dark:text-slate-400');
+        tabBase.classList.add('bg-white', 'dark:bg-slate-600', 'text-slate-900', 'dark:text-white', 'shadow-sm');
+        tabNuevo.classList.remove('bg-white', 'dark:bg-slate-600', 'text-slate-900', 'dark:text-white', 'shadow-sm');
+        tabNuevo.classList.add('text-slate-600', 'dark:text-slate-400');
+
+        contenidoBase.classList.remove('hidden');
+        contenidoNuevo.classList.add('hidden');
+    } else {
+        tabNuevo.classList.remove('text-slate-600', 'dark:text-slate-400');
+        tabNuevo.classList.add('bg-white', 'dark:bg-slate-600', 'text-slate-900', 'dark:text-white', 'shadow-sm');
+        tabBase.classList.remove('bg-white', 'dark:bg-slate-600', 'text-slate-900', 'dark:text-white', 'shadow-sm');
+        tabBase.classList.add('text-slate-600', 'dark:text-slate-400');
+
+        contenidoNuevo.classList.remove('hidden');
+        contenidoBase.classList.add('hidden');
+    }
+}
+
+async function cargarCategorias() {
+    try {
+        const response = await fetch('/plantillas/api/categorias');
+        const data = await response.json();
+
+        if (data.success) {
+            const selectCategoria = document.getElementById('nuevo-categoria');
+            selectCategoria.innerHTML = '<option value="">Selecciona una categoría...</option>';
+
+            data.categorias.forEach(categoria => {
+                const option = document.createElement('option');
+                option.value = categoria.id;
+                option.textContent = categoria.nombre;
+                selectCategoria.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error al cargar categorías:', error);
+    }
+}
+
+function agregarItemModal() {
+    document.getElementById('modal-agregar-item').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    cambiarTipoItem('base'); // Por defecto mostrar item base
+    document.getElementById('buscar-item-base').focus();
+}
+
+function cerrarModalAgregar() {
+    document.getElementById('modal-agregar-item').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+    document.getElementById('form-agregar-item').reset();
+    document.getElementById('resultados-busqueda').classList.add('hidden');
+    document.getElementById('item-seleccionado-info').classList.add('hidden');
+    itemBaseSeleccionado = null;
+    tipoItemActual = 'base';
+}
+
+async function buscarItemsBase(e) {
+    const query = e.target.value.trim();
+    const resultadosDiv = document.getElementById('resultados-busqueda');
+
+    if (query.length < 2) {
+        resultadosDiv.classList.add('hidden');
+        return;
+    }
+
+    try {
+        // Buscar items base que no estén ya en la plantilla
+        const itemsEnPlantilla = itemsPlantilla.map(item => item.item_base_id);
+
+        const response = await fetch(`{{ url_for('plantillas.buscar_items_base') }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                query: query,
+                exclude: itemsEnPlantilla
+            })
+        });
+        const data = await response.json();
+
+        if (data.success && data.items.length > 0) {
+            resultadosDiv.innerHTML = data.items.map(item => `
+                <div class="p-3 hover:bg-slate-50 dark:hover:bg-slate-600 cursor-pointer border-b border-slate-100 dark:border-slate-600 last:border-b-0"
+                     onclick="seleccionarItemBase(${item.id}, '${item.descripcion.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${item.riesgo}', ${item.puntaje_minimo}, ${item.puntaje_maximo}, '${item.categoria.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">
+                    <div class="font-medium text-slate-900 dark:text-white">${item.descripcion}</div>
+                    <div class="text-sm text-slate-500 dark:text-slate-400">
+                        ${item.categoria} • Riesgo: ${item.riesgo} • Puntaje: ${item.puntaje_minimo}-${item.puntaje_maximo}
+                    </div>
+                </div>
+            `).join('');
+            resultadosDiv.classList.remove('hidden');
+        } else {
+            resultadosDiv.innerHTML = '<div class="p-3 text-slate-500 dark:text-slate-400">No se encontraron items disponibles</div>';
+            resultadosDiv.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        resultadosDiv.innerHTML = '<div class="p-3 text-red-600 dark:text-red-400">Error al buscar items</div>';
+        resultadosDiv.classList.remove('hidden');
+    }
+}
+
+function seleccionarItemBase(id, descripcion, riesgo, min, max, categoria) {
+    itemBaseSeleccionado = { id, descripcion, riesgo, puntaje_minimo: min, puntaje_maximo: max, categoria };
+
+    document.getElementById('item-base-seleccionado').value = id;
+    document.getElementById('resultados-busqueda').classList.add('hidden');
+
+    const infoDiv = document.getElementById('item-seleccionado-info');
+    infoDiv.innerHTML = `
+        <div class="flex items-start space-x-3">
+            <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+            <div>
+                <div class="font-medium text-slate-900 dark:text-white">${descripcion.replace(/&quot;/g, '"').replace(/\\'/g, "'")}</div>
+                <div class="text-sm text-slate-600 dark:text-slate-400">
+                    ${categoria.replace(/&quot;/g, '"').replace(/\\'/g, "'")} • Riesgo: ${riesgo} • Puntaje base: ${min}-${max}
+                </div>
+            </div>
+        </div>
+    `;
+    infoDiv.classList.remove('hidden');
+
+    // Actualizar preview inicial
+    actualizarPreviewAgregar();
+}
+
+async function agregarItem(e) {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+    let data = {};
+
+    if (tipoItemActual === 'base') {
+        // Validar que se haya seleccionado un item base
+        if (!itemBaseSeleccionado) {
+            mostrarMensaje('Debes seleccionar un item base', 'error');
+            return;
+        }
+
+        data = {
+            tipo: 'base',
+            item_base_id: itemBaseSeleccionado.id,
+            descripcion_personalizada: formData.get('descripcion_personalizada') || null,
+            puntaje_minimo: formData.get('puntaje_minimo_personalizado') !== '' ? parseInt(formData.get('puntaje_minimo_personalizado')) : null,
+            puntaje_maximo: formData.get('puntaje_maximo_personalizado') !== '' ? parseInt(formData.get('puntaje_maximo_personalizado')) : null,
+            obligatorio: formData.has('obligatorio')
+        };
+    } else {
+        // Validar campos requeridos para item nuevo
+        const descripcion = formData.get('descripcion', '').trim();
+        const categoriaId = formData.get('categoria_id');
+        const riesgo = formData.get('riesgo');
+        const puntajeMinimo = parseInt(formData.get('puntaje_minimo') || 0);
+        const puntajeMaximo = parseInt(formData.get('puntaje_maximo') || 4);
+
+        if (!descripcion || !categoriaId || !riesgo) {
+            mostrarMensaje('Descripción, categoría y riesgo son obligatorios', 'error');
+            return;
+        }
+
+        if (puntajeMinimo >= puntajeMaximo) {
+            mostrarMensaje('El puntaje mínimo debe ser menor que el máximo', 'error');
+            return;
+        }
+
+        data = {
+            tipo: 'nuevo',
+            descripcion: descripcion,
+            categoria_id: parseInt(categoriaId),
+            riesgo: riesgo,
+            puntaje_minimo: puntajeMinimo,
+            puntaje_maximo: puntajeMaximo,
+            descripcion_personalizada: formData.get('descripcion_personalizada') || null,
+            puntaje_minimo_personalizado: null,
+            puntaje_maximo_personalizado: null,
+            obligatorio: formData.has('obligatorio')
+        };
+    }
+
+    try {
+        const response = await fetch(`{{ url_for('plantillas.agregar_item_plantilla', plantilla_id=plantilla.id) }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            mostrarMensaje(result.message, 'success');
+            cerrarModalAgregar();
+            await cargarItemsPlantilla();
+        } else {
+            mostrarMensaje(result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarMensaje('Error al agregar el item', 'error');
+    }
+}
+
+// ===== FUNCIONES PARA EDITAR ITEMS =====
+let itemEditando = null;
+
+async function editarItem(itemId) {
+    const item = itemsPlantilla.find(i => i.id === itemId);
+    if (!item) return;
+
+    itemEditando = item;
+
+    // Llenar el modal con los datos actuales
+    const itemBaseInfo = document.getElementById('item-base-info');
+    if (itemBaseInfo) {
+        itemBaseInfo.innerHTML = `
+            <div class="font-medium text-slate-900 dark:text-white">${item.descripcion_base}</div>
+            <div class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                Categoría: ${item.categoria} • Código: ${item.codigo}
+            </div>
+        `;
+    }
+
+    // Mostrar información de puntajes base
+    const puntajeBaseInfo = document.getElementById('puntaje-base-info');
+    if (puntajeBaseInfo) {
+        puntajeBaseInfo.innerHTML = `
+            Puntaje base: ${item.puntaje_minimo}-${item.puntaje_maximo} |
+            Riesgo base: ${item.riesgo_base}
+        `;
+    }
+
+    // Llenar campos del formulario con verificaciones de existencia
+    const descripcionBaseField = document.getElementById('editar-descripcion-base');
+    if (descripcionBaseField) {
+        descripcionBaseField.value = item.descripcion_base;
+    }
+
+    const descripcionPersonalizadaField = document.getElementById('editar-descripcion-personalizada');
+    if (descripcionPersonalizadaField) {
+        descripcionPersonalizadaField.value = item.descripcion_personalizada || '';
+    }
+
+    const factorAjusteField = document.getElementById('editar-factor-ajuste');
+    if (factorAjusteField) {
+        factorAjusteField.value = item.factor_ajuste;
+    }
+
+    const riesgoField = document.getElementById('editar-riesgo');
+    if (riesgoField) {
+        riesgoField.value = item.riesgo;  // Usa el riesgo actual (personalizado o base)
+    }
+
+    const puntajeMinimoField = document.getElementById('editar-puntaje-minimo');
+    if (puntajeMinimoField) {
+        puntajeMinimoField.value = item.puntaje_minimo_personalizado !== null ? item.puntaje_minimo_personalizado : item.puntaje_minimo;
+    }
+
+    const puntajeMaximoField = document.getElementById('editar-puntaje-maximo');
+    if (puntajeMaximoField) {
+        puntajeMaximoField.value = item.puntaje_maximo_personalizado !== null ? item.puntaje_maximo_personalizado : item.puntaje_maximo;
+    }
+
+    const obligatorioField = document.getElementById('editar-obligatorio');
+    if (obligatorioField) {
+        obligatorioField.checked = item.obligatorio;
+    }
+
+    // Actualizar preview inicial
+    actualizarPreviewEditar();
+
+    // Mostrar modal
+    const modal = document.getElementById('modal-editar-item');
+    if (modal) {
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function cerrarModalEditar() {
+    const modal = document.getElementById('modal-editar-item');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+
+    const form = document.getElementById('form-editar-item');
+    if (form) {
+        form.reset();
+    }
+
+    document.body.style.overflow = 'auto';
+    itemEditando = null;
+}
+
+async function guardarCambiosItem(e) {
+    e.preventDefault();
+
+    if (!itemEditando) return;
+
+    const form = e.target;
+    if (!form) return;
+
+    const formData = new FormData(form);
+    const descripcionBase = (formData.get('descripcion_base') || '').trim();
+    const descripcionPersonalizada = formData.get('descripcion_personalizada') || null;
+    const factorAjuste = parseFloat(formData.get('factor_ajuste'));
+    const riesgo = formData.get('riesgo');
+    const puntajeMinimo = formData.get('puntaje_minimo') !== '' ? parseInt(formData.get('puntaje_minimo')) : null;
+    const puntajeMaximo = formData.get('puntaje_maximo') !== '' ? parseInt(formData.get('puntaje_maximo')) : null;
+    const obligatorio = formData.has('obligatorio');
+
+    // Validaciones del lado del cliente
+    if (!descripcionBase) {
+        mostrarMensaje('La descripción base del item es obligatoria', 'error');
+        return;
+    }
+
+    if (descripcionBase.length > 1000) {
+        mostrarMensaje('La descripción base no puede tener más de 1000 caracteres', 'error');
+        return;
+    }
+
+    if (isNaN(factorAjuste) || factorAjuste < 0.1 || factorAjuste > 5.0) {
+        mostrarMensaje('El factor de ajuste debe estar entre 0.1 y 5.0', 'error');
+        return;
+    }
+
+    if (riesgo && !['Menor', 'Mayor', 'Crítico'].includes(riesgo)) {
+        mostrarMensaje('El riesgo debe ser Menor, Mayor o Crítico', 'error');
+        return;
+    }
+
+    if (puntajeMinimo !== null && (puntajeMinimo < 0 || puntajeMinimo > 100)) {
+        mostrarMensaje('El puntaje mínimo debe estar entre 0 y 100', 'error');
+        return;
+    }
+
+    if (puntajeMaximo !== null && (puntajeMaximo < 0 || puntajeMaximo > 100)) {
+        mostrarMensaje('El puntaje máximo debe estar entre 0 y 100', 'error');
+        return;
+    }
+
+    if (puntajeMinimo !== null && puntajeMaximo !== null && puntajeMinimo >= puntajeMaximo) {
+        mostrarMensaje('El puntaje mínimo debe ser menor que el puntaje máximo', 'error');
+        return;
+    }
+
+    const data = {
+        descripcion_base: descripcionBase,
+        descripcion_personalizada: descripcionPersonalizada,
+        factor_ajuste: factorAjuste,
+        riesgo: riesgo,
+        puntaje_minimo: puntajeMinimo,
+        puntaje_maximo: puntajeMaximo,
+        obligatorio: obligatorio
+    };
+
+    try {
+        const response = await fetch(`/plantillas/api/items/${itemEditando.id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            mostrarMensaje(result.message, 'success');
+            cerrarModalEditar();
+            await cargarItemsPlantilla();
+        } else {
+            mostrarMensaje(result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarMensaje('Error al guardar los cambios', 'error');
+    }
+}
+
+async function eliminarItem(itemId) {
+    const item = itemsPlantilla.find(i => i.id === itemId);
+    if (!item) return;
+
+    if (!confirm(`¿Estás seguro de eliminar el item "${item.descripcion_base}"?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/plantillas/api/items/${itemId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            mostrarMensaje(result.message, 'success');
+            await cargarItemsPlantilla();
+        } else {
+            mostrarMensaje(result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarMensaje('Error al eliminar el item', 'error');
+    }
+}
+
+// ===== FUNCIONES UTILITARIAS =====
+function mostrarMensaje(mensaje, tipo) {
+    const mensajeDiv = document.createElement('div');
+    mensajeDiv.className = `fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg transition-all duration-300 ${
+        tipo === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+    }`;
+    mensajeDiv.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas ${tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>
+            <span>${mensaje}</span>
+        </div>
+    `;
+
+    document.body.appendChild(mensajeDiv);
+
+    setTimeout(() => {
+        mensajeDiv.remove();
+    }, 3000);
+}
+
+// Funciones para actualizar previews de puntajes
+function actualizarPreviewEditar() {
+    if (!itemEditando) return;
+
+    const minPersonalizado = document.getElementById('editar-puntaje-minimo').value;
+    const maxPersonalizado = document.getElementById('editar-puntaje-maximo').value;
+
+    const minBase = itemEditando.puntaje_minimo;
+    const maxBase = itemEditando.puntaje_maximo;
+
+    const minFinal = minPersonalizado !== '' ? minPersonalizado : minBase;
+    const maxFinal = maxPersonalizado !== '' ? maxPersonalizado : maxBase;
+
+    const previewDiv = document.getElementById('puntaje-preview');
+    if (!previewDiv) return; // Si no existe el elemento, no hacer nada
+    previewDiv.innerHTML = `
+        <div class="text-blue-800 dark:text-blue-300">
+            Puntaje final: ${minFinal} - ${maxFinal} puntos
+        </div>
+        <div class="text-blue-600 dark:text-blue-400 text-xs mt-1">
+            (Base: ${minBase}-${maxBase})
+        </div>
+    `;
+}
+
+function actualizarPreviewAgregar() {
+    if (tipoItemActual === 'base') {
+        if (!itemBaseSeleccionado) return;
+
+        const minPersonalizado = document.getElementById('puntaje-minimo').value;
+        const maxPersonalizado = document.getElementById('puntaje-maximo').value;
+
+        const minBase = itemBaseSeleccionado.puntaje_minimo;
+        const maxBase = itemBaseSeleccionado.puntaje_maximo;
+
+        const minFinal = minPersonalizado !== '' ? minPersonalizado : minBase;
+        const maxFinal = maxPersonalizado !== '' ? maxPersonalizado : maxBase;
+
+        const previewDiv = document.getElementById('puntaje-preview-agregar');
+        if (!previewDiv) return;
+        previewDiv.innerHTML = `
+            <div class="text-green-800 dark:text-green-300">
+                Puntaje final: ${minFinal} - ${maxFinal} puntos
+            </div>
+            <div class="text-green-600 dark:text-green-400 text-xs mt-1">
+                (Base: ${minBase}-${maxBase})
+            </div>
+        `;
+    } else {
+        const minBase = document.getElementById('nuevo-puntaje-minimo').value || 0;
+        const maxBase = document.getElementById('nuevo-puntaje-maximo').value || 4;
+        const minPersonalizado = document.getElementById('puntaje-minimo').value;
+        const maxPersonalizado = document.getElementById('puntaje-maximo').value;
+
+        const minFinal = minPersonalizado !== '' ? minPersonalizado : minBase;
+        const maxFinal = maxPersonalizado !== '' ? maxPersonalizado : maxBase;
+
+        const previewDiv = document.getElementById('puntaje-preview-agregar');
+        if (!previewDiv) return;
+        previewDiv.innerHTML = `
+            <div class="text-green-800 dark:text-green-300">
+                Puntaje final: ${minFinal} - ${maxFinal} puntos
+            </div>
+            <div class="text-green-600 dark:text-green-400 text-xs mt-1">
+                (Base: ${minBase}-${maxBase})
+            </div>
+        `;
+    }
+}
+</script>
+
+<!-- Script para drag & drop (SortableJS) -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar sortable para cada categoría
+    setTimeout(() => {
+        document.querySelectorAll('[id^="categoria-"]').forEach(container => {
+            new Sortable(container, {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: function(evt) {
+                    // Reordenar items y guardar
+                    const categoria = evt.to.id.replace('categoria-', '').replace(/-/g, ' ');
+                    const itemsInCategoria = Array.from(evt.to.children).map((el, index) => ({
+                        id: parseInt(el.dataset.itemId),
+                        orden: index + 1
+                    }));
+
+                    // Actualizar órdenes en itemsPlantilla
+                    itemsInCategoria.forEach(itemData => {
+                        const item = itemsPlantilla.find(i => i.id === itemData.id);
+                        if (item) item.orden = itemData.orden;
+                    });
+
+                    // Guardar reordenamiento
+                    guardarReordenamiento();
+                }
+            });
+        });
+    }, 1000);
+});
+
+async function guardarReordenamiento() {
+    const itemsParaReordenar = itemsPlantilla.map((item, index) => ({
+        id: item.id,
+        orden: index + 1
+    }));
+
+    try {
+        const response = await fetch(`{{ url_for('plantillas.reordenar_items_plantilla', plantilla_id=plantilla.id) }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ items: itemsParaReordenar })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            mostrarMensaje('Orden actualizado exitosamente', 'success');
+        } else {
+            mostrarMensaje('Error al guardar el orden', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarMensaje('Error al guardar el orden', 'error');
+    }
+}
+</script>
+{% endblock %}

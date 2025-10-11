@@ -1,0 +1,1039 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Jefes de Establecimiento{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Encabezado -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+                        Gestión de Jefes de Establecimiento
+                    </h1>
+                    <p class="text-lg text-gray-600 dark:text-gray-300">
+                        Administrar jefes asignados a establecimientos
+                    </p>
+                </div>
+                <button onclick="abrirModalCrearJefe()"
+                        class="inline-flex items-center px-6 py-3 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 transform hover:scale-105">
+                    <i class="fas fa-plus mr-2"></i>
+                    Crear Jefe de Establecimiento
+                </button>
+            </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-user-tie text-blue-600 dark:text-blue-400 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Jefes Activos</h3>
+                        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ jefes|length }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-building text-green-600 dark:text-green-400 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Establecimientos</h3>
+                        <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ jefes|length }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-calendar-check text-purple-600 dark:text-purple-400 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Asignaciones</h3>
+                        <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">100%</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Jefes -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Lista de Jefes de Establecimiento</h2>
+            </div>
+
+            {% if jefes %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-slate-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Jefe
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Establecimiento
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Fecha Inicio
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Estado
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Acciones
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for jefe in jefes %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-slate-700">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <div class="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center">
+                                            <span class="text-sm font-medium text-white">
+                                                {{ jefe.nombre[0] }}{{ jefe.apellido[0] if jefe.apellido else '' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                            {{ jefe.nombre }} {{ jefe.apellido or '' }}
+                                        </div>
+                                        <div class="text-sm text-gray-500 dark:text-gray-400">
+                                            {{ jefe.correo }}
+                                        </div>
+                                        {% if jefe.telefono %}
+                                        <div class="text-sm text-gray-500 dark:text-gray-400">
+                                            {{ jefe.telefono }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                    {{ jefe.establecimiento_nombre }}
+                                </div>
+                                <div class="text-sm text-gray-500 dark:text-gray-400">
+                                    {{ jefe.establecimiento_direccion }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                                {{ jefe.fecha_inicio.strftime('%d/%m/%Y') }}
+                                {% if jefe.fecha_fin %}
+                                <br>
+                                <span class="text-xs text-red-500">Hasta: {{ jefe.fecha_fin.strftime('%d/%m/%Y') }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if jefe.activo %}
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                                        <i class="fas fa-check-circle mr-1"></i>
+                                        Activo
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                                        <i class="fas fa-times-circle mr-1"></i>
+                                        Inactivo
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <div class="flex items-center space-x-2">
+                                    <button onclick="verDetalles({{ jefe.id }})"
+                                            class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button onclick="restablecerContrasena({{ jefe.id }}, '{{ jefe.correo }}')"
+                                            class="text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300 transition-colors"
+                                            title="Restablecer contraseña">
+                                        <i class="fas fa-key"></i>
+                                    </button>
+                                    <button onclick="editarJefe({{ jefe.id }})"
+                                            class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="desactivarJefe({{ jefe.id }})"
+                                            class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors">
+                                        <i class="fas fa-user-times"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="px-6 py-12 text-center">
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-user-tie text-gray-400 text-6xl mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No hay jefes de establecimiento</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">
+                        Comienza creando el primer jefe de establecimiento para asignarlo a un establecimiento.
+                    </p>
+                    <button onclick="abrirModalCrearJefe()"
+                             class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        <i class="fas fa-plus mr-2"></i>
+                        Crear Primer Jefe
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal Crear Jefe de Establecimiento -->
+<div id="modal-crear-jefe" class="fixed inset-0 overflow-y-auto h-full w-full hidden" style="z-index: 9999; backdrop-filter: blur(4px); background-color: rgba(0,0,0,0.5);">
+    <div class="relative top-4 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-lg bg-white dark:bg-slate-800 overflow-y-auto max-h-[90vh]">
+        <div class="mt-3">
+            <!-- Encabezado del Modal -->
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
+                        <i class="fas fa-user-plus mr-2 text-blue-500"></i>
+                        Crear Jefe de Establecimiento
+                    </h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                        Asignar un jefe a un establecimiento disponible
+                    </p>
+                </div>
+                <button onclick="cerrarModalCrearJefe()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Formulario -->
+            <form id="form-crear-jefe" class="space-y-6">
+                <!-- Información Personal -->
+                <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-6">
+                    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-user mr-2 text-blue-500"></i>
+                        Información Personal
+                    </h4>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="nombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Nombre *
+                            </label>
+                            <input type="text"
+                                   id="nombre"
+                                   name="nombre"
+                                   required
+                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="Ingrese el nombre">
+                        </div>
+
+                        <div>
+                            <label for="apellido" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Apellido *
+                            </label>
+                            <input type="text"
+                                   id="apellido"
+                                   name="apellido"
+                                   required
+                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="Ingrese el apellido">
+                        </div>
+
+                        <div>
+                            <label for="correo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Correo Electrónico *
+                            </label>
+                            <input type="email"
+                                   id="correo"
+                                   name="correo"
+                                   required
+                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="correo@ejemplo.com">
+                        </div>
+
+                        <div>
+                            <label for="telefono" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Teléfono
+                            </label>
+                            <input type="tel"
+                                   id="telefono"
+                                   name="telefono"
+                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="+51 999 999 999">
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label for="dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                DNI *
+                            </label>
+                            <input type="text"
+                                   id="dni"
+                                   name="dni"
+                                   required
+                                   maxlength="8"
+                                   pattern="[0-9]{8}"
+                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="12345678">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Asignación de Establecimiento -->
+                <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-6">
+                    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-building mr-2 text-green-500"></i>
+                        Asignación de Establecimiento
+                    </h4>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label for="establecimiento_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Establecimiento *
+                            </label>
+                            <select id="establecimiento_id"
+                                    name="establecimiento_id"
+                                    required
+                                    class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+                                <option value="">Cargando establecimientos...</option>
+                            </select>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                Solo se muestran establecimientos sin jefe asignado
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="fecha_inicio" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Fecha de Inicio *
+                                </label>
+                                <input type="date"
+                                       id="fecha_inicio"
+                                       name="fecha_inicio"
+                                       required
+                                       class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+                            </div>
+
+                            <div>
+                                <label for="fecha_fin" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Fecha de Fin (Opcional)
+                                </label>
+                                <input type="date"
+                                       id="fecha_fin"
+                                       name="fecha_fin"
+                                       class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="comentario" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Comentario (Opcional)
+                            </label>
+                            <textarea id="comentario"
+                                      name="comentario"
+                                      rows="3"
+                                      class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                      placeholder="Comentarios adicionales sobre la asignación..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información Importante -->
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-info-circle text-blue-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-blue-800 dark:text-blue-300">
+                                Información Importante
+                            </h3>
+                            <div class="mt-2 text-sm text-blue-700 dark:text-blue-400">
+                                <ul class="list-disc pl-5 space-y-1">
+                                    <li>Se creará automáticamente un usuario con rol "Jefe de Establecimiento"</li>
+                                    <li>Se generará una contraseña temporal robusta que deberá ser cambiada en el primer inicio de sesión</li>
+                                    <li>El jefe podrá crear usuarios encargados para su establecimiento</li>
+                                    <li>Esta asignación puede tener una fecha de fin opcional</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones -->
+                <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <button type="button"
+                            onclick="cerrarModalCrearJefe()"
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            class="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fas fa-save mr-2"></i>
+                        Crear Jefe de Establecimiento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmación Desactivar Jefe -->
+<div id="modal-confirmar-desactivar" class="fixed inset-0 overflow-y-auto h-full w-full hidden" style="z-index: 9999; backdrop-filter: blur(4px); background-color: rgba(0,0,0,0.5);">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-lg bg-white dark:bg-slate-800 overflow-y-auto max-h-[80vh]">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                    <i class="fas fa-exclamation-triangle mr-2 text-red-500"></i>
+                    Confirmar Desactivación
+                </h3>
+                <button onclick="cerrarModalConfirmarDesactivar()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-red-400"></i>
+                        </div>
+                        <div class="ml-3 flex-1">
+                            <h4 class="text-sm font-medium text-red-800 dark:text-red-200">
+                                ¿Está seguro de que desea desactivar este jefe de establecimiento?
+                            </h4>
+                            <p class="text-sm text-red-700 dark:text-red-300 mt-1">
+                                Esta acción puede afectar las inspecciones asignadas y no se puede deshacer fácilmente.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-4 pt-4">
+                    <button onclick="cerrarModalConfirmarDesactivar()"
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                        Cancelar
+                    </button>
+                    <button onclick="confirmarDesactivarJefe()"
+                            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
+                        <i class="fas fa-user-times mr-2"></i>
+                        Desactivar Jefe
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmación Restablecer Contraseña -->
+<div id="modal-confirmar-restablecer" class="fixed inset-0 overflow-y-auto h-full w-full hidden" style="z-index: 9999; backdrop-filter: blur(4px); background-color: rgba(0,0,0,0.5);">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-lg bg-white dark:bg-slate-800 overflow-y-auto max-h-[80vh]">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                    <i class="fas fa-key mr-2 text-blue-500"></i>
+                    Confirmar Restablecimiento
+                </h3>
+                <button onclick="cerrarModalConfirmarRestablecer()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-info-circle text-blue-400"></i>
+                        </div>
+                        <div class="ml-3 flex-1">
+                            <h4 class="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                ¿Está seguro de que desea restablecer la contraseña?
+                            </h4>
+                            <p class="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                                Se generará una nueva contraseña temporal robusta y el jefe deberá cambiarla en su próximo inicio de sesión.
+                            </p>
+                            <p id="correo-jefe-restablecer" class="text-sm font-medium text-blue-800 dark:text-blue-200 mt-2"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-4 pt-4">
+                    <button onclick="cerrarModalConfirmarRestablecer()"
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                        Cancelar
+                    </button>
+                    <button onclick="confirmarRestablecerContrasena()"
+                            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        <i class="fas fa-key mr-2"></i>
+                        Restablecer Contraseña
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Verificar si estamos en un contexto seguro
+console.log('Contexto seguro:', window.isSecureContext);
+console.log('Protocolo:', window.location.protocol);
+console.log('Clipboard API disponible:', !!navigator.clipboard);
+
+// Variables globales
+let establecimientosDisponibles = [];
+let jefeIdParaDesactivar = null;
+let jefeIdParaRestablecer = null;
+
+// Esperar a que el DOM esté completamente cargado
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM cargado, inicializando JavaScript...');
+
+    // Función para mostrar alertas
+    function mostrarAlerta(tipo, mensaje) {
+        console.log('Mostrando alerta:', tipo, mensaje);
+        const container = document.getElementById('alert-container') || document.body;
+        const alertClass = tipo === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800';
+
+        const alert = document.createElement('div');
+        alert.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border ${alertClass} max-w-md`;
+        alert.innerHTML = `
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <i class="fas ${tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} text-lg"></i>
+                </div>
+                <div class="ml-3 flex-1">
+                    <p class="text-sm font-medium">${mensaje}</p>
+                </div>
+                <div class="ml-auto pl-3">
+                    <button onclick="this.parentElement.parentElement.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(alert);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (alert.parentElement) {
+                alert.remove();
+            }
+        }, 5000);
+    }
+
+    // Función para abrir modal de crear jefe
+    window.abrirModalCrearJefe = function() {
+        console.log('Abriendo modal de crear jefe...');
+        const modal = document.getElementById('modal-crear-jefe');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'block';
+            modal.style.visibility = 'visible';
+            document.body.style.overflow = 'hidden'; // Prevenir scroll del body
+
+            // Cargar establecimientos disponibles
+            cargarEstablecimientosDisponibles();
+
+            // Resetear formulario
+            const form = document.getElementById('form-crear-jefe');
+            if (form) {
+                form.reset();
+            }
+
+            console.log('Modal abierto correctamente');
+        } else {
+            console.error('Modal no encontrado');
+        }
+    };
+
+    // Función para cerrar modal de crear jefe
+    window.cerrarModalCrearJefe = function() {
+        console.log('Cerrando modal de crear jefe...');
+        const modal = document.getElementById('modal-crear-jefe');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto'; // Restaurar scroll del body
+            console.log('Modal cerrado correctamente');
+        }
+    };
+
+    // Función para cargar establecimientos disponibles
+    async function cargarEstablecimientosDisponibles() {
+        try {
+            console.log('Cargando establecimientos disponibles...');
+            
+            // Determinar la URL correcta según el contexto
+            let url = '/api/establecimientos';
+            if (window.location.pathname.startsWith('/inspector/')) {
+                url = '/inspector/api/establecimientos-disponibles';
+            }
+            
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.establecimientos) {
+                establecimientosDisponibles = data.establecimientos;
+                const select = document.getElementById('establecimiento_id');
+
+                // Limpiar opciones existentes
+                select.innerHTML = '<option value="">Seleccione un establecimiento</option>';
+
+                // Agregar nuevas opciones
+                data.establecimientos.forEach(est => {
+                    const option = document.createElement('option');
+                    option.value = est.id;
+                    option.textContent = `${est.nombre} - ${est.direccion}`;
+                    select.appendChild(option);
+                });
+
+                console.log(`Cargados ${data.establecimientos.length} establecimientos`);
+            } else {
+                console.error('Error cargando establecimientos:', data.error);
+                mostrarAlerta('error', 'Error al cargar establecimientos disponibles');
+            }
+        } catch (error) {
+            console.error('Error al cargar establecimientos:', error);
+            mostrarAlerta('error', 'Error al cargar establecimientos disponibles');
+        }
+    }
+
+    // Validación del formulario
+    const form = document.getElementById('form-crear-jefe');
+    if (form) {
+        console.log('Formulario encontrado, agregando event listener...');
+        form.addEventListener('submit', async function(e) {
+            console.log('Formulario enviado, previniendo default...');
+            e.preventDefault();
+            console.log('Default prevenido correctamente');
+
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creando...';
+
+            try {
+                // Recopilar datos del formulario
+                const formData = {
+                    nombre: document.getElementById('nombre').value.trim(),
+                    apellido: document.getElementById('apellido').value.trim(),
+                    correo: document.getElementById('correo').value.trim(),
+                    telefono: document.getElementById('telefono').value.trim(),
+                    dni: document.getElementById('dni').value.trim(),
+                    establecimiento_id: document.getElementById('establecimiento_id').value,
+                    fecha_inicio: document.getElementById('fecha_inicio').value,
+                    fecha_fin: document.getElementById('fecha_fin').value || null,
+                    comentario: document.getElementById('comentario').value.trim()
+                };
+
+                console.log('Datos del formulario:', formData);
+
+                // Validaciones básicas
+                if (!formData.nombre || !formData.apellido || !formData.correo || !formData.dni || !formData.establecimiento_id || !formData.fecha_inicio) {
+                    throw new Error('Todos los campos marcados con * son obligatorios');
+                }
+
+                // Validar formato de email
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(formData.correo)) {
+                    throw new Error('El formato del correo electrónico no es válido');
+                }
+
+                // Validar DNI
+                if (!/^\d{8}$/.test(formData.dni)) {
+                    throw new Error('El DNI debe tener exactamente 8 dígitos');
+                }
+
+                console.log('Enviando datos al servidor...');
+
+                // Enviar datos
+                const response = await fetch('/inspector/api/jefes-establecimiento', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                console.log('Respuesta del servidor:', response.status);
+
+                const data = await response.json();
+                console.log('Datos de respuesta:', data);
+
+                if (data.success) {
+                    console.log('Éxito, verificando contrasena_temporal:', data.contrasena_temporal);
+                    if (data.contrasena_temporal) {
+                        console.log('Cerrando modal y mostrando credenciales...');
+                        cerrarModalCrearJefe();
+                        setTimeout(() => {
+                            mostrarCredencialesUsuario(data.correo, data.contrasena_temporal);
+                        }, 300);
+                    } else {
+                        console.log('No hay contrasena_temporal, mostrando alerta...');
+                        cerrarModalCrearJefe();
+                        mostrarAlerta('success', data.message);
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    }
+                } else {
+                    console.log('Error en respuesta:', data.message);
+                    throw new Error(data.message);
+                }
+
+            } catch (error) {
+                console.error('Error en el proceso:', error);
+                mostrarAlerta('error', error.message);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalText;
+            }
+        });
+        console.log('Event listener agregado correctamente');
+    } else {
+        console.error('Formulario no encontrado!');
+    }
+
+    // Validación en tiempo real del DNI
+    const dniInput = document.getElementById('dni');
+    if (dniInput) {
+        dniInput.addEventListener('input', function(e) {
+            // Solo permitir números
+            this.value = this.value.replace(/\D/g, '');
+            // Limitar a 8 caracteres
+            if (this.value.length > 8) {
+                this.value = this.value.slice(0, 8);
+            }
+        });
+    }
+
+    // Validación de fechas
+    const fechaInicio = document.getElementById('fecha_inicio');
+    const fechaFin = document.getElementById('fecha_fin');
+
+    if (fechaInicio) {
+        fechaInicio.addEventListener('change', function() {
+            if (fechaFin && fechaFin.value && this.value > fechaFin.value) {
+                fechaFin.value = '';
+                mostrarAlerta('error', 'La fecha de fin debe ser posterior a la fecha de inicio');
+            }
+        });
+    }
+
+    if (fechaFin) {
+        fechaFin.addEventListener('change', function() {
+            if (fechaInicio && fechaInicio.value && this.value < fechaInicio.value) {
+                this.value = '';
+                mostrarAlerta('error', 'La fecha de fin debe ser posterior a la fecha de inicio');
+            }
+        });
+    }
+
+    // Función para ver detalles del jefe
+    window.verDetalles = function(jefeId) {
+        // Implementar modal con detalles
+        console.log('Ver detalles del jefe:', jefeId);
+        mostrarAlerta('info', 'Funcionalidad de detalles próximamente disponible');
+    };
+
+    // Función para editar jefe
+    window.editarJefe = function(jefeId) {
+        // Implementar edición
+        console.log('Editar jefe:', jefeId);
+        mostrarAlerta('info', 'Funcionalidad de edición próximamente disponible');
+    };
+
+    // Función para desactivar jefe
+    window.desactivarJefe = function(jefeId) {
+        jefeIdParaDesactivar = jefeId;
+        abrirModalConfirmarDesactivar();
+    };
+
+    // Funciones para modal de confirmación desactivar
+    function abrirModalConfirmarDesactivar() {
+        const modal = document.getElementById('modal-confirmar-desactivar');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'block';
+            modal.style.visibility = 'visible';
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function cerrarModalConfirmarDesactivar() {
+        const modal = document.getElementById('modal-confirmar-desactivar');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+        jefeIdParaDesactivar = null;
+    }
+
+    function confirmarDesactivarJefe() {
+        if (!jefeIdParaDesactivar) return;
+        
+        console.log('Desactivar jefe:', jefeIdParaDesactivar);
+        cerrarModalConfirmarDesactivar();
+        mostrarAlerta('info', 'Funcionalidad de desactivación próximamente disponible');
+    }
+
+    // Mostrar credenciales del usuario creado
+    function mostrarCredencialesUsuario(correo, contrasena) {
+        console.log('Creando modal de credenciales para:', correo, contrasena);
+
+        // Deshabilitar scroll del body
+        document.body.style.overflow = 'hidden';
+
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 overflow-y-auto h-full w-full';
+        modal.style.zIndex = '10000'; // Mayor z-index que el modal de creación
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backdropFilter = 'blur(4px)';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        modal.innerHTML = `
+            <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white dark:bg-slate-800 overflow-y-auto max-h-[80vh]">
+                <div class="mt-3">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                            <i class="fas fa-key mr-2 text-green-500"></i>
+                            Jefe de Establecimiento Creado Exitosamente
+                        </h3>
+                        <button onclick="this.closest('.fixed').remove(); document.body.style.overflow = 'auto';" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-check-circle text-green-400"></i>
+                                </div>
+                                <div class="ml-3 flex-1">
+                                    <h4 class="text-sm font-medium text-green-800 dark:text-green-200">
+                                        Credenciales Generadas
+                                    </h4>
+                                    <p class="text-sm text-green-700 dark:text-green-300 mt-1">
+                                        El jefe de establecimiento ha sido creado exitosamente. Comparta estas credenciales de forma segura.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Texto completo de credenciales -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-copy mr-1"></i>
+                                Credenciales para compartir
+                            </label>
+                            <div class="relative">
+                                <textarea id="credenciales-texto" readonly
+                                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-sm font-mono"
+                                          rows="4">${`Correo: ${correo}\nContraseña temporal: ${contrasena}`}</textarea>
+                                <button onclick="copiarTextoCompleto()"
+                                        class="absolute top-2 right-2 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                                        title="Copiar todo el texto">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Información adicional -->
+                        <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-exclamation-triangle text-red-400"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <h4 class="text-sm font-medium text-red-800 dark:text-red-200">
+                                        ¡Importante!
+                                    </h4>
+                                    <p class="text-sm text-red-700 dark:text-red-300 mt-1">
+                                        Estas credenciales no se podrán volver a visualizar una vez cerrado este modal.
+                                        Copie y guarde la información de forma segura antes de continuar.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <h4 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                                        Información adicional
+                                    </h4>
+                                    <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                                        El jefe deberá cambiar esta contraseña en su primer inicio de sesión.
+                                        Asegúrese de compartir estas credenciales de forma segura.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end pt-4">
+                            <button onclick="this.closest('.fixed').remove(); document.body.style.overflow = 'auto'; setTimeout(() => window.location.reload(), 1000);"
+                                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                                <i class="fas fa-check mr-2"></i>
+                                He copiado las credenciales
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        console.log('Agregando modal al DOM...');
+        document.body.appendChild(modal);
+        console.log('Modal agregado al DOM');
+
+        // Asegurar que sea visible
+        modal.style.display = 'block';
+        modal.style.visibility = 'visible';
+
+        console.log('Modal debería ser visible ahora');
+    }
+
+    // Función para restablecer contraseña de un jefe
+    window.restablecerContrasena = function(jefeId, correoJefe) {
+        console.log('restablecerContrasena llamada con:', { jefeId, correoJefe });
+        jefeIdParaRestablecer = jefeId;
+        document.getElementById('correo-jefe-restablecer').textContent = `Usuario: ${correoJefe}`;
+        abrirModalConfirmarRestablecer();
+    };
+
+    // Funciones para modal de confirmación restablecer
+    function abrirModalConfirmarRestablecer() {
+        const modal = document.getElementById('modal-confirmar-restablecer');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'block';
+            modal.style.visibility = 'visible';
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function cerrarModalConfirmarRestablecer() {
+        const modal = document.getElementById('modal-confirmar-restablecer');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+        jefeIdParaRestablecer = null;
+    }
+
+    async function confirmarRestablecerContrasena() {
+        console.log('confirmarRestablecerContrasena llamada, jefeIdParaRestablecer:', jefeIdParaRestablecer);
+        
+        if (!jefeIdParaRestablecer) {
+            console.error('No hay jefeId para restablecer');
+            mostrarAlerta('error', 'Error: No se pudo identificar el jefe de establecimiento');
+            return;
+        }
+
+        const jefeId = jefeIdParaRestablecer; // Guardar el valor antes de cerrar el modal
+        console.log('Usando jefeId:', jefeId);
+        cerrarModalConfirmarRestablecer();
+
+        try {
+            console.log('Haciendo fetch a:', `/inspector/api/jefes-establecimiento/${jefeId}/restablecer-contrasena`);
+            
+            const response = await fetch(`/inspector/api/jefes-establecimiento/${jefeId}/restablecer-contrasena`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            console.log('Respuesta del servidor:', response.status);
+
+            const data = await response.json();
+            console.log('Datos de respuesta:', data);
+
+            if (data.success) {
+                // Mostrar las nuevas credenciales
+                mostrarCredencialesUsuario(data.correo, data.contrasena_temporal);
+                mostrarAlerta('success', 'Contraseña restablecida exitosamente');
+            } else {
+                throw new Error(data.message || 'Error al restablecer la contraseña');
+            }
+        } catch (error) {
+            console.error('Error al restablecer contraseña:', error);
+            mostrarAlerta('error', error.message || 'Error al restablecer la contraseña');
+        }
+    }
+
+    // Copiar al portapapeles
+    async function copiarAlPortapapeles(texto) {
+        try {
+            await navigator.clipboard.writeText(texto);
+            mostrarAlerta('success', 'Copiado al portapapeles');
+        } catch (error) {
+            console.warn('Clipboard API no disponible, usando fallback...');
+            // Fallback para navegadores que no soportan clipboard API
+            const textArea = document.createElement('textarea');
+            textArea.value = texto;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-9999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                mostrarAlerta('success', 'Copiado al portapapeles');
+            } catch (fallbackError) {
+                console.error('Fallback copy failed:', fallbackError);
+                mostrarAlerta('error', 'No se pudo copiar al portapapeles');
+            }
+            document.body.removeChild(textArea);
+        }
+    }
+
+    // Copiar texto completo de credenciales
+    async function copiarTextoCompleto() {
+        const textarea = document.getElementById('credenciales-texto');
+        if (textarea) {
+            const texto = textarea.value;
+            await copiarAlPortapapeles(texto);
+        } else {
+            console.error('Textarea de credenciales no encontrada');
+        }
+    }
+
+    // Hacer las funciones globales para que puedan ser llamadas desde HTML
+    window.mostrarCredencialesUsuario = mostrarCredencialesUsuario;
+    window.abrirModalConfirmarDesactivar = abrirModalConfirmarDesactivar;
+    window.cerrarModalConfirmarDesactivar = cerrarModalConfirmarDesactivar;
+    window.confirmarDesactivarJefe = confirmarDesactivarJefe;
+    window.abrirModalConfirmarRestablecer = abrirModalConfirmarRestablecer;
+    window.cerrarModalConfirmarRestablecer = cerrarModalConfirmarRestablecer;
+    window.confirmarRestablecerContrasena = confirmarRestablecerContrasena;
+    window.restablecerContrasena = restablecerContrasena;
+    window.copiarTextoCompleto = copiarTextoCompleto;
+    window.copiarAlPortapapeles = copiarAlPortapapeles;
+
+    console.log('JavaScript inicializado correctamente');
+});
+</script>
+
+{% endblock %}

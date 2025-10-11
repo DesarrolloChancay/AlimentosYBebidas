@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-slate-900 py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="bg-white dark:bg-slate-800 shadow rounded-lg mb-6">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-slate-700">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white"><i class="fas fa-cog mr-2"></i>Configuraciones del Sistema</h1>
+                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Gestión de parámetros y configuraciones globales</p>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button onclick="exportarConfiguraciones()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors">
+                            <i class="fas fa-download mr-2"></i>Exportar
+                        </button>
+                        <button onclick="restaurarConfiguraciones()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 transition-colors">
+                            <i class="fas fa-undo mr-2"></i>Restaurar por Defecto
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alertas -->
+        <div id="alert-container" class="mb-6"></div>
+
+        <!-- Configuraciones del Sistema -->
+        <div class="bg-white dark:bg-slate-800 shadow rounded-lg mb-6">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-slate-700">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white"><i class="fas fa-cog mr-2"></i>Configuraciones del Sistema</h2>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for config in configuraciones %}
+                    <div class="border border-gray-200 dark:border-slate-600 rounded-lg p-4 bg-white dark:bg-slate-700">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {{ config.clave.replace('_', ' ').title() }}
+                                </label>
+                                {% if config.descripcion %}
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">{{ config.descripcion }}</p>
+                                {% endif %}
+                            </div>
+                            <div class="flex items-center space-x-2 ml-2">
+                                {% if config.modificable_por_inspector %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200" title="Modificable por Inspector">
+                                    <i class="fas fa-users mr-1"></i>
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200" title="Solo Administrador">
+                                    <i class="fas fa-wrench mr-1"></i>
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Campo de valor -->
+                        <div class="config-field" data-clave="{{ config.clave }}">
+                            {% if config.clave in ['notificaciones_email', 'notificaciones_navegador'] %}
+                                <div class="flex items-center">
+                                    <input type="checkbox" 
+                                           id="config_{{ config.clave }}" 
+                                           class="h-4 w-4 text-blue-600 border-gray-300 dark:border-slate-600 rounded dark:bg-slate-700"
+                                           {% if config.valor.lower() in ['true', '1', 'yes', 'si'] %}checked{% endif %}
+                                           onchange="actualizarConfiguracion('{{ config.clave }}', this.checked ? 'true' : 'false')">
+                                    <label for="config_{{ config.clave }}" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                                        {% if config.valor.lower() in ['true', '1', 'yes', 'si'] %}Activado{% else %}Desactivado{% endif %}
+                                    </label>
+                                </div>
+                            {% elif config.clave in ['meta_semanal_default', 'tiempo_sesion', 'intentos_login'] %}
+                                <input type="number" 
+                                       id="config_{{ config.clave }}"
+                                       class="block w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                       value="{{ config.valor }}"
+                                       min="1"
+                                       {% if config.clave == 'meta_semanal_default' %}max="10"{% endif %}
+                                       {% if config.clave == 'tiempo_sesion' %}max="480"{% endif %}
+                                       {% if config.clave == 'intentos_login' %}max="10"{% endif %}
+                                       onchange="actualizarConfiguracion('{{ config.clave }}', this.value)">
+                            {% else %}
+                                <input type="text" 
+                                       id="config_{{ config.clave }}"
+                                       class="block w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                       value="{{ config.valor }}"
+                                       onchange="actualizarConfiguracion('{{ config.clave }}', this.value)">
+                            {% endif %}
+                        </div>
+
+                        {% if config.updated_at %}
+                        <div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+                            Actualizado: {{ config.updated_at.strftime('%d/%m/%Y %H:%M') }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Función para actualizar configuración
+function actualizarConfiguracion(clave, valor) {
+    const formData = new FormData();
+    formData.append('clave', clave);
+    formData.append('valor', valor);
+
+    fetch('/admin/configuraciones/actualizar', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarAlerta('success', `<i class="fas fa-check text-green-600"></i> ${data.message}`);
+            
+            // Actualizar etiqueta de checkbox si es necesario
+            const input = document.getElementById(`config_${clave}`);
+            if (input.type === 'checkbox') {
+                const label = input.nextElementSibling;
+                if (label) {
+                    label.textContent = input.checked ? 'Activado' : 'Desactivado';
+                }
+            }
+        } else {
+            mostrarAlerta('error', `<i class="fas fa-times text-red-600"></i> ${data.message}`);
+            // Revertir el valor si hay error
+            location.reload();
+        }
+    })
+    .catch(error => {
+        mostrarAlerta('error', '<i class="fas fa-times text-red-600"></i> Error de conexión');
+        location.reload();
+    });
+}
+
+// Función para exportar configuraciones
+function exportarConfiguraciones() {
+    const configuraciones = {};
+    
+    document.querySelectorAll('[data-clave]').forEach(element => {
+        const clave = element.dataset.clave;
+        const input = element.querySelector('input, select');
+        if (input) {
+            if (input.type === 'checkbox') {
+                configuraciones[clave] = input.checked;
+            } else {
+                configuraciones[clave] = input.value;
+            }
+        }
+    });
+    
+    const blob = new Blob([JSON.stringify(configuraciones, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `configuraciones_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    mostrarAlerta('success', 'Configuraciones exportadas correctamente');
+}
+
+// Función para restaurar configuraciones por defecto
+function restaurarConfiguraciones() {
+    if (confirm('¿Está seguro de que desea restaurar todas las configuraciones a sus valores por defecto? Esta acción no se puede deshacer.')) {
+        fetch('/admin/inicializar_sistema', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta('success', `<i class="fas fa-check text-green-600"></i> ${data.message}`);
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                mostrarAlerta('error', `<i class="fas fa-times text-red-600"></i> ${data.message}`);
+            }
+        })
+        .catch(error => {
+            mostrarAlerta('error', '<i class="fas fa-times text-red-600"></i> Error de conexión');
+        });
+    }
+}
+
+// Función para mostrar alertas
+function mostrarAlerta(tipo, mensaje) {
+    const container = document.getElementById('alert-container');
+    const alertClass = tipo === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800';
+    
+    const alert = document.createElement('div');
+    alert.className = `border rounded-lg p-4 ${alertClass}`;
+    alert.innerHTML = `
+        <div class="flex justify-between items-center">
+            <span>${mensaje}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+    `;
+    
+    container.appendChild(alert);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (alert.parentElement) {
+            alert.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

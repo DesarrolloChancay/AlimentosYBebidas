@@ -1,0 +1,522 @@
+{% extends 'base.html' %}
+
+{% block title %}Configuración del Sistema - Gestión de Inspecciones{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
+
+    <!-- ===== HEADER MOBILE-FIRST ===== -->
+    <header class="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl shadow-lg border-b border-slate-200/50 dark:border-slate-700/50 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
+            <div class="flex items-center justify-between h-14 sm:h-16 lg:h-18">
+
+                <!-- ===== LOGO Y TÍTULO ===== -->
+                <div class="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0 flex-1">
+                    <div class="flex items-center gap-2 cursor-pointer group flex-shrink-0">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg sm:rounded-xl shadow-md sm:shadow-lg flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                            <i class="ph ph-gear text-white text-sm sm:text-base lg:text-xl"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <h1 class="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-slate-900 dark:text-white tracking-tight truncate">
+                                Configuración
+                            </h1>
+                            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 hidden sm:block lg:hidden xl:block">
+                                Sistema de Inspecciones
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== BOTONES DE ACCIÓN ===== -->
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <!-- Botón Guardar - Mobile First -->
+                    <button id="guardar-btn" type="button"
+                            class="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-lg sm:rounded-xl shadow-sm text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform hover:scale-105 active:scale-95 min-h-[44px]">
+                        <i class="ph ph-floppy-disk text-sm sm:text-base"></i>
+                        <span class="hidden sm:inline">Guardar</span>
+                    </button>
+
+                    <!-- Botón Restaurar - Mobile First -->
+                    <button id="resetear-btn" type="button"
+                            class="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-lg sm:rounded-xl text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 border border-slate-300 dark:border-slate-600 min-h-[44px]">
+                        <i class="ph ph-arrow-clockwise text-sm sm:text-base"></i>
+                        <span class="hidden sm:inline">Restaurar</span>
+                    </button>
+
+                    <!-- Botón Limpiar - Mobile First -->
+                    <button id="limpiar-datos-btn" type="button"
+                            class="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-lg sm:rounded-xl text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-200 border border-orange-300 dark:border-orange-600 min-h-[44px]">
+                        <i class="ph ph-trash text-sm sm:text-base"></i>
+                        <span class="hidden sm:inline">Limpiar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===== CONTENIDO PRINCIPAL ===== -->
+    <main class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
+
+        <!-- ===== ALERTA DE ESTADO ===== -->
+        <div id="alert-container" class="mb-4 sm:mb-6 hidden">
+            <div class="rounded-lg sm:rounded-xl p-3 sm:p-4 animate-pulse" id="alert-content">
+                <!-- Contenido dinámico -->
+            </div>
+        </div>
+
+        <!-- ===== NAVEGACIÓN DE PESTAÑAS MOBILE-FIRST ===== -->
+        <div class="bg-white dark:bg-slate-800 rounded-lg sm:rounded-xl shadow-lg overflow-hidden mb-4 sm:mb-6">
+
+            <!-- ===== PESTAÑAS SCROLLABLE EN MÓVIL ===== -->
+            <div class="border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
+                <nav class="flex whitespace-nowrap px-2 sm:px-4 lg:px-6 min-w-max" role="tablist">
+
+                    <!-- Pestaña Evaluaciones -->
+                    <button data-tab="evaluaciones"
+                            class="tab-button flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm font-medium transition-all duration-200 hover:text-blue-600 hover:border-blue-300 focus:outline-none focus:text-blue-600 focus:border-blue-300 border-b-2 min-h-[44px] border-transparent text-slate-500 dark:text-slate-400">
+                        <i class="ph ph-chart-line text-sm sm:text-base"></i>
+                        <span>Evaluaciones</span>
+                    </button>
+
+                    {% if user_role in ['Inspector', 'Administrador'] %}
+                    <!-- Pestaña Establecimientos -->
+                    <button data-tab="establecimientos"
+                            class="tab-button flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm font-medium transition-all duration-200 hover:text-blue-600 hover:border-blue-300 focus:outline-none focus:text-blue-600 focus:border-blue-300 border-b-2 min-h-[44px] border-blue-500 text-blue-600">
+                        <i class="ph ph-buildings text-sm sm:text-base"></i>
+                        <span>Establecimientos</span>
+                    </button>
+
+                    <!-- Pestaña Plantillas -->
+                    <button data-tab="plantillas"
+                            class="tab-button flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm font-medium transition-all duration-200 hover:text-blue-600 hover:border-blue-300 focus:outline-none focus:text-blue-600 focus:border-blue-300 border-b-2 min-h-[44px] border-transparent text-slate-500 dark:text-slate-400">
+                        <i class="ph ph-clipboard text-sm sm:text-base"></i>
+                        <span>Plantillas</span>
+                    </button>
+                    {% endif %}
+                </nav>
+            </div>
+
+            <!-- ===== CONTENIDO DE PESTAÑAS ===== -->
+            <div class="p-3 sm:p-4 lg:p-6">
+
+                <!-- ===== TAB: PLAN DE EVALUACIONES ===== -->
+                <div id="tab-evaluaciones" class="tab-content space-y-4 sm:space-y-6 lg:space-y-8 hidden">
+
+                    <!-- ===== META SEMANAL ===== -->
+                    <div class="bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100 dark:from-slate-700 dark:via-slate-800 dark:to-slate-700 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-blue-200/50 dark:border-slate-600/50">
+                        <div class="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
+                                <i class="ph ph-target text-white text-lg sm:text-xl"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h3 class="text-base sm:text-lg lg:text-xl font-semibold text-slate-900 dark:text-white">Meta Semanal</h3>
+                                <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300">Evaluaciones por establecimiento semanalmente</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                                <label class="text-sm font-medium text-slate-700 dark:text-slate-300 min-w-0 flex-shrink-0">
+                                    Número de evaluaciones:
+                                </label>
+                                <div class="flex-1 flex items-center gap-3">
+                                    <input type="number" id="meta-semanal" min="1" max="20"
+                                           class="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white transition-all duration-200 text-base sm:text-lg font-medium text-center min-h-[44px]">
+                                    <span class="text-sm text-slate-500 dark:text-slate-400 flex-shrink-0">por semana</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-blue-100/50 dark:bg-slate-600/50 rounded-lg p-3 sm:p-4 border border-blue-200/50 dark:border-slate-500/50">
+                                <div class="flex items-start gap-2">
+                                    <i class="ph ph-info text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"></i>
+                                    <p class="text-xs sm:text-sm text-blue-800 dark:text-blue-200">
+                                        Esta configuración se aplica a nuevos planes semanales. Los establecimientos existentes mantienen su meta actual.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if user_role in ['Inspector', 'Administrador'] %}
+                <!-- ===== TAB: ESTABLECIMIENTOS ===== -->
+                <div id="tab-establecimientos" class="tab-content space-y-4 sm:space-y-6 lg:space-y-8">
+
+                    <!-- ===== CREAR NUEVO ESTABLECIMIENTO ===== -->
+                    <div class="bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 dark:from-slate-700 dark:via-slate-800 dark:to-slate-700 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-green-200/50 dark:border-slate-600/50">
+                        <div class="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-green-500 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
+                                <i class="ph ph-plus text-white text-lg sm:text-xl"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h3 class="text-base sm:text-lg lg:text-xl font-semibold text-slate-900 dark:text-white">Crear Establecimiento</h3>
+                                <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300">Agrega un nuevo establecimiento al sistema</p>
+                            </div>
+                        </div>
+
+                        <form id="form-crear-establecimiento" class="space-y-4 sm:space-y-6">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                                <!-- Nombre -->
+                                <div class="sm:col-span-2">
+                                    <label for="nombre-establecimiento" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                        <i class="ph ph-building mr-1"></i>
+                                        Nombre del Establecimiento *
+                                    </label>
+                                    <input type="text" id="nombre-establecimiento" required
+                                           class="w-full px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-slate-700 dark:text-white transition-all duration-200 min-h-[44px]"
+                                           placeholder="Ej: Restaurant El Buen Sabor">
+                                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Nombre único del establecimiento</p>
+                                </div>
+
+                                <!-- Tipo -->
+                                <div class="sm:col-span-2">
+                                    <label for="tipo-establecimiento" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                        <i class="ph ph-tag mr-1"></i>
+                                        Tipo *
+                                    </label>
+                                    <select id="tipo-establecimiento" required
+                                            class="w-full px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-slate-700 dark:text-white transition-all duration-200 min-h-[44px]">
+                                        <option value="">Selecciona un tipo</option>
+                                        <option value="Restaurante">Restaurante</option>
+                                        <option value="Cafetería">Cafetería</option>
+                                        <option value="Bar">Bar</option>
+                                        <option value="Hotel">Hotel</option>
+                                        <option value="Supermercado">Supermercado</option>
+                                        <option value="Tienda">Tienda</option>
+                                        <option value="Otro">Otro</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Botón para mostrar/ocultar campos adicionales -->
+                            <div class="pt-2">
+                                <button type="button" id="btn-toggle-campos-adicionales"
+                                        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                                    <i class="ph ph-plus-circle text-lg"></i>
+                                    <span id="texto-toggle">Agregar datos adicionales</span>
+                                    <i class="ph ph-caret-down text-sm transition-transform duration-200" id="icono-toggle"></i>
+                                </button>
+                            </div>
+
+                            <!-- Campos adicionales (ocultos inicialmente) -->
+                            <div id="campos-adicionales" class="hidden space-y-4 sm:space-y-6 border-t border-slate-200 dark:border-slate-600 pt-4 sm:pt-6">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                                    <!-- Distrito -->
+                                    <div>
+                                        <label for="distrito-establecimiento" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                            <i class="ph ph-city mr-1"></i>
+                                            Distrito
+                                        </label>
+                                        <input type="text" id="distrito-establecimiento"
+                                               class="w-full px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-slate-700 dark:text-white transition-all duration-200 min-h-[44px]"
+                                               placeholder="Ej: Miraflores">
+                                    </div>
+
+                                    <!-- Dirección -->
+                                    <div class="sm:col-span-2">
+                                        <label for="direccion-establecimiento" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                            <i class="ph ph-map-pin mr-1"></i>
+                                            Dirección
+                                        </label>
+                                        <input type="text" id="direccion-establecimiento"
+                                               class="w-full px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-slate-700 dark:text-white transition-all duration-200 min-h-[44px]"
+                                               placeholder="Ej: Av. Larco 123, Miraflores, Lima">
+                                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Dirección completa del establecimiento</p>
+                                    </div>
+
+                                    <!-- Teléfono -->
+                                    <div>
+                                        <label for="telefono-establecimiento" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                            <i class="ph ph-phone mr-1"></i>
+                                            Teléfono
+                                        </label>
+                                        <input type="tel" id="telefono-establecimiento"
+                                               class="w-full px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-slate-700 dark:text-white transition-all duration-200 min-h-[44px]"
+                                               placeholder="Ej: (01) 123-4567">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botones -->
+                            <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4 border-t border-slate-200 dark:border-slate-600">
+                                <button type="button" id="btn-limpiar-form"
+                                        class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 sm:py-2.5 text-sm font-medium rounded-lg text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 border border-slate-300 dark:border-slate-600 min-h-[44px]">
+                                    <i class="ph ph-x"></i>
+                                    Limpiar
+                                </button>
+                                <button type="submit"
+                                        class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 sm:py-2.5 text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 transform hover:scale-105 min-h-[44px]">
+                                    <i class="ph ph-plus"></i>
+                                    Crear Establecimiento
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- ===== LISTA DE ESTABLECIMIENTOS ===== -->
+                    <div class="bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100 dark:from-slate-700 dark:via-slate-800 dark:to-slate-700 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-blue-200/50 dark:border-slate-600/50">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+                            <div class="flex items-center gap-3 sm:gap-4">
+                                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
+                                    <i class="ph ph-list text-white text-lg sm:text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-base sm:text-lg lg:text-xl font-semibold text-slate-900 dark:text-white">Establecimientos</h3>
+                                    <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300">Lista de establecimientos registrados</p>
+                                </div>
+                            </div>
+                            <button id="btn-refrescar-lista" type="button"
+                                    class="inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium rounded-lg text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 min-h-[44px]">
+                                <i class="ph ph-arrow-clockwise"></i>
+                                <span class="hidden sm:inline">Actualizar</span>
+                            </button>
+                        </div>
+
+                        <!-- Contenedor de lista -->
+                        <div id="lista-establecimientos" class="space-y-3 sm:space-y-4">
+                            <div class="text-center py-6 sm:py-8">
+                                <i class="ph ph-buildings text-3xl sm:text-4xl text-slate-400 dark:text-slate-500 mb-3 sm:mb-4"></i>
+                                <p class="text-sm sm:text-base text-slate-500 dark:text-slate-400">Cargando establecimientos...</p>
+                            </div>
+                    </div>
+                </div>
+
+                <!-- ===== PESTAÑA PLANTILLAS ===== -->
+                <div id="tab-plantillas" class="tab-content space-y-4 sm:space-y-6 lg:space-y-8 hidden">
+
+                    <!-- ===== CREAR NUEVA PLANTILLA ===== -->
+                    <div class="bg-gradient-to-br from-purple-50 via-violet-50 to-purple-100 dark:from-slate-700 dark:via-slate-800 dark:to-slate-700 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-purple-200/50 dark:border-slate-600/50">
+                        <div class="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-purple-500 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
+                                <i class="ph ph-plus text-white text-lg sm:text-xl"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h3 class="text-base sm:text-lg lg:text-xl font-semibold text-slate-900 dark:text-white">Crear Plantilla</h3>
+                                <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300">Agrega una nueva plantilla de inspección al sistema</p>
+                            </div>
+                        </div>
+
+                        <form id="form-crear-plantilla" class="space-y-4 sm:space-y-6">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                                <!-- Nombre -->
+                                <div class="sm:col-span-2">
+                                    <label for="nombre-plantilla" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                        <i class="ph ph-clipboard-text mr-1"></i>
+                                        Nombre de la Plantilla *
+                                    </label>
+                                    <input type="text" id="nombre-plantilla" required
+                                           class="w-full px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-slate-700 dark:text-white transition-all duration-200 min-h-[44px]"
+                                           placeholder="Ej: Inspección de Restaurante Básica">
+                                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Nombre único de la plantilla</p>
+                                </div>
+
+                                <!-- Descripción -->
+                                <div class="sm:col-span-2">
+                                    <label for="descripcion-plantilla" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                        <i class="ph ph-text-align-left mr-1"></i>
+                                        Descripción
+                                    </label>
+                                    <textarea id="descripcion-plantilla" rows="3"
+                                              class="w-full px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-slate-700 dark:text-white transition-all duration-200 resize-none"
+                                              placeholder="Describe el propósito y alcance de esta plantilla..."></textarea>
+                                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Descripción opcional de la plantilla</p>
+                                </div>
+
+                                <!-- Tipo -->
+                                <div>
+                                    <label for="tipo-plantilla" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                        <i class="ph ph-tag mr-1"></i>
+                                        Tipo *
+                                    </label>
+                                    <select id="tipo-plantilla" required
+                                            class="w-full px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-slate-700 dark:text-white transition-all duration-200 min-h-[44px]">
+                                        <option value="">Selecciona un tipo</option>
+                                        <option value="Restaurante">Restaurante</option>
+                                        <option value="Cafetería">Cafetería</option>
+                                        <option value="Bar">Bar</option>
+                                        <option value="Hotel">Hotel</option>
+                                        <option value="Supermercado">Supermercado</option>
+                                        <option value="Tienda">Tienda</option>
+                                        <option value="Otro">Otro</option>
+                                    </select>
+                                </div>
+
+                                <!-- Categoría -->
+                                <div>
+                                    <label for="categoria-plantilla" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                        <i class="ph ph-folder mr-1"></i>
+                                        Categoría
+                                    </label>
+                                    <select id="categoria-plantilla"
+                                            class="w-full px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-slate-700 dark:text-white transition-all duration-200 min-h-[44px]">
+                                        <option value="">Selecciona una categoría</option>
+                                        <option value="Básica">Básica</option>
+                                        <option value="Completa">Completa</option>
+                                        <option value="Especializada">Especializada</option>
+                                        <option value="Personalizada">Personalizada</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Botones -->
+                            <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4 border-t border-slate-200 dark:border-slate-600">
+                                <button type="button" id="btn-limpiar-form-plantilla"
+                                        class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 sm:py-2.5 text-sm font-medium rounded-lg text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 border border-slate-300 dark:border-slate-600 min-h-[44px]">
+                                    <i class="ph ph-x"></i>
+                                    Limpiar
+                                </button>
+                                <button type="submit"
+                                        class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 sm:py-2.5 text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all duration-200 transform hover:scale-105 min-h-[44px]">
+                                    <i class="ph ph-plus"></i>
+                                    Crear Plantilla
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- ===== LISTA DE PLANTILLAS ===== -->
+                    <div class="bg-gradient-to-br from-indigo-50 via-blue-50 to-indigo-100 dark:from-slate-700 dark:via-slate-800 dark:to-slate-700 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-indigo-200/50 dark:border-slate-600/50">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+                            <div class="flex items-center gap-3 sm:gap-4">
+                                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-500 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
+                                    <i class="ph ph-list text-white text-lg sm:text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-base sm:text-lg lg:text-xl font-semibold text-slate-900 dark:text-white">Plantillas</h3>
+                                    <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300">Lista de plantillas de inspección disponibles</p>
+                                </div>
+                            </div>
+                            <button id="btn-refrescar-plantillas" type="button"
+                                    class="inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium rounded-lg text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 min-h-[44px]">
+                                <i class="ph ph-arrow-clockwise"></i>
+                                <span class="hidden sm:inline">Actualizar</span>
+                            </button>
+                        </div>
+
+                        <!-- Contenedor de lista -->
+                        <div id="lista-plantillas" class="space-y-3 sm:space-y-4">
+                            <div class="text-center py-6 sm:py-8">
+                                <i class="ph ph-clipboard text-3xl sm:text-4xl text-slate-400 dark:text-slate-500 mb-3 sm:mb-4"></i>
+                                <p class="text-sm sm:text-base text-slate-500 dark:text-slate-400">Cargando plantillas...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- ===== LOADING OVERLAY ===== -->
+<div id="loading-overlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+    <div class="bg-white dark:bg-slate-800 rounded-lg sm:rounded-xl p-6 sm:p-8 shadow-2xl">
+        <div class="flex items-center gap-4">
+            <div class="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600"></div>
+            <span class="text-base sm:text-lg font-medium text-slate-900 dark:text-white">Guardando configuración...</span>
+        </div>
+    </div>
+</div>
+
+<!-- ===== TOAST NOTIFICATION ===== -->
+<div id="toast" class="fixed top-4 right-4 max-w-sm w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 transform transition-all duration-300 translate-y-0 opacity-100 z-50 hidden">
+    <div class="p-4">
+        <div class="flex items-start">
+            <div class="flex-shrink-0" id="toastIcon">
+                <!-- Icono dinámico -->
+            </div>
+            <div class="ml-3 w-0 flex-1 pt-0.5">
+                <p class="text-sm font-medium text-gray-900 dark:text-white" id="toastTitle">Título</p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400" id="toastMessage">Mensaje</p>
+            </div>
+            <div class="ml-4 flex-shrink-0 flex">
+                <button onclick="cerrarToast()" class="bg-white dark:bg-gray-800 rounded-md inline-flex text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <span class="sr-only">Cerrar</span>
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/configuracion.js') }}"></script>
+
+<script>
+// Variable global para el rol del usuario
+window.userRole = '{{ user_role }}';
+</script>
+
+<script>
+// ===== FUNCIONALIDAD DE PESTAÑAS =====
+document.addEventListener('DOMContentLoaded', function() {
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    function switchTab(tabName) {
+        // Ocultar todos los contenidos
+        tabContents.forEach(content => {
+            content.classList.add('hidden');
+        });
+
+        // Desactivar todos los botones
+        tabButtons.forEach(button => {
+            button.classList.remove('border-blue-500', 'text-blue-600');
+            button.classList.add('border-transparent', 'text-slate-500', 'dark:text-slate-400');
+        });
+
+        // Mostrar contenido activo
+        const activeContent = document.getElementById(`tab-${tabName}`);
+        if (activeContent) {
+            activeContent.classList.remove('hidden');
+        }
+
+        // Activar botón correspondiente
+        const activeButton = document.querySelector(`[data-tab="${tabName}"]`);
+        if (activeButton) {
+            activeButton.classList.remove('border-transparent', 'text-slate-500', 'dark:text-slate-400');
+            activeButton.classList.add('border-blue-500', 'text-blue-600');
+        }
+    }
+
+    // Event listeners para botones de pestañas
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const tabName = this.getAttribute('data-tab');
+            switchTab(tabName);
+        });
+    });
+
+    // ===== FUNCIONALIDAD CAMPOS ADICIONALES =====
+    const btnToggle = document.getElementById('btn-toggle-campos-adicionales');
+    const camposAdicionales = document.getElementById('campos-adicionales');
+    const textoToggle = document.getElementById('texto-toggle');
+    const iconoToggle = document.getElementById('icono-toggle');
+
+    if (btnToggle && camposAdicionales) {
+        btnToggle.addEventListener('click', function() {
+            const isHidden = camposAdicionales.classList.contains('hidden');
+
+            if (isHidden) {
+                // Mostrar campos adicionales
+                camposAdicionales.classList.remove('hidden');
+                textoToggle.textContent = 'Ocultar datos adicionales';
+                iconoToggle.classList.remove('ph-caret-down');
+                iconoToggle.classList.add('ph-caret-up');
+                btnToggle.classList.remove('text-blue-700', 'dark:text-blue-300', 'bg-blue-50', 'dark:bg-blue-900/20', 'hover:bg-blue-100', 'dark:hover:bg-blue-900/30');
+                btnToggle.classList.add('text-orange-700', 'dark:text-orange-300', 'bg-orange-50', 'dark:bg-orange-900/20', 'hover:bg-orange-100', 'dark:hover:bg-orange-900/30');
+            } else {
+                // Ocultar campos adicionales
+                camposAdicionales.classList.add('hidden');
+                textoToggle.textContent = 'Agregar datos adicionales';
+                iconoToggle.classList.remove('ph-caret-up');
+                iconoToggle.classList.add('ph-caret-down');
+                btnToggle.classList.remove('text-orange-700', 'dark:text-orange-300', 'bg-orange-50', 'dark:bg-orange-900/20', 'hover:bg-orange-100', 'dark:hover:bg-orange-900/30');
+                btnToggle.classList.add('text-blue-700', 'dark:text-blue-300', 'bg-blue-50', 'dark:bg-blue-900/20', 'hover:bg-blue-100', 'dark:hover:bg-blue-900/30');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

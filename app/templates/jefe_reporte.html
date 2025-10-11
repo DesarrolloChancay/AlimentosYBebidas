@@ -1,0 +1,937 @@
+{% extends "base.html" %}
+
+{% block title %}Reporte de Establecimiento{% endblock %}
+
+{% block extra_css %}
+<!-- Configuración personalizada de Tailwind -->
+<script>
+tailwind.config = {
+    darkMode: 'class',
+    theme: {
+        extend: {
+            colors: {
+                'custom-blue': '#3B82F6',
+                'custom-green': '#10B981',
+                'custom-purple': '#8B5CF6',
+                'custom-orange': '#F59E0B'
+            }
+        }
+    }
+}
+</script>
+<style>
+/* Estilos adicionales para asegurar compatibilidad */
+@media print {
+    .no-print { display: none !important; }
+}
+
+/* Animaciones suaves */
+.transition-all {
+    transition: all 0.3s ease !important;
+}
+
+/* Mejorar scroll horizontal en móviles */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Estilos para touch targets */
+.touch-target {
+    min-height: 44px;
+    min-width: 44px;
+}
+
+/* Gradientes personalizados */
+.gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gradient-success {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.gradient-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.gradient-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <!-- Header Principal - Mobile First -->
+    <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 sm:h-20">
+                <!-- Logo y Título -->
+                <div class="flex items-center min-w-0 flex-1">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-chart-line text-white text-lg sm:text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-3 min-w-0 flex-1">
+                        <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white truncate">
+                            Reporte de Establecimiento
+                        </h1>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 truncate">
+                            {{ establecimiento.nombre }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <button onclick="window.print()"
+                            class="touch-target inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        <i class="fas fa-print mr-2"></i>
+                        <span class="hidden sm:inline">Imprimir</span>
+                    </button>
+                    <button onclick="exportarPDF()"
+                            class="touch-target inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        <i class="fas fa-file-pdf mr-2"></i>
+                        <span class="hidden sm:inline">PDF</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+        <!-- Información del Establecimiento -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 mb-6">
+            <div class="flex items-start space-x-4">
+                <div class="flex-shrink-0">
+                    <div class="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-building text-white text-xl sm:text-2xl"></i>
+                    </div>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <h2 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                        {{ establecimiento.nombre }}
+                    </h2>
+                    <p class="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-2">
+                        <i class="fas fa-map-marker-alt mr-2 text-gray-400"></i>
+                        {{ establecimiento.direccion }}
+                    </p>
+                    <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-calendar-alt mr-2"></i>
+                        Generado el {{ fecha_actual }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navegación de Períodos - Mobile Optimized -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Período de Análisis</h3>
+            <div class="grid grid-cols-3 gap-2 sm:gap-4">
+                <button class="periodo-tab touch-target flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl font-medium transition-all duration-300 text-center bg-blue-600 text-white shadow-md active:scale-95"
+                        data-periodo="mes" id="tab-mes">
+                    <i class="fas fa-calendar-day text-lg sm:text-xl mb-1 sm:mb-2"></i>
+                    <span class="text-xs sm:text-sm">Mes</span>
+                </button>
+                <button class="periodo-tab touch-target flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl font-medium transition-all duration-300 text-center bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 active:scale-95"
+                        data-periodo="trimestre" id="tab-trimestre">
+                    <i class="fas fa-calendar-week text-lg sm:text-xl mb-1 sm:mb-2"></i>
+                    <span class="text-xs sm:text-sm">Trimestre</span>
+                </button>
+                <button class="periodo-tab touch-target flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl font-medium transition-all duration-300 text-center bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 active:scale-95"
+                        data-periodo="año" id="tab-año">
+                    <i class="fas fa-calendar-alt text-lg sm:text-xl mb-1 sm:mb-2"></i>
+                    <span class="text-xs sm:text-sm">Año</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Métricas por Período - Mobile First -->
+        <div id="metricas-mes" class="periodo-content">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+                <!-- Tarjeta Total Inspecciones -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-clipboard-list text-white text-lg sm:text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                                {{ reporte.mes.total_inspecciones or 0 }}
+                            </div>
+                            <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
+                                Total Inspecciones
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta Completadas -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-check-circle text-white text-lg sm:text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                                {{ reporte.mes.completadas or 0 }}
+                            </div>
+                            <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
+                                Completadas
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta Promedio Cumplimiento -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-percent text-white text-lg sm:text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                                {{ reporte.mes.promedio_cumplimiento or 0 }}%
+                            </div>
+                            <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
+                                Cumplimiento
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta Tasa Finalización -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-chart-line text-white text-lg sm:text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                                {% if reporte.mes.total_inspecciones and reporte.mes.total_inspecciones > 0 %}
+                                    {{ ((reporte.mes.completadas / reporte.mes.total_inspecciones) * 100)|round(1) }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </div>
+                            <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
+                                Finalización
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="metricas-trimestre" class="periodo-content hidden">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-clipboard-list text-white text-lg sm:text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ reporte.trimestre.total_inspecciones or 0 }}</div>
+                            <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">Total Inspecciones</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-check-circle text-white text-lg sm:text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ reporte.trimestre.completadas or 0 }}</div>
+                            <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">Completadas</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-percent text-white text-lg sm:text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ reporte.trimestre.promedio_cumplimiento or 0 }}%</div>
+                            <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">Cumplimiento</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-chart-line text-white text-lg sm:text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                                {% if reporte.trimestre.total_inspecciones and reporte.trimestre.total_inspecciones > 0 %}
+                                    {{ ((reporte.trimestre.completadas / reporte.trimestre.total_inspecciones) * 100)|round(1) }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </div>
+                            <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">Finalización</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="metricas-año" class="periodo-content hidden">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-clipboard-list text-white text-lg sm:text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ reporte.año.total_inspecciones or 0 }}</div>
+                            <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">Total Inspecciones</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-check-circle text-white text-lg sm:text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ reporte.año.completadas or 0 }}</div>
+                            <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">Completadas</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-percent text-white text-lg sm:text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ reporte.año.promedio_cumplimiento or 0 }}%</div>
+                            <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">Cumplimiento</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-chart-line text-white text-lg sm:text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                                {% if reporte.año.total_inspecciones and reporte.año.total_inspecciones > 0 %}
+                                    {{ ((reporte.año.completadas / reporte.año.total_inspecciones) * 100)|round(1) }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </div>
+                            <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">Finalización</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico de Tendencias - Mobile First -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 mb-6 sm:mb-8 shadow-sm border border-gray-200 dark:border-gray-700">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                <h5 class="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white mb-2 sm:mb-0 flex items-center">
+                    <i class="fas fa-chart-area mr-2 text-blue-600"></i>
+                    Tendencia de Inspecciones
+                </h5>
+                <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Datos del período seleccionado
+                </div>
+            </div>
+            <div class="h-64 sm:h-80 lg:h-96">
+                <canvas id="chartTendencias" class="w-full h-full"></canvas>
+            </div>
+            <!-- Leyenda móvil -->
+            <div class="mt-4 flex flex-wrap justify-center gap-4 sm:hidden">
+                <div class="flex items-center space-x-2">
+                    <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <span class="text-xs text-gray-600 dark:text-gray-400">Completadas</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <span class="text-xs text-gray-600 dark:text-gray-400">Total</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumen de Encargados y Firmas - Mobile First -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            <!-- Estado de Encargados -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h5 class="text-base sm:text-lg font-semibold text-gray-800 dark:text-white flex items-center">
+                        <i class="fas fa-users mr-2 text-green-600"></i>
+                        Encargados
+                    </h5>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                        Estado actual
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                    <div class="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                        <div class="text-2xl sm:text-3xl font-bold text-green-600 mb-1">{{ estadisticas.encargados_activos or 0 }}</div>
+                        <div class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 uppercase tracking-wide font-medium">Activos</div>
+                    </div>
+                    <div class="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                        <div class="text-2xl sm:text-3xl font-bold text-red-600 mb-1">{{ estadisticas.encargados_inactivos or 0 }}</div>
+                        <div class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 uppercase tracking-wide font-medium">Inactivos</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estado de Firmas -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h5 class="text-base sm:text-lg font-semibold text-gray-800 dark:text-white flex items-center">
+                        <i class="fas fa-signature mr-2 text-blue-600"></i>
+                        Firmas
+                    </h5>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                        Estado actual
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                    <div class="text-center p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                        <div class="text-2xl sm:text-3xl font-bold text-yellow-600 mb-1">{{ estadisticas.firmas_registradas or 0 }}</div>
+                        <div class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 uppercase tracking-wide font-medium">Registradas</div>
+                    </div>
+                    <div class="text-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                        <div class="text-2xl sm:text-3xl font-bold text-orange-600 mb-1">{{ estadisticas.firmas_pendientes or 0 }}</div>
+                        <div class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 uppercase tracking-wide font-medium">Pendientes</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inspecciones Recientes - Mobile First -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <h5 class="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white flex items-center mb-2 sm:mb-0">
+                        <i class="fas fa-clipboard-list mr-2 text-purple-600"></i>
+                        Inspecciones Recientes
+                    </h5>
+                    <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                        Últimas {{ inspecciones_recientes|length }} inspecciones
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vista móvil: Cards -->
+            <div class="block sm:hidden">
+                <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for inspeccion in inspecciones_recientes %}
+                    <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="flex-shrink-0">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                                        <span class="text-white font-semibold text-sm">#{{ inspeccion.id }}</span>
+                                    </div>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                        {{ inspeccion.inspector_nombre or 'Sin asignar' }}
+                                    </div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                        {{ inspeccion.fecha or 'Fecha no disponible' }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0">
+                                {% if inspeccion.estado == 'completada' %}
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                                        <i class="fas fa-check mr-1"></i>Completada
+                                    </span>
+                                {% elif inspeccion.estado == 'proceso' %}
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">
+                                        <i class="fas fa-clock mr-1"></i>En Proceso
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
+                                        <i class="fas fa-times mr-1"></i>Pendiente
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1 mr-4">
+                                {% if inspeccion.porcentaje_cumplimiento %}
+                                    <div class="flex items-center space-x-2">
+                                        <div class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                            <div class="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full transition-all duration-300"
+                                                 style="width: {{ inspeccion.porcentaje_cumplimiento }}%"></div>
+                                        </div>
+                                        <span class="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[35px]">
+                                            {{ inspeccion.porcentaje_cumplimiento }}%
+                                        </span>
+                                    </div>
+                                {% else %}
+                                    <span class="text-xs text-gray-400 dark:text-gray-500">Cumplimiento no disponible</span>
+                                {% endif %}
+                            </div>
+                            <button class="flex-shrink-0 w-8 h-8 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg flex items-center justify-center transition-colors"
+                                    onclick="verInspeccion({{ inspeccion.id }})"
+                                    title="Ver detalles">
+                                <i class="fas fa-eye text-blue-600 text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Vista desktop: Tabla -->
+            <div class="hidden sm:block overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Inspector</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Estado</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Cumplimiento</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider print:hidden">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for inspeccion in inspecciones_recientes %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">#{{ inspeccion.id }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{{ inspeccion.fecha or 'N/A' }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{{ inspeccion.inspector_nombre or 'Sin asignar' }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if inspeccion.estado == 'completada' %}
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                                        <i class="fas fa-check mr-1"></i>Completada
+                                    </span>
+                                {% elif inspeccion.estado == 'proceso' %}
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">
+                                        <i class="fas fa-clock mr-1"></i>En Proceso
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
+                                        <i class="fas fa-times mr-1"></i>Pendiente
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                                {% if inspeccion.porcentaje_cumplimiento %}
+                                    <div class="flex items-center">
+                                        <div class="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-2">
+                                            <div class="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full transition-all duration-300"
+                                                 style="width: {{ inspeccion.porcentaje_cumplimiento }}%"></div>
+                                        </div>
+                                        <span class="text-xs font-medium">{{ inspeccion.porcentaje_cumplimiento }}%</span>
+                                    </div>
+                                {% else %}
+                                    <span class="text-gray-400 dark:text-gray-500">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium print:hidden">
+                                <button class="w-8 h-8 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg flex items-center justify-center transition-colors"
+                                        onclick="verInspeccion({{ inspeccion.id }})"
+                                        title="Ver detalles">
+                                    <i class="fas fa-eye text-blue-600"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Mensaje cuando no hay inspecciones -->
+            {% if not inspecciones_recientes %}
+            <div class="text-center py-12">
+                <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-clipboard-list text-gray-400 text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No hay inspecciones recientes</h3>
+                <p class="text-gray-500 dark:text-gray-400">Las inspecciones recientes aparecerán aquí una vez que se realicen.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+/* Estilos adicionales para mobile-first */
+@media (max-width: 640px) {
+    .periodo-content {
+        opacity: 0;
+        transition: opacity 0.15s ease-in-out;
+    }
+    .periodo-content:not(.hidden) {
+        opacity: 1;
+    }
+}
+
+/* Animaciones suaves para las tarjetas */
+.hover-lift {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Mejorar experiencia táctil */
+@media (hover: none) and (pointer: coarse) {
+    .hover-lift:hover {
+        transform: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+}
+
+/* Scroll suave para móviles */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Loading states */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Focus states mejorados para accesibilidad */
+button:focus,
+.tab-button:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+
+<!-- Datos del reporte para JavaScript -->
+<script>
+window.reporte_data = {{ reporte | tojson | safe }};
+</script>
+
+<script>
+// Variables globales
+let chartTendencias = null;
+
+// Inicialización cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Verificar que Chart.js está disponible
+    if (typeof Chart === 'undefined') {
+        return;
+    }
+    
+    // Inicializar gráficos
+    inicializarGraficos();
+    
+    // Configurar eventos de los tabs
+    configurarTabs();
+    
+});
+
+// ===== CONFIGURAR TABS =====
+function configurarTabs() {
+    const tabs = document.querySelectorAll('.periodo-tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const periodo = this.dataset.periodo;
+            if (periodo) {
+                cambiarPeriodo(periodo);
+            }
+        });
+
+        // Optimizar para touch en móviles
+        tab.addEventListener('touchstart', function() {
+            this.style.transform = 'scale(0.98)';
+        });
+
+        tab.addEventListener('touchend', function() {
+            this.style.transform = 'scale(1)';
+        });
+    });
+}
+
+// ===== FUNCIÓN DE CAMBIO DE PERÍODO =====
+function cambiarPeriodo(periodo) {
+
+    try {
+        // Actualizar tabs activos con animación
+        document.querySelectorAll('.periodo-tab').forEach(tab => {
+            tab.classList.remove('bg-blue-600', 'text-white', 'scale-105');
+            tab.classList.add('bg-white', 'text-gray-700', 'hover:bg-gray-50');
+        });
+
+        const activeTab = document.getElementById(`tab-${periodo}`);
+        if (activeTab) {
+            activeTab.classList.remove('bg-white', 'text-gray-700', 'hover:bg-gray-50');
+            activeTab.classList.add('bg-blue-600', 'text-white', 'scale-105');
+        }
+
+        // Mostrar contenido correspondiente con fade
+        document.querySelectorAll('.periodo-content').forEach(content => {
+            content.style.opacity = '0';
+            setTimeout(() => content.classList.add('hidden'), 150);
+        });
+
+        const targetContent = document.getElementById(`metricas-${periodo}`);
+        if (targetContent) {
+            setTimeout(() => {
+                targetContent.classList.remove('hidden');
+                targetContent.style.opacity = '1';
+            }, 150);
+        }
+
+        // Actualizar gráfico según el período
+        actualizarGrafico(periodo);
+
+    } catch (error) {
+    }
+}
+
+// ===== FUNCIÓN ACTUALIZAR GRÁFICO =====
+function actualizarGrafico(periodo) {
+    if (!chartTendencias) return;
+    
+    try {
+        const reporte = window.reporte_data || {};
+        let labels, datos, completadas;
+        
+        switch(periodo) {
+            case 'mes':
+                labels = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
+                datos = [
+                    Math.round((reporte.mes?.total_inspecciones || 0) * 0.2),
+                    Math.round((reporte.mes?.total_inspecciones || 0) * 0.3),
+                    Math.round((reporte.mes?.total_inspecciones || 0) * 0.3),
+                    Math.round((reporte.mes?.total_inspecciones || 0) * 0.2)
+                ];
+                completadas = [
+                    Math.round((reporte.mes?.completadas || 0) * 0.2),
+                    Math.round((reporte.mes?.completadas || 0) * 0.3),
+                    Math.round((reporte.mes?.completadas || 0) * 0.3),
+                    Math.round((reporte.mes?.completadas || 0) * 0.2)
+                ];
+                break;
+            case 'trimestre':
+                labels = ['Mes 1', 'Mes 2', 'Mes 3'];
+                datos = [
+                    Math.round((reporte.trimestre?.total_inspecciones || 0) * 0.33),
+                    Math.round((reporte.trimestre?.total_inspecciones || 0) * 0.33),
+                    Math.round((reporte.trimestre?.total_inspecciones || 0) * 0.34)
+                ];
+                completadas = [
+                    Math.round((reporte.trimestre?.completadas || 0) * 0.33),
+                    Math.round((reporte.trimestre?.completadas || 0) * 0.33),
+                    Math.round((reporte.trimestre?.completadas || 0) * 0.34)
+                ];
+                break;
+            case 'año':
+                labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                const totalAnual = reporte.año?.total_inspecciones || 0;
+                const completadasAnual = reporte.año?.completadas || 0;
+                datos = new Array(12).fill(0).map(() => Math.round(totalAnual / 12));
+                completadas = new Array(12).fill(0).map(() => Math.round(completadasAnual / 12));
+                break;
+        }
+        
+        // Actualizar el gráfico
+        chartTendencias.data.labels = labels;
+        chartTendencias.data.datasets[0].data = completadas;
+        chartTendencias.data.datasets[1].data = datos;
+        chartTendencias.update();
+        
+    } catch (error) {
+    }
+}
+
+// ===== INICIALIZACIÓN DE GRÁFICOS =====
+function inicializarGraficos() {
+    try {
+        const ctx = document.getElementById('chartTendencias');
+        
+        if (!ctx) {
+            return;
+        }
+
+        const reporte = window.reporte_data || {};
+        
+        chartTendencias = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
+                datasets: [{
+                    label: 'Inspecciones Completadas',
+                    data: [
+                        Math.round((reporte.mes?.completadas || 0) * 0.2),
+                        Math.round((reporte.mes?.completadas || 0) * 0.3),
+                        Math.round((reporte.mes?.completadas || 0) * 0.3),
+                        Math.round((reporte.mes?.completadas || 0) * 0.2)
+                    ],
+                    borderColor: 'rgb(34, 197, 94)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }, {
+                    label: 'Total Inspecciones',
+                    data: [
+                        Math.round((reporte.mes?.total_inspecciones || 0) * 0.2),
+                        Math.round((reporte.mes?.total_inspecciones || 0) * 0.3),
+                        Math.round((reporte.mes?.total_inspecciones || 0) * 0.3),
+                        Math.round((reporte.mes?.total_inspecciones || 0) * 0.2)
+                    ],
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        display: window.innerWidth >= 640, // Ocultar en móviles (ya tenemos la leyenda personalizada)
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 15,
+                            font: {
+                                size: window.innerWidth < 640 ? 12 : 14
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: 'white',
+                        bodyColor: 'white',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        padding: 12,
+                        callbacks: {
+                            title: function(context) {
+                                return context[0].label;
+                            },
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            padding: 10,
+                            font: {
+                                size: window.innerWidth < 640 ? 11 : 12
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            padding: 10,
+                            font: {
+                                size: window.innerWidth < 640 ? 11 : 12
+                            },
+                            maxRotation: window.innerWidth < 640 ? 45 : 0
+                        }
+                    }
+                },
+                elements: {
+                    point: {
+                        radius: window.innerWidth < 640 ? 4 : 6,
+                        hoverRadius: window.innerWidth < 640 ? 6 : 8
+                    },
+                    line: {
+                        borderWidth: window.innerWidth < 640 ? 2 : 3
+                    }
+                }
+            }
+        });
+        
+        // Listener para redimensionamiento de ventana
+        window.addEventListener('resize', function() {
+            if (chartTendencias) {
+                // Actualizar opciones responsive
+                const isMobile = window.innerWidth < 640;
+                chartTendencias.options.plugins.legend.display = !isMobile;
+                chartTendencias.options.scales.x.ticks.maxRotation = isMobile ? 45 : 0;
+                chartTendencias.options.elements.point.radius = isMobile ? 4 : 6;
+                chartTendencias.options.elements.point.hoverRadius = isMobile ? 6 : 8;
+                chartTendencias.options.elements.line.borderWidth = isMobile ? 2 : 3;
+                chartTendencias.update();
+            }
+        });
+        
+    } catch (error) {
+    }
+}
+
+// ===== FUNCIÓN VER INSPECCIÓN =====
+function verInspeccion(inspeccionId) {
+    window.open(`/inspecciones/${inspeccionId}/detalle`, '_blank');
+}
+
+// ===== FUNCIÓN EXPORTAR PDF =====
+function exportarPDF() {
+    window.print();
+}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+
+{% endblock %}
+

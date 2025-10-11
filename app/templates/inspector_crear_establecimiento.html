@@ -1,0 +1,480 @@
+{% extends "base.html" %}
+
+{% block title %}Crear Establecimiento - {{ plantilla.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .plantilla-selector {
+        transition: all 0.3s ease;
+    }
+    .plantilla-selector:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .plantilla-selected {
+        border-color: #3b82f6;
+        background-color: #eff6ff;
+        dark:border-color: #3b82f6;
+        dark:bg-blue-900/20;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ===== CREAR ESTABLECIMIENTO ===== -->
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+
+    <!-- ===== HEADER ===== -->
+    <header class="sticky top-0 z-40 bg-white/80 dark:bg-slate-800/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-700">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <i class="fas fa-plus text-white font-bold text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-slate-800 dark:text-white">Crear Establecimiento</h1>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Plantilla: {{ plantilla.nombre }}</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <a href="{{ url_for('plantillas.ver_plantilla', plantilla_id=plantilla.id) }}"
+                       class="p-2 text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-all duration-200"
+                       title="Ver plantilla">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
+                    </a>
+                    <a href="{{ url_for('plantillas.listar_plantillas') }}"
+                       class="inline-flex items-center px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl shadow-sm text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Cambiar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===== CONTENIDO ===== -->
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="space-y-8">
+
+            <!-- Información de la plantilla principal -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-white flex items-center">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        Plantilla Principal Seleccionada
+                    </h2>
+                </div>
+                <div class="p-6">
+                    <div class="bg-slate-50 dark:bg-slate-700 rounded-xl p-4 border border-slate-200 dark:border-slate-600">
+                        <div class="flex items-start space-x-4">
+                            <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-clipboard-check text-white text-lg"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-lg font-semibold text-slate-900 dark:text-white">{{ plantilla.nombre }}</h3>
+                                <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">{{ plantilla.descripcion or 'Sin descripción' }}</p>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
+                                    <div>
+                                        <span class="text-slate-500 dark:text-slate-400">Tipo:</span>
+                                        <span class="ml-2 font-medium text-slate-900 dark:text-white">{{ plantilla.tipo_establecimiento.nombre }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-slate-500 dark:text-slate-400">Tamaño:</span>
+                                        <span class="ml-2 font-medium text-slate-900 dark:text-white capitalize">{{ plantilla.tamano_local }}</span>
+                                    </div>
+                                    {% if plantilla.tipo_restaurante %}
+                                    <div>
+                                        <span class="text-slate-500 dark:text-slate-400">Especialidad:</span>
+                                        <span class="ml-2 font-medium text-slate-900 dark:text-white capitalize">{{ plantilla.tipo_restaurante }}</span>
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <span class="text-slate-500 dark:text-slate-400">Items:</span>
+                                        <span class="ml-2 font-medium text-slate-900 dark:text-white">{{ plantilla.items_plantilla|length }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plantillas adicionales -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-white flex items-center">
+                        <i class="fas fa-plus-circle mr-2"></i>
+                        Agregar Checklists Adicionales
+                    </h2>
+                    <p class="text-sm text-green-100 mt-1">
+                        Opcional: Selecciona plantillas adicionales para combinar checklists
+                    </p>
+                </div>
+                <div class="p-6">
+                    <div id="plantillas-adicionales" class="space-y-4">
+                        <!-- Las plantillas adicionales se cargarán aquí -->
+                    </div>
+                    <div class="mt-6 text-center">
+                        <button id="btn-agregar-plantilla" type="button"
+                                class="inline-flex items-center px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl shadow-sm text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200">
+                            <i class="fas fa-plus mr-2"></i>
+                            Agregar Plantilla Adicional
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulario de datos del establecimiento -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div class="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-white flex items-center">
+                        <i class="fas fa-building mr-2"></i>
+                        Datos del Establecimiento
+                    </h2>
+                    <p class="text-sm text-slate-300 mt-1">
+                        Complete la información básica del establecimiento
+                    </p>
+                </div>
+
+                <form id="form-crear-establecimiento" class="p-6 space-y-6">
+                    <!-- Campo oculto para plantilla_id -->
+                    <input type="hidden" name="plantilla_id" value="{{ plantilla.id }}">
+                    <input type="hidden" name="plantillas_adicionales" id="plantillas-adicionales-input" value="">
+
+                    <!-- Nombre del establecimiento -->
+                    <div>
+                        <label for="nombre" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            Nombre del Establecimiento *
+                        </label>
+                        <input type="text" name="nombre" id="nombre" required maxlength="100"
+                               class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200"
+                               placeholder="Ej: Restaurante El Castillo">
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            Nombre completo y oficial del establecimiento
+                        </p>
+                    </div>
+
+                    <!-- Tipo de establecimiento -->
+                    <div>
+                        <label for="tipo_establecimiento_id" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            Tipo de Establecimiento *
+                        </label>
+                        <select name="tipo_establecimiento_id" id="tipo_establecimiento_id" required
+                                class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200">
+                            <option value="">Seleccione un tipo...</option>
+                            {% for tipo in tipos_establecimiento %}
+                            <option value="{{ tipo.id }}" {% if tipo.id == plantilla.tipo_establecimiento_id %}selected{% endif %}>
+                                {{ tipo.nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            Tipo de negocio o establecimiento (pre-seleccionado según la plantilla)
+                        </p>
+                    </div>
+
+                    <!-- Dirección -->
+                    <div>
+                        <label for="direccion" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            Dirección
+                        </label>
+                        <input type="text" name="direccion" id="direccion" maxlength="200"
+                               class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200"
+                               placeholder="Ej: Calle Principal 123, Ciudad">
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            Dirección completa del establecimiento (opcional)
+                        </p>
+                    </div>
+
+                    <!-- Teléfono -->
+                    <div>
+                        <label for="telefono" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            Teléfono
+                        </label>
+                        <input type="tel" name="telefono" id="telefono" maxlength="20"
+                               class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200"
+                               placeholder="Ej: +51 123 456 789">
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            Número de teléfono de contacto (opcional)
+                        </p>
+                    </div>
+
+                    <!-- Correo electrónico -->
+                    <div>
+                        <label for="correo" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            Correo Electrónico
+                        </label>
+                        <input type="email" name="correo" id="correo" maxlength="100"
+                               class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200"
+                               placeholder="Ej: contacto@establecimiento.com">
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            Correo electrónico de contacto (opcional)
+                        </p>
+                    </div>
+
+                    <!-- Resumen -->
+                    <div class="bg-slate-50 dark:bg-slate-700 rounded-xl p-4 border border-slate-200 dark:border-slate-600">
+                        <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Resumen de Creación</h3>
+                        <div class="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+                            <p><strong>Plantilla principal:</strong> {{ plantilla.nombre }} ({{ plantilla.items_plantilla|length }} items)</p>
+                            <p id="resumen-adicionales"><strong>Plantillas adicionales:</strong> Ninguna seleccionada</p>
+                            <p id="resumen-total"><strong>Total de items estimado:</strong> {{ plantilla.items_plantilla|length }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Acciones -->
+                    <div class="flex justify-end space-x-4 pt-6 border-t border-slate-200 dark:border-slate-600">
+                        <a href="{{ url_for('plantillas.listar_plantillas') }}"
+                           class="px-6 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200">
+                            <i class="fas fa-times mr-2"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit"
+                                class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fas fa-save mr-2"></i>
+                            Crear Establecimiento
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para seleccionar plantilla adicional -->
+<div id="modal-plantillas" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Seleccionar Plantilla Adicional</h3>
+                    <button onclick="cerrarModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="lista-plantillas-modal" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Las plantillas se cargarán aquí -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script>
+let plantillasAdicionales = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('form-crear-establecimiento');
+    const btnAgregarPlantilla = document.getElementById('btn-agregar-plantilla');
+
+    // Evento para agregar plantilla adicional
+    btnAgregarPlantilla.addEventListener('click', function() {
+        cargarPlantillasModal();
+    });
+
+    // Evento de envío del formulario
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        // Actualizar campo oculto con plantillas adicionales
+        document.getElementById('plantillas-adicionales-input').value = JSON.stringify(plantillasAdicionales);
+
+        // Deshabilitar botón
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creando...';
+
+        try {
+            const formData = new FormData(form);
+
+            const response = await fetch('{{ url_for("plantillas.guardar_establecimiento_desde_plantilla") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                mostrarMensaje(result.message, 'success');
+                setTimeout(() => {
+                    window.location.href = '{{ url_for("inspeccion.dashboard_page") }}';
+                }, 2000);
+            } else {
+                mostrarMensaje(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarMensaje('Error al procesar la solicitud', 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    });
+
+    // Actualizar resumen
+    function actualizarResumen() {
+        const adicionalesTexto = plantillasAdicionales.length > 0
+            ? plantillasAdicionales.map(p => p.nombre).join(', ')
+            : 'Ninguna seleccionada';
+
+        document.getElementById('resumen-adicionales').innerHTML =
+            `<strong>Plantillas adicionales:</strong> ${adicionalesTexto}`;
+
+        const totalItems = {{ plantilla.items_plantilla|length }} + plantillasAdicionales.reduce((sum, p) => sum + p.num_items, 0);
+        document.getElementById('resumen-total').innerHTML =
+            `<strong>Total de items estimado:</strong> ${totalItems}`;
+    }
+
+    // Cargar plantillas para el modal
+    async function cargarPlantillasModal() {
+        try {
+            const response = await fetch('/plantillas/api/listar');
+            const plantillas = await response.json();
+
+            if (response.ok) {
+                mostrarPlantillasModal(plantillas);
+            } else {
+                mostrarMensaje('Error al cargar plantillas', 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarMensaje('Error al cargar plantillas', 'error');
+        }
+    }
+
+    // Mostrar modal con plantillas
+    function mostrarPlantillasModal(plantillas) {
+        const modal = document.getElementById('modal-plantillas');
+        const lista = document.getElementById('lista-plantillas-modal');
+
+        lista.innerHTML = '';
+
+        plantillas.forEach(plantilla => {
+            // Saltar la plantilla principal
+            if (plantilla.id == {{ plantilla.id }}) return;
+
+            // Verificar si ya está seleccionada
+            const yaSeleccionada = plantillasAdicionales.some(p => p.id === plantilla.id);
+
+            const div = document.createElement('div');
+            div.className = `p-4 border rounded-xl cursor-pointer transition-all duration-200 ${
+                yaSeleccionada
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 hover:border-blue-300'
+            }`;
+            div.onclick = () => seleccionarPlantillaAdicional(plantilla);
+
+            div.innerHTML = `
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <h4 class="font-medium text-slate-900 dark:text-white">${plantilla.nombre}</h4>
+                        <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">${plantilla.descripcion || 'Sin descripción'}</p>
+                        <div class="flex items-center space-x-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                            <span><i class="fas fa-utensils mr-1"></i>${plantilla.tipo}</span>
+                            <span><i class="fas fa-list-check mr-1"></i>${plantilla.items_count} items</span>
+                        </div>
+                    </div>
+                    <div class="ml-3">
+                        ${yaSeleccionada ? '<i class="fas fa-check-circle text-blue-500 text-lg"></i>' : '<i class="fas fa-plus-circle text-slate-400 text-lg"></i>'}
+                    </div>
+                </div>
+            `;
+
+            lista.appendChild(div);
+        });
+
+        modal.classList.remove('hidden');
+    }
+
+    // Seleccionar/deseleccionar plantilla adicional
+    function seleccionarPlantillaAdicional(plantilla) {
+        const index = plantillasAdicionales.findIndex(p => p.id === plantilla.id);
+
+        if (index > -1) {
+            // Remover si ya está seleccionada
+            plantillasAdicionales.splice(index, 1);
+        } else {
+            // Agregar si no está seleccionada
+            plantillasAdicionales.push({
+                id: plantilla.id,
+                nombre: plantilla.nombre,
+                num_items: plantilla.items_count
+            });
+        }
+
+        // Actualizar UI
+        renderizarPlantillasAdicionales();
+        actualizarResumen();
+        cerrarModal();
+    }
+
+    // Renderizar plantillas adicionales seleccionadas
+    function renderizarPlantillasAdicionales() {
+        const container = document.getElementById('plantillas-adicionales');
+
+        if (plantillasAdicionales.length === 0) {
+            container.innerHTML = '<p class="text-sm text-slate-500 dark:text-slate-400 text-center py-4">No hay plantillas adicionales seleccionadas</p>';
+            return;
+        }
+
+        container.innerHTML = plantillasAdicionales.map(plantilla => `
+            <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600">
+                <div>
+                    <span class="font-medium text-slate-900 dark:text-white">${plantilla.nombre}</span>
+                    <span class="text-sm text-slate-500 dark:text-slate-400 ml-2">(${plantilla.num_items} items)</span>
+                </div>
+                <button onclick="removerPlantillaAdicional(${plantilla.id})"
+                        class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `).join('');
+    }
+
+    // Función global para remover plantilla adicional
+    window.removerPlantillaAdicional = function(id) {
+        plantillasAdicionales = plantillasAdicionales.filter(p => p.id !== id);
+        renderizarPlantillasAdicionales();
+        actualizarResumen();
+    };
+
+    // Función global para cerrar modal
+    window.cerrarModal = function() {
+        document.getElementById('modal-plantillas').classList.add('hidden');
+    };
+
+    // Función para mostrar mensajes
+    function mostrarMensaje(mensaje, tipo) {
+        const mensajeDiv = document.createElement('div');
+        mensajeDiv.className = `fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg transition-all duration-300 z-50 ${
+            tipo === 'success'
+                ? 'bg-green-500 text-white'
+                : 'bg-red-500 text-white'
+        }`;
+        mensajeDiv.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas ${tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>
+                <span>${mensaje}</span>
+            </div>
+        `;
+
+        document.body.appendChild(mensajeDiv);
+
+        setTimeout(() => {
+            mensajeDiv.remove();
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+
+        <!-- Meta tags para móviles y PWA -->
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="Inspecciones">
+        <meta name="theme-color" content="#1e293b">
+
+        <title>Cambiar Contraseña - Sistema Seguro</title>
+
+        <!-- Favicon global -->
+        <link rel="icon" href="{{ url_for('static', filename='img/cropped-CASTILLO-DE-CHANCAY-32x32.png') }}" sizes="32x32">
+        <link rel="icon" href="{{ url_for('static', filename='img/cropped-CASTILLO-DE-CHANCAY-192x192.png') }}" sizes="192x192">
+
+        <!-- Tailwind CSS compilado para producción -->
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind-compiled.css') }}">
+
+        <!-- FontAwesome para íconos -->
+        <link defer="" media="all" onload="this.media='all'" rel="stylesheet" href="https://site-assets.fontawesome.com/releases/v7.1.0/css/all.css">
+
+        <!-- Dependencias mínimas -->
+        <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+
+        <!-- Estilos críticos para evitar flash de posicionamiento -->
+        <style>
+            /* Bloquear navegación y scroll */
+            body {
+                overflow: hidden;
+                position: fixed;
+                width: 100%;
+                height: 100%;
+            }
+
+            /* Overlay de seguridad */
+            .seguridad-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                z-index: 9999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .seguridad-modal {
+                background: white;
+                border-radius: 12px;
+                padding: 2rem;
+                max-width: 500px;
+                width: 90%;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            }
+
+            /* Animación de entrada */
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .seguridad-modal {
+                animation: slideIn 0.3s ease-out;
+            }
+        </style>
+    </head>
+
+    <body class="h-full bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-red-950 dark:via-orange-950 dark:to-yellow-950">
+        <!-- Overlay de seguridad que bloquea toda interacción -->
+        <div class="seguridad-overlay">
+            <div class="seguridad-modal">
+                <!-- Header de seguridad -->
+                <div class="text-center mb-8">
+                    <div class="mx-auto h-16 w-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-shield-alt text-red-600 dark:text-red-400 text-2xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                        🔒 Cambio de Contraseña Obligatorio
+                    </h1>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        Por seguridad del sistema, debe cambiar su contraseña temporal antes de continuar
+                    </p>
+                </div>
+
+                <!-- Formulario de cambio de contraseña -->
+                <form id="form-cambiar-contrasena" class="space-y-6">
+                    <!-- Contraseña Actual -->
+                    <div>
+                        <label for="contrasena_actual" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-lock mr-1"></i>
+                            Contraseña Actual (Temporal)
+                        </label>
+                        <div class="relative">
+                            <input type="password"
+                                   id="contrasena_actual"
+                                   name="contrasena_actual"
+                                   required
+                                   class="block w-full px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="Temp123!">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-lock text-red-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Nueva Contraseña -->
+                    <div>
+                        <label for="contrasena_nueva" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-key mr-1"></i>
+                            Nueva Contraseña Segura
+                        </label>
+                        <div class="relative">
+                            <input type="password"
+                                   id="contrasena_nueva"
+                                   name="contrasena_nueva"
+                                   required
+                                   class="block w-full px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="Mínimo 6 caracteres (solo letras y números)">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-key text-red-400"></i>
+                            </div>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Solo letras y números, mínimo 6 caracteres
+                        </p>
+                    </div>
+
+                    <!-- Confirmar Nueva Contraseña -->
+                    <div>
+                        <label for="confirmar_contrasena" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-check-circle mr-1"></i>
+                            Confirmar Nueva Contraseña
+                        </label>
+                        <div class="relative">
+                            <input type="password"
+                                   id="confirmar_contrasena"
+                                   name="confirmar_contrasena"
+                                   required
+                                   class="block w-full px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="Repite la nueva contraseña">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-check-circle text-red-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Indicador de Fortaleza -->
+                    <div id="password-strength" class="hidden">
+                        <div class="flex items-center space-x-2">
+                            <div class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                <div id="strength-bar" class="h-2 rounded-full transition-all duration-300"></div>
+                            </div>
+                            <span id="strength-text" class="text-xs font-medium"></span>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="flex space-x-3">
+                        <button type="button"
+                                onclick="logout()"
+                                class="flex-1 flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
+                            <i class="fas fa-sign-out-alt mr-2"></i>
+                            Salir del Sistema
+                        </button>
+                        <button type="submit"
+                                class="flex-1 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fas fa-save mr-2"></i>
+                            Cambiar Contraseña
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Información de Seguridad -->
+                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mt-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800 dark:text-red-200">
+                                Requisitos de Seguridad Obligatorios
+                            </h3>
+                            <div class="mt-2 text-sm text-red-700 dark:text-red-300">
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li>Mínimo 6 caracteres</li>
+                                    <li>Solo letras y números (A-Z, a-z, 0-9)</li>
+                                    <li>No se permiten símbolos ni espacios</li>
+                                    <li>Debe ser diferente a la contraseña temporal</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenedor para notificaciones -->
+        <div id="alert-container"></div>
+
+        <script>
+        // Verificar inmediatamente que el usuario necesita cambiar contraseña
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                const response = await fetch('/api/auth/verificar-cambio-contrasena');
+                const data = await response.json();
+
+                if (!data.requiere_cambio) {
+                    // Si no requiere cambio, redirigir al dashboard
+                    window.location.href = '/';
+                    return;
+                }
+
+                // Si requiere cambio, configurar validaciones
+                configurarValidacionTiempoReal();
+
+            } catch (error) {
+                console.error('Error verificando cambio de contraseña:', error);
+                // En caso de error, redirigir al login
+                window.location.href = '/login';
+            }
+        });
+
+        // Configurar validación en tiempo real
+        function configurarValidacionTiempoReal() {
+            const nuevaContrasena = document.getElementById('contrasena_nueva');
+            const confirmarContrasena = document.getElementById('confirmar_contrasena');
+
+            nuevaContrasena.addEventListener('input', function() {
+                validarContrasena(this.value);
+                validarCoincidencia();
+            });
+
+            confirmarContrasena.addEventListener('input', validarCoincidencia);
+        }
+
+        // Validar contraseña
+        function validarContrasena(contrasena) {
+            const strengthIndicator = document.getElementById('password-strength');
+            const strengthBar = document.getElementById('strength-bar');
+            const strengthText = document.getElementById('strength-text');
+
+            if (contrasena.length === 0) {
+                strengthIndicator.classList.add('hidden');
+                return true;
+            }
+
+            strengthIndicator.classList.remove('hidden');
+
+            // Validar formato (solo letras y números)
+            const formatoValido = /^[a-zA-Z0-9]+$/.test(contrasena);
+
+            if (!formatoValido) {
+                strengthBar.className = 'h-2 rounded-full bg-red-500';
+                strengthText.textContent = 'Solo letras y números';
+                strengthText.className = 'text-xs font-medium text-red-600';
+                return false;
+            }
+
+            // Validar longitud
+            if (contrasena.length < 6) {
+                strengthBar.className = 'h-2 rounded-full bg-red-500';
+                strengthBar.style.width = '33%';
+                strengthText.textContent = 'Muy corta';
+                strengthText.className = 'text-xs font-medium text-red-600';
+                return false;
+            } else if (contrasena.length < 8) {
+                strengthBar.className = 'h-2 rounded-full bg-yellow-500';
+                strengthBar.style.width = '66%';
+                strengthText.textContent = 'Aceptable';
+                strengthText.className = 'text-xs font-medium text-yellow-600';
+                return true;
+            } else {
+                strengthBar.className = 'h-2 rounded-full bg-green-500';
+                strengthBar.style.width = '100%';
+                strengthText.textContent = 'Fuerte';
+                strengthText.className = 'text-xs font-medium text-green-600';
+                return true;
+            }
+        }
+
+        // Validar que las contraseñas coincidan
+        function validarCoincidencia() {
+            const nueva = document.getElementById('contrasena_nueva').value;
+            const confirmar = document.getElementById('confirmar_contrasena').value;
+            const confirmarInput = document.getElementById('confirmar_contrasena');
+
+            if (confirmar.length > 0) {
+                if (nueva === confirmar) {
+                    confirmarInput.classList.remove('border-red-500');
+                    confirmarInput.classList.add('border-green-500');
+                } else {
+                    confirmarInput.classList.remove('border-green-500');
+                    confirmarInput.classList.add('border-red-500');
+                }
+            } else {
+                confirmarInput.classList.remove('border-red-500', 'border-green-500');
+            }
+        }
+
+        // Enviar formulario
+        document.getElementById('form-cambiar-contrasena').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Cambiando...';
+
+            try {
+                const formData = {
+                    contrasena_actual: document.getElementById('contrasena_actual').value,
+                    contrasena_nueva: document.getElementById('contrasena_nueva').value
+                };
+
+                // Validaciones
+                if (!formData.contrasena_actual || !formData.contrasena_nueva) {
+                    throw new Error('Todos los campos son obligatorios');
+                }
+
+                if (formData.contrasena_actual === formData.contrasena_nueva) {
+                    throw new Error('La nueva contraseña debe ser diferente a la temporal');
+                }
+
+                if (!validarContrasena(formData.contrasena_nueva)) {
+                    throw new Error('La nueva contraseña no cumple con los requisitos');
+                }
+
+                if (formData.contrasena_nueva !== document.getElementById('confirmar_contrasena').value) {
+                    throw new Error('Las contraseñas no coinciden');
+                }
+
+                const response = await fetch('/usuarios/api/cambiar-contrasena', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    mostrarExito('Contraseña cambiada exitosamente. Redirigiendo...');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                } else {
+                    throw new Error(data.error);
+                }
+
+            } catch (error) {
+                mostrarError(error.message);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalText;
+            }
+        });
+
+        // Función para hacer logout
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+                window.location.href = '/login';
+            } catch (error) {
+                console.error('Error al cerrar sesión:', error);
+                window.location.href = '/login';
+            }
+        }
+
+        // Funciones de notificación
+        function mostrarExito(mensaje) {
+            mostrarNotificacion('success', mensaje);
+        }
+
+        function mostrarError(mensaje) {
+            mostrarNotificacion('error', mensaje);
+        }
+
+        function mostrarNotificacion(tipo, mensaje) {
+            const container = document.getElementById('alert-container');
+            const alertClass = tipo === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800';
+
+            const alert = document.createElement('div');
+            alert.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border ${alertClass} max-w-md`;
+            alert.innerHTML = `
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <i class="fas ${tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} text-lg"></i>
+                    </div>
+                    <div class="ml-3 flex-1">
+                        <p class="text-sm font-medium">${mensaje}</p>
+                    </div>
+                    <div class="ml-auto pl-3">
+                        <button onclick="this.parentElement.parentElement.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(alert);
+
+            setTimeout(() => {
+                if (alert.parentElement) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+
+        // Bloquear navegación del navegador
+        window.addEventListener('beforeunload', function(e) {
+            // Mostrar mensaje de confirmación si intenta salir
+            e.preventDefault();
+            e.returnValue = '¿Está seguro de que desea salir? Debe cambiar su contraseña antes de continuar.';
+            return e.returnValue;
+        });
+
+        // Bloquear atajos de teclado que podrían permitir navegación
+        document.addEventListener('keydown', function(e) {
+            // Bloquear Ctrl+R (recargar), Ctrl+Shift+R (recargar forzada), F5
+            if ((e.ctrlKey && e.key === 'r') || (e.ctrlKey && e.shiftKey && e.key === 'R') || e.key === 'F5') {
+                e.preventDefault();
+                mostrarError('No puede recargar la página hasta cambiar su contraseña');
+                return false;
+            }
+
+            // Bloquear Ctrl+W (cerrar pestaña), Alt+F4
+            if ((e.ctrlKey && e.key === 'w') || (e.altKey && e.key === 'F4')) {
+                e.preventDefault();
+                mostrarError('Debe cambiar su contraseña antes de salir');
+                return false;
+            }
+
+            // Bloquear backspace para navegación
+            if (e.key === 'Backspace' && !e.target.matches('input, textarea')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Bloquear clicks en enlaces (aunque no debería haber ninguno)
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('a, [href], [onclick]')) {
+                e.preventDefault();
+                mostrarError('No puede navegar hasta cambiar su contraseña');
+                return false;
+            }
+        });
+
+        // Bloquear el botón de retroceso del navegador
+        history.pushState(null, null, location.href);
+        window.addEventListener('popstate', function() {
+            history.pushState(null, null, location.href);
+            mostrarError('No puede usar los botones de navegación del navegador');
+        });
+        </script>
+    </body>
+</html>

@@ -1,273 +1,922 @@
 {% extends "base.html" %} 
 {% block title %}Evaluación Sanitaria{% endblock %} 
-{% block content %}
+{% block extra_css %}
+<style>
+/* ===== ESTILOS PERSONALIZADOS PARA INDEX.HTML ===== */
 
-<section id="vista-app" class="min-h-screen p-4 md:p-8" data-user-role="{{ user_role }}">
-  <!-- Header -->
-  <header class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-    <div>
-      <h1 class="text-2xl md:text-3xl font-bold">
-        Evaluación Sanitaria
-        {% if user_role == 'Encargado' %}
-        <span class="text-sm font-normal text-blue-600">(Vista de Encargado)</span>
-        {% elif user_role == 'Inspector' %}
-        <span class="text-sm font-normal text-green-600">(Vista de Inspector)</span>
-        {% elif user_role == 'Administrador' %}
-        <span class="text-sm font-normal text-purple-600">(Vista de Administrador)</span>
-        {% endif %}
-      </h1>
-      <p class="text-slate-600">
-        Usuario: <span id="auditor-email" class="font-medium">{{ session.get('user_name', 'Usuario') }}</span>
-      </p>
-    </div>
-    <div class="flex items-center gap-2">
-      {% if user_role in ['Inspector', 'Administrador'] %}
-      <a href="{{ url_for('inspeccion.buscar_inspecciones') }}" class="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors">
-        Buscar Inspecciones
-      </a>
-      <a href="/inspecciones" class="px-4 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-colors">
-        Historial
-      </a>
-      {% endif %}
-      <button onclick="cerrarSesion()" class="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors">
-        Cerrar sesión
-      </button>
-    </div>
-  </header>
+/* Animaciones de entrada */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
-  <!-- Mensaje informativo para encargado -->
-  {% if user_role == 'Encargado' %}
-  <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-    <h3 class="font-semibold text-blue-800 mb-2">Vista de Encargado</h3>
-    <p class="text-blue-700 text-sm">
-      Como encargado, podrá ver en tiempo real las calificaciones que va asignando el inspector. 
-      Al finalizar la inspección, podrá poner su firma para aceptar las puntuaciones.
-    </p>
-  </div>
-  {% endif %}
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
 
-  <form id="form-inspeccion" class="space-y-8" method="POST" action="{{ url_for('inspeccion.guardar_inspeccion') }}">
-    <input type="hidden" id="inspector_id" name="inspector_id" value="{{ session.get('user_id') }}">
+/* Aplicar animaciones */
+.animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-slide-in-right {
+    animation: slideInRight 0.5s ease-out forwards;
+}
+
+/* Estilos para el menú móvil */
+.menu-mobile {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+}
+
+.menu-mobile.open {
+    transform: translateX(0);
+}
+
+/* Estilos para los items de evaluación */
+.item-evaluacion {
+    transition: all 0.2s ease-in-out;
+}
+
+.item-evaluacion:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilos para las firmas */
+.firma-preview {
+    max-width: 100%;
+    max-height: 100px;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+/* Estilos para el estado de sincronización */
+.sync-status {
+    transition: all 0.3s ease-in-out;
+}
+
+.sync-status.syncing {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: rgb(59, 130, 246);
+}
+
+.sync-status.synced {
+    background-color: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: rgb(34, 197, 94);
+}
+
+.sync-status.error {
+    background-color: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: rgb(239, 68, 68);
+}
+
+/* Estilos para los botones de radio personalizados */
+.radio-custom {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #d1d5db;
+    border-radius: 50%;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.radio-custom:checked {
+    border-color: #3b82f6;
+    background-color: #3b82f6;
+}
+
+.radio-custom:checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background-color: white;
+    border-radius: 50%;
+}
+
+/* Estilos para el scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Estilos para el modo oscuro */
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+    background: #374151;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #6b7280;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Estilos para las transiciones de carga */
+.loading-spinner {
+    border: 2px solid #f3f4f6;
+    border-top: 2px solid #3b82f6;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Estilos para los tooltips */
+.tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip .tooltip-text {
+    visibility: hidden;
+    width: 200px;
+    background-color: #374151;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 8px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 12px;
+}
+
+.tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Estilos para el responsive design */
+@media (max-width: 640px) {
+    .mobile-full-width {
+        width: 100vw;
+        margin-left: calc(-50vw + 50%);
+    }
+}
+
+/* Estilos para los gradientes animados */
+.gradient-animate {
+    background-size: 200% 200%;
+    animation: gradientShift 3s ease infinite;
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Estilos para los estados de validación */
+.input-error {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.input-success {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* Estilos para las notificaciones */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 50;
+    padding: 12px 16px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+.notification.success {
+    background-color: #10b981;
+}
+
+.notification.error {
+    background-color: #ef4444;
+}
+
+.notification.warning {
+    background-color: #f59e0b;
+}
+
+/* Estilos para el drag and drop */
+.drag-over {
+    border-color: #3b82f6;
+    background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* Estilos para las previsualizaciones de imagen */
+.image-preview {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.2s ease-in-out;
+}
+
+.image-preview:hover {
+    transform: scale(1.05);
+}
+
+.image-preview .remove-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.image-preview .remove-btn:hover {
+    background: rgba(239, 68, 68, 1);
+}
+
+/* Estilos para botones de scroll flotantes */
+.scroll-buttons {
+    position: fixed;
+    bottom: 40px;
+    left: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.scroll-buttons.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.scroll-button {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: 2px solid #ffffff;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    transition: all 0.3s ease;
+    opacity: 1;
+    transform: translateY(20px) scale(1.1);
+    animation: pulse 2s infinite;
+}
+
+.scroll-button.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.scroll-button.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.scroll-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.scroll-button:active {
+    transform: scale(0.95);
+}
+
+.scroll-button svg {
+    width: 20px;
+    height: 20px;
+}
+
+.scroll-button.scroll-to-top {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.scroll-button.scroll-to-bottom {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+/* Responsive para móviles */
+@media (max-width: 640px) {
+    .scroll-buttons {
+        bottom: 15px;
+        left: 15px;
+        gap: 8px;
+    }
     
-    <!-- Panel superior: selección y plan semanal -->
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-      <!-- Selección -->
-      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-4">
-        <h2 class="font-semibold mb-3">1) Selección</h2>
-        <label class="text-sm text-slate-600 dark:text-slate-400">Negocio</label>
-        <select id="establecimiento" name="establecimiento" 
-                class="w-full border dark:border-slate-600 rounded-xl px-3 py-2 mt-1 mb-3 bg-white dark:bg-slate-700 text-slate-900 dark:text-white" 
-                required {{ 'disabled' if user_role == 'Encargado' else '' }}>
-          <option value="">{{ 'Sus establecimientos se cargarán automáticamente' if user_role == 'Encargado' else 'Seleccione un establecimiento' }}</option>
-        </select>
-        <label class="text-sm text-slate-600 dark:text-slate-400">Fecha</label>
-        <input
-          type="date"
-          id="fecha"
-          name="fecha"
-          value="{{ fecha_actual }}"
-          class="w-full border dark:border-slate-600 rounded-xl px-3 py-2 mt-1 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-          required
-          {{ 'readonly' if user_role == 'Encargado' else '' }}
-        />
-      </div>
+    .scroll-button {
+        width: 45px;
+        height: 45px;
+    }
+    
+    .scroll-button svg {
+        width: 18px;
+        height: 18px;
+    }
+}
 
-      <!-- Resumen -->
-      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-4">
-        <h2 class="font-semibold mb-3">2) Resumen</h2>
-        <div class="space-y-3">
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-slate-600 dark:text-slate-400">Puntaje obtenido:</span>
-            <span id="puntaje-actual" class="font-bold text-lg text-slate-900 dark:text-white">0</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-slate-600 dark:text-slate-400">Puntaje máximo:</span>
-            <span id="puntaje-maximo" class="font-bold text-lg text-slate-900 dark:text-white">0</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-slate-600 dark:text-slate-400">% Cumplimiento:</span>
-            <span id="porcentaje-cumplimiento" class="font-bold text-lg text-blue-600">0%</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-slate-600 dark:text-slate-400">Puntos críticos perdidos:</span>
-            <span id="puntos-criticos" class="font-bold text-red-600">0</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-slate-600 dark:text-slate-400">Progreso:</span>
-            <span id="progreso-items" class="font-medium text-slate-700 dark:text-slate-300">0/0 items</span>
-          </div>
+/* Animación de pulso para llamar la atención */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 0 0 rgba(102, 126, 234, 0.6);
+    }
+    50% {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 0 8px rgba(102, 126, 234, 0);
+    }
+    100% {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 0 0 rgba(102, 126, 234, 0);
+    }
+}
+</style>
+{% endblock %}
+{% block content %}
+<!-- ===== EVALUACIÓN SANITARIA MOBILE-FIRST ===== -->
+<div id="vista-app" class="min-h-screen dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" data-user-role="{{ user_role }}" data-user-id="{{ session.get('user_id', '') }}">
 
-          <!-- Barra de progreso -->
-          <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 mt-3">
-            <div id="barra-progreso" class="h-2 bg-gray-400 rounded transition-all duration-300" style="width: 0%"></div>
-          </div>
-        </div>
-      </div>
+    <!-- ===== CONTENIDO PRINCIPAL ===== -->
+    <main class="max-w-7xl px-2 mx-auto">
 
-      <!-- Plan semanal (solo para Inspector y Admin) -->
-      {% if user_role in ['Inspector', 'Administrador'] %}
-      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-4">
-        <h2 class="font-semibold mb-2">3) Plan semanal</h2>
-        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
-          Cuántas inspecciones se han realizado esta semana
-        </p>
-        <div class="space-y-3" id="plan-semanal-container">
-          {% for plan in plan_semanal %}
-          <div class="flex justify-between items-center">
-            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ plan.establecimiento }}</span>
-            <span class="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">{{ plan.texto }}</span>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% else %}
-      <!-- Área de informes para encargado -->
-      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-4">
-        <h2 class="font-semibold mb-2">3) Mis Informes</h2>
-        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
-          Inspecciones de su establecimiento
-        </p>
-        <div id="informes-container" class="space-y-2">
-          <!-- Se cargarán dinámicamente -->
-        </div>
-      </div>
-      {% endif %}
-    </section>
-
-    <!-- Checklist de evaluación -->
-    <section class="bg-white dark:bg-slate-800 rounded-2xl shadow p-4 md:p-6 mb-8">
-      <div class="flex items-end justify-between mb-4">
-        <h2 class="text-lg md:text-xl font-semibold text-slate-900 dark:text-white">
-          Checklist de evaluación
-          {% if user_role == 'Encargado' %}
-          <span class="text-sm font-normal text-blue-600">(Solo lectura - verá las calificaciones en tiempo real)</span>
-          {% endif %}
-        </h2>
-        <div class="text-xs md:text-sm text-slate-500 dark:text-slate-400">
-          0 = No cumple, 4 = Cumple completamente
-        </div>
-      </div>
-      
-      <div id="categorias-container">
-        <p class="text-gray-500">{{ 'Sus establecimientos aparecerán automáticamente' if user_role == 'Encargado' else 'Seleccione un establecimiento para ver los items de evaluación' }}</p>
-      </div>
-    </section>
-
-    <!-- Observaciones y evidencias -->
-    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-4">
-        <h3 class="font-semibold mb-3 text-slate-900 dark:text-white">
-          Observaciones
-          {% if user_role == 'Encargado' %}
-          <span class="text-sm font-normal text-blue-600">(Solo lectura)</span>
-          {% endif %}
-        </h3>
-        <textarea
-          id="observaciones-generales"
-          name="observaciones"
-          placeholder="{{ 'Las observaciones del inspector aparecerán aquí...' if user_role == 'Encargado' else 'Escriba sus observaciones generales sobre la inspección...' }}"
-          class="w-full border dark:border-slate-600 rounded-xl px-3 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-          rows="4"
-          required
-          {{ 'readonly' if user_role == 'Encargado' else '' }}
-        ></textarea>
-      </div>
-
-      <!-- Evidencias (solo para Inspector y Admin) -->
-      {% if user_role in ['Inspector', 'Administrador'] %}
-      <div id="evidencias-container" class="bg-white dark:bg-slate-800 rounded-2xl shadow p-4">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="font-semibold text-slate-900 dark:text-white">Evidencia fotográfica</h3>
-          <span id="evidencias-contador" class="text-sm text-slate-500">0 evidencia(s) seleccionada(s)</span>
-        </div>
-        
-        <input type="file" id="evidencias-input" multiple accept="image/*" class="hidden">
-        
-        <div class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 transition-all duration-200" 
-             onclick="document.getElementById('evidencias-input').click()">
-          <div class="flex flex-col items-center">
-            <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mb-4">
-              <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-              </svg>
-            </div>
-            <h4 class="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">Agregar evidencias fotográficas</h4>
-            <p class="text-sm text-slate-500 dark:text-slate-400 mb-1">Seleccione múltiples imágenes para documentar la inspección</p>
-            <p class="text-xs text-slate-400">Formatos admitidos: JPG, PNG, GIF • Máximo 5MB por archivo</p>
-          </div>
-        </div>
-        
-        <div id="evidencias-preview" class="mt-6">
-          <!-- Previsualizaciones se cargarán aquí dinámicamente -->
-        </div>
-      </div>
-      {% endif %}
-    </section>
-
-    <!-- Firmas -->
-    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-      <!-- Firma del Inspector (solo para Inspector y Admin) -->
-      {% if user_role in ['Inspector', 'Administrador'] %}
-      <div id="firma-inspector-area" class="bg-white dark:bg-slate-800 rounded-2xl shadow p-4">
-        <h3 class="font-semibold mb-3 text-slate-900 dark:text-white">Firma del Inspector</h3>
-        <input type="file" id="firma-inspector" accept="image/*" class="w-full border rounded px-3 py-2 mb-2"
-               onchange="handleFileSelect(event, 'inspector')">
-        <div id="preview-firma-inspector" class="mt-2"></div>
-        <button type="button" onclick="eliminarFirma('inspector')" 
-                class="text-sm text-red-600 hover:underline">Eliminar firma</button>
-      </div>
-      {% endif %}
-
-      <!-- Firma del Encargado -->
-      <div id="firma-encargado-area" class="bg-white dark:bg-slate-800 rounded-2xl shadow p-4" 
-           style="{{ 'display: block;' if user_role == 'Encargado' else 'display: none;' }}">
-        <h3 class="font-semibold mb-3 text-slate-900 dark:text-white">
-          {% if user_role == 'Encargado' %}
-          Su Firma (Para aprobar la inspección)
-          {% else %}
-          Firma del Encargado
-          {% endif %}
-        </h3>
+        <!-- ===== MENSAJE INFORMATIVO PARA ENCARGADO ===== -->
         {% if user_role == 'Encargado' %}
-        <p class="text-sm text-blue-600 mb-3">
-          Al firmar, está confirmando que está de acuerdo con las puntuaciones asignadas por el inspector.
-        </p>
-        {% endif %}
-        <input type="file" id="firma-encargado" accept="image/*" class="w-full border rounded px-3 py-2 mb-2"
-               onchange="handleFileSelect(event, 'encargado')" 
-               {{ 'required' if user_role == 'Encargado' else '' }}>
-        <div id="preview-firma-encargado" class="mt-2"></div>
-        <div id="firma-encargado-container" class="mt-3">
-          {% if user_role == 'Encargado' %}
-          <!-- El botón se agregará dinámicamente via JavaScript -->
-          {% else %}
-          <button type="button" onclick="eliminarFirma('encargado')" 
-                  class="text-sm text-red-600 hover:underline">Eliminar firma</button>
-          {% endif %}
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-6 mb-6">
+            <div class="flex items-start space-x-4">
+                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-eye text-2xl text-blue-600 dark:text-blue-400"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-blue-800 dark:text-blue-400 mb-2">Vista de Encargado</h3>
+                    <p class="text-blue-700 dark:text-blue-300 text-sm mb-4">
+                        Podrá ver en tiempo real las calificaciones que va asignando el inspector.
+                        Al finalizar la inspección, podrá poner su firma para aceptar las puntuaciones.
+                    </p>
+                    <button id="btn-sincronizar" type="button" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Sincronizar
+                    </button>
+                </div>
+            </div>
         </div>
-      </div>
-    </section>
+        {% endif %}
 
-    <!-- Botones de acción (solo para Inspector y Admin) -->
-    {% if user_role in ['Inspector', 'Administrador'] %}
-    <div class="flex justify-end gap-4">
-      <button type="submit" name="accion" value="guardar"
-              class="px-6 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition-colors">
-        Guardar Borrador
-      </button>
-      <button type="submit" name="accion" value="completar"
-              class="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors">
-        Completar Inspección
-      </button>
+        <!-- ===== CONTENEDOR PARA INSPECCIONES PENDIENTES ===== -->
+    <div id="establecimiento-select-container" class="hidden mb-6">
+        <!-- La interfaz de inspecciones pendientes se insertará aquí dinámicamente -->
+    </div>        <!-- ===== FORMULARIO DE INSPECCIÓN ===== -->
+        <form id="form-inspeccion" class="space-y-6" method="POST" action="{{ url_for('inspeccion.guardar_inspeccion') }}">
+            <input type="hidden" id="inspector_id" name="inspector_id" value="{{ session.get('user_id') }}">
+
+            <!-- ===== PANEL SUPERIOR ===== -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                <!-- ===== SELECCIÓN ===== -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-4">
+                        <h2 class="text-white font-semibold flex items-center">
+                            <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">1</span>
+                            Selección
+                        </h2>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                <i class="fas fa-building mr-2 text-slate-500"></i>Establecimiento
+                            </label>
+                            <select id="establecimiento" name="establecimiento"
+                                    class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-white"
+                                    required {{ 'disabled' if user_role == 'Encargado' else '' }}>
+                                <option value="">
+                                    {% if user_role == 'Encargado' %}
+                                    Sus establecimientos se cargarán automáticamente
+                                    {% else %}
+                                    Seleccione un establecimiento
+                                    {% endif %}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                <i class="fas fa-calendar mr-2 text-slate-500"></i>Fecha
+                            </label>
+                            <input type="date" id="fecha" name="fecha" value="{{ fecha_actual }}"
+                                   class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-white"
+                                   required {{ 'readonly' if user_role == 'Encargado' else '' }} readonly disabled>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== RESUMEN ===== -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div class="bg-gradient-to-r from-green-500 to-emerald-600 p-4">
+                        <h2 class="text-white font-semibold flex items-center">
+                            <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">2</span>
+                            Resumen
+                        </h2>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="text-center p-3 bg-slate-50 dark:bg-slate-700 rounded-xl">
+                                <div class="text-2xl font-bold text-slate-800 dark:text-white" id="puntaje-actual">0</div>
+                                <div class="text-xs text-slate-500 dark:text-slate-400">Puntaje Actual</div>
+                            </div>
+                            <div class="text-center p-3 bg-slate-50 dark:bg-slate-700 rounded-xl">
+                                <div class="text-2xl font-bold text-slate-800 dark:text-white" id="puntaje-maximo">0</div>
+                                <div class="text-xs text-slate-500 dark:text-slate-400">Puntaje Máximo</div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-slate-600 dark:text-slate-400">% Cumplimiento</span>
+                                <span class="font-bold text-lg text-blue-600" id="porcentaje-cumplimiento">0%</span>
+                            </div>
+
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-slate-600 dark:text-slate-400">Puntos Críticos</span>
+                                <span class="font-bold text-red-600" id="puntos-criticos">0</span>
+                            </div>
+
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-slate-600 dark:text-slate-400">Progreso</span>
+                                <span class="font-medium text-slate-700 dark:text-slate-300" id="progreso-items">0/0 items</span>
+                            </div>
+                        </div>
+
+                        <!-- Barra de progreso -->
+                        <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
+                            <div id="barra-progreso" class="h-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== PLAN SEMANAL / INFORMES ===== -->
+                {% if user_role in ['Inspector', 'Administrador'] %}
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div class="bg-gradient-to-r from-purple-500 to-pink-600 p-4">
+                        <h2 class="text-white font-semibold flex items-center">
+                            <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">3</span>
+                            Plan Semanal
+                        </h2>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                            Inspecciones realizadas esta semana
+                        </p>
+                        <div class="space-y-3 max-h-64 overflow-y-auto" id="plan-semanal-container">
+                            {% for plan in plan_semanal %}
+                            {% if loop.index <= 5 %}
+                            <div class="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-700 rounded-xl">
+                                <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ plan.establecimiento }}</span>
+                                <span class="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-400 px-3 py-1 rounded-full">{{ plan.texto }}</span>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                            {% if plan_semanal|length > 5 %}
+                            <div class="text-center py-2">
+                                <span class="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-600 px-3 py-1 rounded-full">
+                                    +{{ plan_semanal|length - 5 }} más...
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div class="bg-gradient-to-r from-orange-500 to-red-600 p-4">
+                        <h2 class="text-white font-semibold flex items-center">
+                            <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">3</span>
+                            Mis Informes
+                        </h2>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                            Inspecciones de su establecimiento
+                        </p>
+                        <div id="informes-container" class="space-y-3">
+                            <!-- Se cargarán dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ===== CHECKLIST DE EVALUACIÓN ===== -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div class="bg-gradient-to-r from-indigo-500 to-blue-600 p-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-white font-semibold flex items-center">
+                            <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">4</span>
+                            Checklist de Evaluación
+                            {% if user_role == 'Encargado' %}
+                            <span class="text-xs font-normal text-blue-200 ml-2">(Solo lectura)</span>
+                            {% endif %}
+                        </h2>
+
+                        <div class="flex items-center space-x-3">
+                            {% if user_role == 'Encargado' %}
+                            <div id="sync-status" class="text-xs bg-blue-200/20 text-blue-200 px-3 py-1 rounded-full border border-blue-300/30">
+                                <!-- Estado dinámico de sincronización -->
+                            </div>
+                            {% endif %}
+
+                            <div class="hidden sm:block text-xs text-blue-200">
+                                0 = No cumple • 4 = Cumple completamente
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3">
+                    <div id="categorias-container">
+                        <div class="text-center py-12">
+                            <div class="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                </svg>
+                            </div>
+                            <p class="text-slate-500 dark:text-slate-400">
+                                {% if user_role == 'Encargado' %}
+                                Sus establecimientos aparecerán automáticamente
+                                {% else %}
+                                Seleccione un establecimiento para ver los items de evaluación
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== OBSERVACIONES Y EVIDENCIAS ===== -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                <!-- Observaciones -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div class="bg-gradient-to-r from-teal-500 to-cyan-600 p-4">
+                        <h3 class="text-white font-semibold flex items-center">
+                            <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">5</span>
+                            Observaciones
+                            {% if user_role == 'Encargado' %}
+                            <span class="text-xs font-normal text-blue-200 ml-2">(Solo lectura)</span>
+                            {% endif %}
+                        </h3>
+                    </div>
+                    <div class="p-6">
+                        <textarea id="observaciones-generales" name="observaciones"
+                                  placeholder="{% if user_role == 'Encargado' %}Las observaciones del inspector aparecerán aquí...{% else %}Escriba sus observaciones generales sobre la inspección...{% endif %}"
+                                  class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-white resize-none"
+                                  rows="6" {{ 'readonly' if user_role == 'Encargado' else '' }}></textarea>
+                    </div>
+                </div>
+
+                <!-- Evidencias (solo para Inspector y Admin) -->
+                {% if user_role in ['Inspector', 'Administrador'] %}
+                <div id="evidencias-container" class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div class="bg-gradient-to-r from-rose-500 to-pink-600 p-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-white font-semibold flex items-center">
+                                <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">6</span>
+                                Evidencia Fotográfica
+                            </h3>
+                            <span id="evidencias-contador" class="text-xs bg-white/20 text-white px-3 py-1 rounded-full">0 evidencia(s)</span>
+                        </div>
+                    </div>
+
+                    <div class="p-6">
+                        <input type="file" id="evidencias-input" multiple accept="image/*" class="hidden">
+
+                        <div class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all duration-200"
+                             onclick="document.getElementById('evidencias-input').click()">
+                            <div class="flex flex-col items-center">
+                                <div class="w-16 h-16 bg-rose-100 dark:bg-rose-900 rounded-full flex items-center justify-center mb-4">
+                                    <svg class="w-8 h-8 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                                <h4 class="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">Agregar Evidencias</h4>
+                                <p class="text-sm text-slate-500 dark:text-slate-400 mb-1">Seleccione múltiples imágenes</p>
+                                <p class="text-xs text-slate-400">JPG, PNG, GIF • Máx. 5MB por archivo</p>
+                            </div>
+                        </div>
+
+                        <div id="evidencias-preview" class="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            <!-- Previsualizaciones se cargarán aquí dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ===== FIRMAS ===== -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                <!-- Firma del Inspector (solo para Inspector y Admin) -->
+                {% if user_role in ['Inspector', 'Administrador'] %}
+                <div id="firma-inspector-area" class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div class="bg-gradient-to-r from-emerald-500 to-green-600 p-4">
+                        <h3 class="text-white font-semibold flex items-center">
+                            <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">7</span>
+                            Su Firma
+                        </h3>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <!-- Mensaje informativo -->
+                        <div id="firma-inspector-info" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 hidden">
+                            <p class="text-sm text-blue-800 dark:text-blue-400">
+                                Su firma está precargada automáticamente
+                            </p>
+                        </div>
+                        
+                        <!-- Preview de la firma -->
+                        <div id="preview-firma-inspector" class="min-h-[100px] border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl flex items-center justify-center">
+                            <p class="text-slate-400 text-sm">Cargando firma...</p>
+                        </div>
+                        
+                        <!-- Input hidden para almacenar la firma -->
+                        <input type="hidden" id="firma-inspector-hidden" name="firma_inspector_path">
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Firma del Encargado -->
+                <div id="firma-encargado-area" class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+                     style="{{ 'display: block;' if user_role in ['Encargado', 'Jefe de Establecimiento'] else 'display: none;' }}">
+                    <div class="bg-gradient-to-r from-amber-500 to-orange-600 p-4">
+                        <h3 class="text-white font-semibold flex items-center">
+                            <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">
+                                {% if user_role in ['Encargado', 'Jefe de Establecimiento'] %}7{% else %}8{% endif %}
+                            </span>
+                            {% if user_role in ['Encargado', 'Jefe de Establecimiento'] %}
+                            Su Firma
+                            {% else %}
+                            Firma del Encargado
+                            {% endif %}
+                        </h3>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <!-- Mensaje informativo -->
+                        <div id="firma-mensaje-info" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 hidden">
+                            <p class="text-sm text-blue-800 dark:text-blue-400">
+                                <span id="firma-mensaje-texto"></span>
+                            </p>
+                        </div>
+
+                        <!-- Selector para Inspector/Admin (múltiples firmas) -->
+                        <div id="firma-selector-container" class="hidden">
+                            <label for="firma-encargado-select" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                Seleccionar Firma del Encargado
+                            </label>
+                            <select id="firma-encargado-select"
+                                    class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-white">
+                                <option value="">-- Seleccione una firma --</option>
+                            </select>
+                        </div>
+
+                        <!-- Información de firma propia para Encargado -->
+                        <div id="firma-info-propia" class="hidden">
+                            <p class="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                Su firma ha sido cargada por el jefe del establecimiento
+                            </p>
+                        </div>
+
+                        <!-- Preview de firma -->
+                        <div id="preview-firma-encargado" class="min-h-[100px] border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl flex items-center justify-center">
+                            <p class="text-slate-400 text-sm">Vista previa de la firma</p>
+                        </div>
+
+                        <input type="hidden" id="firma-encargado-hidden" name="firma_encargado_id" value="">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== BOTONES DE ACCIÓN ===== -->
+            {% if user_role in ['Inspector', 'Administrador'] %}
+            <div class="flex flex-col sm:flex-row gap-4 justify-end">
+                <button type="submit" name="accion" value="guardar"
+                        class="px-8 py-4 bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                    </svg>
+                    Guardar Borrador
+                </button>
+                <button type="submit" name="accion" value="completar"
+                        class="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Completar Inspección
+                </button>
+            </div>
+            {% elif user_role in ['Encargado', 'Jefe de Establecimiento'] %}
+            <div class="flex justify-end">
+                <button type="button" onclick="confirmarInspeccionEncargado()"
+                        class="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Confirmar Inspección
+                </button>
+            </div>
+            {% endif %}
+        </form>
+    </main>
+
+    <!-- ===== BOTONES DE SCROLL FLOTANTES ===== -->
+    <div class="scroll-buttons" id="scroll-buttons">
+        <button class="scroll-button scroll-to-top" id="scroll-to-top" title="Ir arriba">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+            </svg>
+        </button>
+        <button class="scroll-button scroll-to-bottom" id="scroll-to-bottom" title="Ir abajo">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+            </svg>
+        </button>
     </div>
-    {% endif %}
-  </form>
-</section>
+</div>
 
+<!-- ===== SCRIPTS ===== -->
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
 <script>
-// Pasar el rol del usuario al JavaScript
-window.userRole = '{{ user_role }}';
-window.userId = {{ session.get('user_id', 'null') }};
-</script>
+// Inicializar la página index cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof window.inicializarIndexSelect === 'function') {
+        window.inicializarIndexSelect();
+    } else {
+    }
 
+    // ===== FUNCIONALIDAD DE BOTONES DE SCROLL =====
+    const scrollButtons = document.getElementById('scroll-buttons');
+    const scrollToTopBtn = document.getElementById('scroll-to-top');
+    const scrollToBottomBtn = document.getElementById('scroll-to-bottom');
+
+    if (!scrollButtons || !scrollToTopBtn || !scrollToBottomBtn) {
+        return;
+    }
+
+    // Función para mostrar/ocultar botones basado en scroll
+    function toggleScrollButtons() {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+
+        // Mostrar botones si hay suficiente contenido para hacer scroll (altura del documento > altura de ventana + margen)
+        const hasScrollableContent = documentHeight > windowHeight + 200; // 200px de margen
+
+        if (hasScrollableContent) {
+            scrollButtons.classList.add('visible');
+        } else {
+            scrollButtons.classList.remove('visible');
+        }
+
+        // Dentro del contenedor visible, manejar la visibilidad individual de botones
+        if (scrollButtons.classList.contains('visible')) {
+            // Ocultar botón "ir arriba" cuando estamos cerca del top (dentro del contenedor visible)
+            if (scrollTop < 200) {
+                scrollToTopBtn.classList.add('hidden');
+            } else {
+                scrollToTopBtn.classList.remove('hidden');
+            }
+
+            // Ocultar botón "ir abajo" cuando estamos cerca del final
+            const isNearBottom = scrollTop + windowHeight >= documentHeight - 100;
+            if (isNearBottom) {
+                scrollToBottomBtn.classList.add('hidden');
+            } else {
+                scrollToBottomBtn.classList.remove('hidden');
+            }
+        }
+    }
+
+    // Función para scroll suave hacia arriba
+    function scrollToTop() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
+
+    // Función para scroll suave hacia abajo
+    function scrollToBottom() {
+        window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: 'smooth'
+        });
+    }
+
+    // Event listeners
+    scrollToTopBtn.addEventListener('click', scrollToTop);
+    scrollToBottomBtn.addEventListener('click', scrollToBottom);
+
+    // Escuchar eventos de scroll con throttling para mejor rendimiento
+    let scrollTimeout;
+    window.addEventListener('scroll', function() {
+        if (!scrollTimeout) {
+            scrollTimeout = setTimeout(function() {
+                toggleScrollButtons();
+                scrollTimeout = null;
+            }, 16); // ~60fps
+        }
+    });
+
+    // Verificar estado inicial
+    toggleScrollButtons();
+
+    // Quitar la animación de pulso después de 5 segundos
+    setTimeout(() => {
+        document.querySelectorAll('.scroll-button').forEach(btn => {
+            btn.style.animation = 'none';
+        });
+    }, 5000);
+
+    // Soporte para touch en móviles (mejor experiencia táctil)
+    let touchStartY = 0;
+    let touchEndY = 0;
+
+    document.addEventListener('touchstart', function(e) {
+        touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    document.addEventListener('touchend', function(e) {
+        touchEndY = e.changedTouches[0].screenY;
+        const diffY = touchStartY - touchEndY;
+
+        // Si el swipe es hacia arriba y significativo, mostrar botones
+        if (Math.abs(diffY) > 50) {
+            setTimeout(toggleScrollButtons, 100);
+        }
+    }, { passive: true });
+});
+</script>
+{% endblock %}
+
+{% block scripts %}
 {% endblock %}

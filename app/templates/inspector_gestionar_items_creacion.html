@@ -1,0 +1,850 @@
+{% extends "base.html" %}
+
+{% block title %}Gestionar Items - Crear Establecimiento{% endblock %}
+
+{% block extra_css %}
+<style>
+    .item-card {
+        transition: all 0.3s ease;
+        background-color: rgb(248, 250, 252); /* slate-50 */
+        border-color: rgb(226, 232, 240); /* slate-200 */
+    }
+    .dark .item-card {
+        background-color: rgb(51, 65, 85); /* slate-700 */
+        border-color: rgb(71, 85, 105); /* slate-600 */
+    }
+    .item-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .item-selected {
+        border-color: rgb(16, 185, 129);
+        background-color: rgb(240, 253, 244);
+    }
+    .dark .item-selected {
+        border-color: rgb(16, 185, 129);
+        background-color: rgba(20, 83, 45, 0.2);
+    }
+    .item-removed {
+        opacity: 0.6;
+        background-color: rgb(254, 242, 242);
+    }
+    .dark .item-removed {
+        background-color: rgba(127, 29, 29, 0.2);
+    }
+    .fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+
+    .fade-out {
+        animation: fadeOut 0.3s ease-out;
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeOut {
+        from { opacity: 1; transform: scale(1); }
+        to { opacity: 0; transform: scale(0.95); }
+    }
+
+    /* Estilos para items adicionales */
+    .item-adicional {
+        position: relative;
+    }
+
+    .item-adicional::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(59, 130, 246, 0.1));
+        border-radius: inherit;
+        z-index: -1;
+    }
+
+    .dark .item-adicional::before {
+        background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(59, 130, 246, 0.2));
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ===== GESTIONAR ITEMS CREACIÓN ===== -->
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+
+    <!-- ===== HEADER ===== -->
+    <header class="sticky top-0 z-40 bg-white/80 dark:bg-slate-800/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+
+                <!-- Logo y título -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <i class="fas fa-list-check text-white font-bold text-lg"></i>
+                    </div>
+                    <div class="hidden sm:block">
+                        <h1 class="text-xl font-bold text-slate-800 dark:text-white">Gestionar Items</h1>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Personalizar establecimiento</p>
+                    </div>
+                </div>
+
+                <!-- Botones de acción -->
+                <div class="flex items-center space-x-2">
+                    <a href="{{ url_for('plantillas.ver_plantilla', plantilla_id=plantilla.id) }}"
+                       class="p-2 text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-all duration-200"
+                       title="Ver plantilla">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
+                    </a>
+                    <a href="{{ url_for('plantillas.listar_plantillas') }}"
+                       class="inline-flex items-center px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl shadow-sm text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Cambiar Plantilla
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===== CONTENIDO ===== -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- Información de la plantilla -->
+        <div class="mb-8">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-clipboard-check text-white text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-semibold text-white">{{ plantilla.nombre }}</h2>
+                            <p class="text-blue-100 text-sm">Personaliza los items antes de crear el establecimiento</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-6">
+                    <div class="bg-slate-50 dark:bg-slate-700 rounded-xl p-4 border border-slate-200 dark:border-slate-600">
+                        <div class="flex items-start space-x-4">
+                            <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-info-circle text-white text-lg"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm text-slate-600 dark:text-slate-400">{{ plantilla.descripcion or 'Sin descripción' }}</p>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
+                                    <div>
+                                        <span class="text-slate-500 dark:text-slate-400">Tipo:</span>
+                                        <span class="ml-2 font-medium text-slate-900 dark:text-white">{{ plantilla.tipo_establecimiento.nombre }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-slate-500 dark:text-slate-400">Tamaño:</span>
+                                        <span class="ml-2 font-medium text-slate-900 dark:text-white capitalize">{{ plantilla.tamano_local }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-slate-500 dark:text-slate-400">Items en plantilla:</span>
+                                        <span class="ml-2 font-medium text-slate-900 dark:text-white">{{ plantilla.items_plantilla|length }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-slate-500 dark:text-slate-400">Items seleccionados:</span>
+                                        <span id="contador-seleccionados" class="ml-2 font-medium text-green-600 dark:text-green-400">{{ plantilla.items_plantilla|length }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid de contenido -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <!-- Lista de items de la plantilla -->
+            <div class="lg:col-span-2">
+                <div class="bg-white dark:bg-slate-800 shadow-xl rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div class="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-list-check mr-2"></i>
+                            Items de la Plantilla
+                        </h3>
+                        <p class="text-sm text-slate-300 mt-1">
+                            Selecciona o deselecciona items para personalizar el establecimiento
+                        </p>
+                    </div>
+
+                    <div class="p-6">
+                        <!-- Acciones masivas -->
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center space-x-4">
+                                <button onclick="seleccionarTodos()"
+                                        class="inline-flex items-center px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200">
+                                    <i class="fas fa-check-square mr-2"></i>
+                                    Seleccionar Todos
+                                </button>
+                                <button onclick="deseleccionarTodos()"
+                                        class="inline-flex items-center px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200">
+                                    <i class="fas fa-square mr-2"></i>
+                                    Deseleccionar Todos
+                                </button>
+                            </div>
+                            <div class="text-sm text-slate-500 dark:text-slate-400">
+                                <span id="items-seleccionados">0</span> de <span id="items-total">{{ plantilla.items_plantilla|length }}</span> items seleccionados
+                            </div>
+                        </div>
+
+                        <!-- Items por categoría -->
+                        <div id="items-container" class="divide-y divide-slate-200 dark:divide-slate-600">
+                            {% for categoria, items in items_por_categoria.items() %}
+                            <div class="p-6">
+                                <div class="flex items-center justify-between mb-6">
+                                    <h4 class="text-lg font-semibold text-slate-900 dark:text-white flex items-center">
+                                        <i class="fas fa-folder mr-3 text-blue-500"></i>
+                                        {{ categoria }}
+                                    </h4>
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+                                        <i class="fas fa-list mr-1"></i>
+                                        {{ items|length }} items
+                                    </span>
+                                </div>
+
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {% for item in items %}
+                                    <div class="item-card rounded-xl p-4 border-2 border-slate-200 dark:border-slate-600 hover:shadow-md transition-all duration-200"
+                                         data-item-id="{{ item.id }}"
+                                         data-categoria="{{ categoria }}"
+                                         data-descripcion="{{ item.item_base.descripcion }}">
+
+                                        <!-- Header del item -->
+                                        <div class="flex items-start justify-between mb-3">
+                                            <div class="flex items-center space-x-3">
+                                                <span class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-slate-200 text-slate-800 dark:bg-slate-600 dark:text-slate-200">
+                                                    {{ item.item_base.codigo }}
+                                                </span>
+                                                <span class="text-sm font-medium text-slate-900 dark:text-white">
+                                                    {{ item.item_base.descripcion }}
+                                                </span>
+                                            </div>
+                                            <input type="checkbox"
+                                                   class="item-checkbox w-5 h-5 text-green-600 bg-slate-100 border-slate-300 rounded focus:ring-green-500 dark:focus:ring-green-600 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600"
+                                                   data-item-id="{{ item.id }}"
+                                                   checked>
+                                        </div>
+
+                                        {% if item.descripcion_personalizada %}
+                                        <!-- Descripción personalizada -->
+                                        <div class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-200 dark:border-blue-800">
+                                            <div class="flex items-start space-x-2">
+                                                <i class="fas fa-quote-left text-blue-500 mt-0.5"></i>
+                                                <div>
+                                                    <p class="text-sm font-medium text-blue-800 dark:text-blue-300">Personalización</p>
+                                                    <p class="text-sm text-blue-700 dark:text-blue-400 mt-1">{{ item.descripcion_personalizada }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+
+                                        <!-- Detalles del item -->
+                                        <div class="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
+                                            <div class="flex items-center">
+                                                <i class="fas fa-exclamation-triangle mr-1.5
+                                                    {% if (item.riesgo or item.item_base.riesgo) == 'Menor' %}text-green-500
+                                                    {% elif (item.riesgo or item.item_base.riesgo) == 'Mayor' %}text-yellow-500
+                                                    {% else %}text-red-500{% endif %}"></i>
+                                                <span>{{ item.riesgo or item.item_base.riesgo }}</span>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <i class="fas fa-star mr-1.5 text-yellow-500"></i>
+                                                <span>{{ item.puntaje_minimo_personalizado or item.item_base.puntaje_minimo }}-{{ item.puntaje_maximo_personalizado or item.item_base.puntaje_maximo }}</span>
+                                            </div>
+
+                                            {% if item.factor_ajuste != 1.00 %}
+                                            <div class="flex items-center">
+                                                <i class="fas fa-balance-scale mr-1.5 text-purple-500"></i>
+                                                <span>Factor: {{ item.factor_ajuste }}</span>
+                                            </div>
+                                            {% endif %}
+
+                                            {% if not item.obligatorio %}
+                                            <div class="flex items-center">
+                                                <i class="fas fa-question mr-1.5 text-orange-500"></i>
+                                                <span>Opcional</span>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel lateral -->
+            <div class="lg:col-span-1 space-y-6">
+
+                <!-- Agregar items adicionales -->
+                <div class="bg-white dark:bg-slate-800 shadow-xl rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-plus-circle mr-2"></i>
+                            Agregar Items Adicionales
+                        </h3>
+                        <p class="text-sm text-green-100 mt-1">
+                            Agrega items de otras plantillas
+                        </p>
+                    </div>
+
+                    <div class="p-6">
+                        <!-- Buscador de items -->
+                        <div class="mb-4">
+                            <label for="busqueda-items" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                Buscar Items Disponibles
+                            </label>
+                            <input type="text"
+                                   id="busqueda-items"
+                                   placeholder="Buscar por descripción o código..."
+                                   class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 dark:bg-slate-700 dark:text-white">
+                        </div>
+
+                        <!-- Lista de items disponibles -->
+                        <div id="items-disponibles" class="max-h-80 overflow-y-auto">
+                            <div class="text-center py-4">
+                                <i class="fas fa-search text-slate-400 text-xl"></i>
+                                <p class="mt-2 text-slate-500 dark:text-slate-400 text-sm">
+                                    Escribe para buscar items disponibles
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resumen y acciones -->
+                <div class="bg-white dark:bg-slate-800 shadow-xl rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div class="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-clipboard-check mr-2"></i>
+                            Resumen y Creación
+                        </h3>
+                    </div>
+
+                    <div class="p-6 space-y-4">
+                        <!-- Estadísticas -->
+                        <div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
+                            <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Estadísticas</h4>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-slate-600 dark:text-slate-400">Items de plantilla:</span>
+                                    <span class="font-medium text-slate-900 dark:text-white">{{ plantilla.items_plantilla|length }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-600 dark:text-slate-400">Items seleccionados:</span>
+                                    <span id="resumen-seleccionados" class="font-medium text-green-600 dark:text-green-400">{{ plantilla.items_plantilla|length }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-600 dark:text-slate-400">Items adicionales:</span>
+                                    <span id="resumen-adicionales" class="font-medium text-purple-600 dark:text-purple-400">0</span>
+                                </div>
+                                <div class="flex justify-between border-t border-slate-200 dark:border-slate-600 pt-2 mt-2">
+                                    <span class="font-medium text-slate-700 dark:text-slate-300">Total de items:</span>
+                                    <span id="resumen-total" class="font-bold text-blue-600 dark:text-blue-400">{{ plantilla.items_plantilla|length }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botón para continuar -->
+                        <button onclick="continuarCreacion()"
+                                class="w-full inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform hover:scale-105">
+                            <i class="fas fa-arrow-right mr-2"></i>
+                            Continuar con Datos del Establecimiento
+                        </button>
+
+                        <p class="text-xs text-slate-500 dark:text-slate-400 text-center">
+                            Los cambios solo afectan a este establecimiento
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Modal de confirmación -->
+<div id="modal-confirmacion" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div class="flex items-center justify-center mb-4">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-question-circle text-blue-500 text-3xl"></i>
+                </div>
+            </div>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white text-center mb-2">
+                Confirmar Selección
+            </h3>
+            <p id="mensaje-confirmacion" class="text-sm text-slate-600 dark:text-slate-400 text-center mb-6">
+                ¿Deseas continuar con la creación del establecimiento usando los items seleccionados?
+            </p>
+            <div class="flex justify-center space-x-3">
+                <button onclick="cerrarModalConfirmacion()"
+                        class="px-4 py-2 bg-slate-300 dark:bg-slate-600 text-slate-800 dark:text-slate-200 rounded-lg hover:bg-slate-400 dark:hover:bg-slate-500 transition-all duration-200">
+                    Revisar Selección
+                </button>
+                <button onclick="confirmarContinuar()"
+                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200">
+                    Continuar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+let plantillaId = {{ plantilla.id }};
+let itemsSeleccionados = new Set();
+let itemsAdicionales = new Set();
+
+// Inicializar
+document.addEventListener('DOMContentLoaded', function() {
+    inicializarItems();
+    configurarBuscador();
+    actualizarEstadisticas();
+    agregarAnimacionesEntrada();
+});
+
+// Agregar item visualmente a la sección principal
+function agregarItemVisualAPrincipal(itemId, descripcion, categoria, codigo, riesgo) {
+    const itemsContainer = document.getElementById('items-container');
+
+    // Buscar si ya existe la categoría en la plantilla (categorías principales)
+    let categoriaDiv = itemsContainer.querySelector(`[data-categoria="${categoria}"]:not([data-categoria-adicional])`);
+
+    if (!categoriaDiv) {
+        // Si no existe en plantilla, buscar si ya existe una categoría adicional con el mismo nombre
+        categoriaDiv = itemsContainer.querySelector(`[data-categoria="${categoria}"][data-categoria-adicional]`);
+    }
+
+    if (!categoriaDiv) {
+        // Crear nueva categoría adicional si no existe ninguna
+        categoriaDiv = document.createElement('div');
+        categoriaDiv.className = 'p-6';
+        categoriaDiv.setAttribute('data-categoria', categoria);
+        categoriaDiv.setAttribute('data-categoria-adicional', 'true');
+        categoriaDiv.innerHTML = `
+            <div class="flex items-center justify-between mb-6">
+                <h4 class="text-lg font-semibold text-slate-900 dark:text-white flex items-center">
+                    <i class="fas fa-folder mr-3 text-purple-500"></i>
+                    ${categoria}
+                </h4>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                    <i class="fas fa-plus mr-1"></i>
+                    <span class="contador-categoria">1</span> items adicionales
+                </span>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-categoria">
+            </div>
+        `;
+
+        // Insertar la nueva categoría al final del contenedor
+        itemsContainer.appendChild(categoriaDiv);
+    } else {
+        // Si la categoría ya existe, verificar si es adicional o principal
+        const esCategoriaAdicional = categoriaDiv.hasAttribute('data-categoria-adicional');
+
+        if (!esCategoriaAdicional) {
+            // Es una categoría principal, agregar el item ahí sin modificar el contador
+            // No necesitamos actualizar contador para categorías principales
+        } else {
+            // Es una categoría adicional existente, actualizar contador
+            const contador = categoriaDiv.querySelector('.contador-categoria');
+            contador.textContent = parseInt(contador.textContent) + 1;
+        }
+    }
+
+    // Agregar el item a la categoría
+    const itemsGrid = categoriaDiv.querySelector('.items-categoria');
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'item-card item-adicional rounded-xl p-4 border-2 border-purple-200 dark:border-purple-600 hover:shadow-md transition-all duration-200';
+    itemDiv.setAttribute('data-item-id', itemId);
+    itemDiv.setAttribute('data-categoria', categoria);
+    itemDiv.setAttribute('data-descripcion', descripcion);
+
+    // Determinar color del riesgo
+    let riesgoColor = 'text-red-500';
+    if (riesgo === 'Menor') riesgoColor = 'text-green-500';
+    else if (riesgo === 'Mayor') riesgoColor = 'text-yellow-500';
+
+    itemDiv.innerHTML = `
+        <!-- Header del item -->
+        <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center space-x-3">
+                <span class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-purple-200 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                    ${codigo}
+                </span>
+                <span class="text-sm font-medium text-slate-900 dark:text-white">
+                    ${descripcion}
+                </span>
+            </div>
+            <div class="flex items-center">
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                    <i class="fas fa-plus mr-1"></i>
+                    Adicional
+                </span>
+            </div>
+        </div>
+
+        <!-- Detalles del item -->
+        <div class="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle mr-1.5 ${riesgoColor}"></i>
+                <span>${riesgo}</span>
+            </div>
+            <div class="flex items-center">
+                <i class="fas fa-tag mr-1.5 text-purple-500"></i>
+                <span>Item Adicional</span>
+            </div>
+        </div>
+    `;
+
+    itemsGrid.appendChild(itemDiv);
+
+    // Agregar animación de entrada
+    setTimeout(() => {
+        itemDiv.classList.add('fade-in');
+    }, 100);
+}
+
+// Remover item visualmente de la sección principal
+function removerItemVisualDePrincipal(itemId) {
+    const itemDiv = document.querySelector(`.item-adicional[data-item-id="${itemId}"]`);
+    if (!itemDiv) return;
+
+    const categoriaDiv = itemDiv.closest('[data-categoria]');
+    const categoria = categoriaDiv.getAttribute('data-categoria');
+    const esCategoriaAdicional = categoriaDiv.hasAttribute('data-categoria-adicional');
+
+    // Remover el item con animación
+    itemDiv.classList.add('fade-out');
+    setTimeout(() => {
+        itemDiv.remove();
+
+        // Solo manejar contadores y eliminación de categorías para categorías adicionales
+        if (esCategoriaAdicional) {
+            // Verificar si la categoría quedó vacía
+            const itemsGrid = categoriaDiv.querySelector('.items-categoria');
+            if (itemsGrid.children.length === 0) {
+                // Remover toda la categoría adicional
+                categoriaDiv.remove();
+            } else {
+                // Actualizar contador
+                const contador = categoriaDiv.querySelector('.contador-categoria');
+                contador.textContent = parseInt(contador.textContent) - 1;
+            }
+        }
+        // Para categorías principales, no hacer nada especial
+    }, 300);
+}
+
+// Inicializar checkboxes de items
+function inicializarItems() {
+    // Marcar todos los items de la plantilla como seleccionados inicialmente
+    document.querySelectorAll('.item-checkbox').forEach(checkbox => {
+        const itemId = parseInt(checkbox.dataset.itemId);
+        if (checkbox.checked) {
+            itemsSeleccionados.add(itemId);
+        }
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                itemsSeleccionados.add(itemId);
+            } else {
+                itemsSeleccionados.delete(itemId);
+            }
+            actualizarEstadisticas();
+            actualizarVisualItems();
+        });
+    });
+
+    // Aplicar clases visuales iniciales
+    actualizarVisualItems();
+}
+
+// Actualizar visual de items
+function actualizarVisualItems() {
+    document.querySelectorAll('.item-card').forEach(card => {
+        const itemId = parseInt(card.dataset.itemId);
+        const checkbox = card.querySelector('.item-checkbox');
+
+        // Remover todas las clases de estado primero
+        card.classList.remove('item-selected', 'item-removed');
+
+        // Aplicar la clase correspondiente según el estado
+        if (checkbox.checked) {
+            card.classList.add('item-selected');
+        } else {
+            // Si no está checked, verificar si está removido
+            // Por ahora, asumimos que si no está checked, no está removido
+            // (esto se puede ajustar según la lógica de negocio)
+        }
+    });
+}
+
+// Seleccionar todos los items
+function seleccionarTodos() {
+    document.querySelectorAll('.item-checkbox').forEach(checkbox => {
+        checkbox.checked = true;
+        itemsSeleccionados.add(parseInt(checkbox.dataset.itemId));
+    });
+    actualizarEstadisticas();
+    actualizarVisualItems();
+}
+
+// Deseleccionar todos los items
+function deseleccionarTodos() {
+    document.querySelectorAll('.item-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+        itemsSeleccionados.delete(parseInt(checkbox.dataset.itemId));
+    });
+    actualizarEstadisticas();
+    actualizarVisualItems();
+}
+
+// Actualizar estadísticas
+function actualizarEstadisticas() {
+    const totalSeleccionados = itemsSeleccionados.size;
+    const totalAdicionales = itemsAdicionales.size;
+    const total = totalSeleccionados + totalAdicionales;
+
+    document.getElementById('items-seleccionados').textContent = totalSeleccionados;
+    document.getElementById('contador-seleccionados').textContent = totalSeleccionados;
+    document.getElementById('resumen-seleccionados').textContent = totalSeleccionados;
+    document.getElementById('resumen-adicionales').textContent = totalAdicionales;
+    document.getElementById('resumen-total').textContent = total;
+}
+
+// Configurar buscador de items adicionales
+function configurarBuscador() {
+    const inputBusqueda = document.getElementById('busqueda-items');
+
+    inputBusqueda.addEventListener('input', function() {
+        const query = this.value.trim();
+        if (query.length >= 2) {
+            buscarItemsDisponibles(query);
+        } else {
+            document.getElementById('items-disponibles').innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-search text-slate-400 text-xl"></i>
+                    <p class="mt-2 text-slate-500 dark:text-slate-400 text-sm">
+                        Escribe para buscar items disponibles
+                    </p>
+                </div>
+            `;
+        }
+    });
+}
+
+// Buscar items disponibles
+async function buscarItemsDisponibles(query) {
+    try {
+        const response = await fetch(`/plantillas/api/items-base?query=${encodeURIComponent(query)}`);
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarItemsDisponibles(data.items);
+        } else {
+            mostrarMensaje(data.error || 'Error al buscar items', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarMensaje('Error al buscar items disponibles', 'error');
+    }
+}
+
+// Mostrar items disponibles
+function mostrarItemsDisponibles(items) {
+    const container = document.getElementById('items-disponibles');
+
+    if (!items || items.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-inbox text-slate-400 text-xl"></i>
+                <p class="mt-2 text-slate-500 dark:text-slate-400 text-sm">
+                    No se encontraron items disponibles
+                </p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    items.forEach(item => {
+        const yaAgregado = itemsAdicionales.has(item.id);
+        html += `
+            <div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3 mb-2 border border-slate-200 dark:border-slate-600 ${yaAgregado ? 'border-green-300 bg-green-50 dark:bg-green-900/20' : ''} transition-all duration-200 hover:shadow-md">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center mb-1">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                                ${item.codigo}
+                            </span>
+                        </div>
+                        <h6 class="text-sm font-medium text-slate-900 dark:text-white">
+                            ${item.descripcion}
+                        </h6>
+                        <div class="flex items-center mt-1 space-x-2">
+                            <span class="text-xs text-slate-500 dark:text-slate-400">
+                                <i class="fas fa-tag mr-1"></i>
+                                ${item.categoria}
+                            </span>
+                            <span class="text-xs text-slate-500 dark:text-slate-400">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                ${item.riesgo}
+                            </span>
+                        </div>
+                    </div>
+                    <button onclick="${yaAgregado ? `removerItemAdicional(${item.id}, '${item.descripcion.replace(/'/g, "\\'")}', '${item.categoria.replace(/'/g, "\\'")}')` : `agregarItemAdicional(${item.id}, '${item.descripcion.replace(/'/g, "\\'")}', '${item.categoria.replace(/'/g, "\\'")}', '${item.codigo}', '${item.riesgo}')`}"
+                            class="ml-2 inline-flex items-center px-2 py-1 border rounded text-xs font-medium transition-all duration-200 transform hover:scale-105 ${yaAgregado ?
+                                'border-red-300 text-red-700 bg-white hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:bg-slate-800 dark:hover:bg-red-900' :
+                                'border-green-300 text-green-700 bg-white hover:bg-green-50 dark:border-green-600 dark:text-green-400 dark:bg-slate-800 dark:hover:bg-green-900'}"
+                            title="${yaAgregado ? 'Remover item' : 'Agregar item'}">
+                        <i class="fas fa-${yaAgregado ? 'minus' : 'plus'}"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+// Agregar item adicional
+function agregarItemAdicional(itemId, descripcion, categoria, codigo, riesgo) {
+    // Validar que no esté duplicado
+    if (itemsAdicionales.has(itemId)) {
+        mostrarMensaje('Este item ya ha sido agregado', 'error');
+        return;
+    }
+
+    // Validar que no exista un item con la misma descripción en la plantilla actual
+    const itemExistente = document.querySelector(`[data-descripcion="${descripcion.replace(/"/g, '\\"')}"]`);
+    if (itemExistente) {
+        mostrarMensaje('Ya existe un item con esta descripción en la plantilla', 'error');
+        return;
+    }
+
+    itemsAdicionales.add(itemId);
+    actualizarEstadisticas();
+    mostrarMensaje(`Item "${descripcion}" agregado`, 'success');
+
+    // Agregar visualmente a la sección principal
+    agregarItemVisualAPrincipal(itemId, descripcion, categoria, codigo, riesgo);
+
+    // Actualizar visual del item en el panel lateral
+    const button = event.target.closest('button');
+    const container = button.closest('.bg-slate-50');
+    container.classList.add('border-green-300', 'bg-green-50', 'dark:bg-green-900/20');
+    button.onclick = () => removerItemAdicional(itemId, descripcion, categoria);
+    button.innerHTML = '<i class="fas fa-minus"></i>';
+    button.title = 'Remover item';
+    button.className = button.className.replace('border-green-300', 'border-red-300').replace('text-green-700', 'text-red-700').replace('hover:bg-green-50', 'hover:bg-red-50');
+}
+
+// Remover item adicional
+function removerItemAdicional(itemId, descripcion, categoria) {
+    if (!itemsAdicionales.has(itemId)) {
+        mostrarMensaje('Este item no está agregado', 'error');
+        return;
+    }
+
+    itemsAdicionales.delete(itemId);
+    actualizarEstadisticas();
+    mostrarMensaje(`Item "${descripcion}" removido`, 'success');
+
+    // Remover visualmente de la sección principal
+    removerItemVisualDePrincipal(itemId);
+
+    // Actualizar visual del item en el panel lateral
+    const button = event.target.closest('button');
+    const container = button.closest('.bg-slate-50');
+    container.classList.remove('border-green-300', 'bg-green-50', 'dark:bg-green-900/20');
+    button.onclick = () => agregarItemAdicional(itemId, descripcion, categoria);
+    button.innerHTML = '<i class="fas fa-plus"></i>';
+    button.title = 'Agregar item';
+    button.className = button.className.replace('border-red-300', 'border-green-300').replace('text-red-700', 'text-green-700').replace('hover:bg-red-50', 'hover:bg-green-50');
+}
+
+// Continuar con la creación
+function continuarCreacion() {
+    const totalItems = itemsSeleccionados.size + itemsAdicionales.size;
+
+    if (totalItems === 0) {
+        mostrarMensaje('Debes seleccionar al menos un item para continuar', 'error');
+        return;
+    }
+
+    // Preparar mensaje de confirmación
+    const mensaje = `Vas a crear un establecimiento con ${totalItems} items de evaluación (${itemsSeleccionados.size} de la plantilla + ${itemsAdicionales.size} adicionales). ¿Deseas continuar?`;
+
+    document.getElementById('mensaje-confirmacion').textContent = mensaje;
+    document.getElementById('modal-confirmacion').classList.remove('hidden');
+}
+
+// Cerrar modal de confirmación
+function cerrarModalConfirmacion() {
+    document.getElementById('modal-confirmacion').classList.add('hidden');
+}
+
+// Confirmar y continuar
+function confirmarContinuar() {
+    // Guardar selección en sessionStorage para el siguiente paso
+    const seleccion = {
+        plantilla_id: plantillaId,
+        items_plantilla: Array.from(itemsSeleccionados),
+        items_adicionales: Array.from(itemsAdicionales)
+    };
+
+    sessionStorage.setItem('seleccion_items_establecimiento', JSON.stringify(seleccion));
+
+    // Redirigir al formulario final
+    window.location.href = `/plantillas/${plantillaId}/crear-establecimiento/finalizar`;
+}
+
+// Función utilitaria para mostrar mensajes
+function mostrarMensaje(mensaje, tipo) {
+    const mensajeDiv = document.createElement('div');
+    mensajeDiv.className = `fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg transition-all duration-300 transform translate-x-full ${
+        tipo === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+    }`;
+    mensajeDiv.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas ${tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>
+            <span>${mensaje}</span>
+        </div>
+    `;
+
+    document.body.appendChild(mensajeDiv);
+
+    // Animar entrada
+    setTimeout(() => {
+        mensajeDiv.classList.remove('translate-x-full');
+    }, 100);
+
+    setTimeout(() => {
+        mensajeDiv.classList.add('translate-x-full');
+        setTimeout(() => mensajeDiv.remove(), 300);
+    }, 3000);
+}
+</script>
+
+{% endblock %}</content>
+<parameter name="filePath">c:\Users\ASUS\Desktop\Desarrollo_CastilloDeChancay\AlimentosYBebidas\app\templates\inspector_gestionar_items_creacion.html

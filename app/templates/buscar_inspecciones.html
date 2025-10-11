@@ -4,397 +4,841 @@
 
 {% block extra_css %}
 <style>
-    .inspeccion-card {
-        transition: all 0.3s ease;
+/* Mobile-first responsive utilities */
+@media (max-width: 640px) {
+    .mobile-full {
+        width: 100vw;
+        margin-left: calc(-50vw + 50%);
+        margin-right: calc(-50vw + 50%);
     }
+}
+
+/* Animaciones suaves */
+.transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Estados de carga mejorados */
+.loading-shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Cards de inspección mobile */
+.inspeccion-card {
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.inspeccion-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+/* Estados de inspección con mejor diseño */
+.estado-badge {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.estado-pendiente {
+    @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800;
+}
+
+.estado-en-proceso {
+    @apply bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800;
+}
+
+.estado-completada {
+    @apply bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800;
+}
+
+/* Barra de progreso personalizada */
+.progreso-barra {
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+    transition: width 0.5s ease;
+}
+
+/* Toggle de vista mejorado */
+.vista-toggle {
+    position: relative;
+    display: inline-flex;
+    background: #f3f4f6;
+    border-radius: 8px;
+    padding: 2px;
+}
+
+.vista-toggle.dark {
+    background: #374151;
+}
+
+.vista-toggle button {
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.vista-toggle button.active {
+    background: white;
+    color: #1f2937;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.vista-toggle.dark button.active {
+    background: #1f2937;
+    color: white;
+}
+
+/* Mejorar scroll en móviles */
+@media (max-width: 640px) {
+    .modal-scroll {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Focus states mejorados para accesibilidad */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* Animación de entrada para cards */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card-enter {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+/* Estados hover mejorados para touch devices */
+@media (hover: hover) {
     .inspeccion-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     }
-    .estado-badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-weight: 600;
-        text-transform: uppercase;
+}
+
+/* Responsive text scaling */
+@media (max-width: 640px) {
+    .responsive-text {
+        font-size: clamp(0.875rem, 2.5vw, 1rem);
     }
-    .estado-pendiente { @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200; }
-    .estado-en-proceso { @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200; }
-    .estado-completada { @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200; }
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-slate-50 dark:bg-slate-900 pt-20">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-slate-900 dark:text-white">
-                Buscar Inspecciones
-            </h1>
-            <p class="mt-2 text-slate-600 dark:text-slate-400">
-                Encuentra y revisa inspecciones guardadas
-            </p>
-        </div>
-
-        <!-- Filtros -->
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-8">
-            <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Filtros de Búsqueda</h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                <!-- Establecimiento -->
-                <div>
-                    <label for="filtro-establecimiento" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        Establecimiento
-                    </label>
-                    <select id="filtro-establecimiento" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <option value="">Todos los establecimientos</option>
-                    </select>
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <!-- Header Mobile-First -->
+    <div class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 sm:h-20">
+                <!-- Logo y título -->
+                <div class="flex items-center space-x-3 sm:space-x-4">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-search text-white text-lg sm:text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <h1 class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
+                            Buscar Inspecciones
+                        </h1>
+                        <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 hidden sm:block">
+                            Encuentra y revisa inspecciones guardadas
+                        </p>
+                    </div>
                 </div>
 
-                <!-- Fecha Desde -->
-                <div>
-                    <label for="filtro-fecha-desde" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        Fecha Desde
-                    </label>
-                    <input type="date" id="filtro-fecha-desde" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                </div>
-
-                <!-- Fecha Hasta -->
-                <div>
-                    <label for="filtro-fecha-hasta" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        Fecha Hasta
-                    </label>
-                    <input type="date" id="filtro-fecha-hasta" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                </div>
-
-                <!-- Estado -->
-                <div>
-                    <label for="filtro-estado" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        Estado
-                    </label>
-                    <select id="filtro-estado" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <option value="">Todos los estados</option>
-                        <option value="pendiente">Pendiente</option>
-                        <option value="en proceso">En Proceso</option>
-                        <option value="completada">Completada</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Botones de acción -->
-            <div class="flex flex-wrap gap-3 mt-6">
-                <button id="btn-buscar" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 flex items-center">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                    Buscar
-                </button>
-                <button id="btn-limpiar" class="px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded-lg transition-colors duration-200">
-                    Limpiar Filtros
-                </button>
-                <button id="btn-nueva-inspeccion" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 flex items-center">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    Nueva Inspección
-                </button>
-            </div>
-        </div>
-
-        <!-- Resultados -->
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-            <!-- Header de resultados -->
-            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">
-                        Resultados de Búsqueda
-                    </h3>
-                    <span id="contador-resultados" class="text-sm text-slate-500 dark:text-slate-400">
-                        0 inspecciones encontradas
-                    </span>
-                </div>
-            </div>
-
-            <!-- Loading -->
-            <div id="loading-resultados" class="hidden p-8 text-center">
-                <div class="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-blue-500 bg-blue-100 transition ease-in-out duration-150">
-                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Buscando inspecciones...
-                </div>
-            </div>
-
-            <!-- Lista de inspecciones -->
-            <div id="lista-inspecciones" class="p-6">
-                <div id="sin-resultados" class="text-center py-12">
-                    <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    <h3 class="mt-2 text-sm font-medium text-slate-900 dark:text-white">Sin inspecciones</h3>
-                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Utiliza los filtros para buscar inspecciones.</p>
+                <!-- Botón de filtros móviles -->
+                <div class="flex items-center space-x-2">
+                    <button id="btn-toggle-filtros" class="sm:hidden w-10 h-10 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg flex items-center justify-center transition-colors">
+                        <i class="fas fa-filter text-gray-600 dark:text-gray-300"></i>
+                    </button>
+                    <div class="hidden sm:flex items-center space-x-2">
+                        <span class="text-xs text-gray-500 dark:text-gray-400">Filtros</span>
+                        <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Modal de Vista Previa -->
-<div id="modal-vista-previa" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-800 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div class="p-6 border-b border-slate-200 dark:border-slate-700">
-            <div class="flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Vista Previa de Inspección</h3>
-                <button id="cerrar-modal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-        </div>
-        <div id="contenido-modal" class="p-6">
-            <!-- Contenido se carga dinámicamente -->
-        </div>
-    </div>
-</div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+        <!-- Filtros de Búsqueda - Mobile First -->
+        <div id="seccion-filtros" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-4 sm:mb-6">
+            <div class="p-4 sm:p-6">
+                <!-- Header de filtros -->
+                <div class="flex items-center justify-between mb-4 sm:mb-6">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-sliders-h text-blue-600 text-sm sm:text-base"></i>
+                        <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                            Filtros de Búsqueda
+                        </h2>
+                    </div>
+                    <button id="btn-collapse-filtros" class="hidden sm:flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                        <i class="fas fa-chevron-up"></i>
+                        <span>Minimizar</span>
+                    </button>
+                </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Variables globales
-    let inspecciones = [];
-    
-    // Elementos del DOM
-    const filtroEstablecimiento = document.getElementById('filtro-establecimiento');
-    const filtroFechaDesde = document.getElementById('filtro-fecha-desde');
-    const filtroFechaHasta = document.getElementById('filtro-fecha-hasta');
-    const filtroEstado = document.getElementById('filtro-estado');
-    const btnBuscar = document.getElementById('btn-buscar');
-    const btnLimpiar = document.getElementById('btn-limpiar');
-    const btnNuevaInspeccion = document.getElementById('btn-nueva-inspeccion');
-    const listaInspecciones = document.getElementById('lista-inspecciones');
-    const contadorResultados = document.getElementById('contador-resultados');
-    const loadingResultados = document.getElementById('loading-resultados');
-    const sinResultados = document.getElementById('sin-resultados');
-    const modalVistaPrevia = document.getElementById('modal-vista-previa');
-    const cerrarModal = document.getElementById('cerrar-modal');
-    const contenidoModal = document.getElementById('contenido-modal');
-    
-    // Cargar establecimientos
-    cargarEstablecimientos();
-    
-    // Event listeners
-    btnBuscar.addEventListener('click', buscarInspecciones);
-    btnLimpiar.addEventListener('click', limpiarFiltros);
-    btnNuevaInspeccion.addEventListener('click', () => window.location.href = '/');
-    cerrarModal.addEventListener('click', cerrarModalPrevia);
-    
-    // Buscar automáticamente al cargar
-    buscarInspecciones();
-    
-    async function cargarEstablecimientos() {
-        try {
-            const response = await fetch('/api/establecimientos');
-            if (response.ok) {
-                const establecimientos = await response.json();
-                
-                filtroEstablecimiento.innerHTML = '<option value="">Todos los establecimientos</option>';
-                establecimientos.forEach(est => {
-                    const option = document.createElement('option');
-                    option.value = est.id;
-                    option.textContent = est.nombre;
-                    filtroEstablecimiento.appendChild(option);
-                });
-            }
-        } catch (error) {
-            console.error('Error cargando establecimientos:', error);
-        }
-    }
-    
-    async function buscarInspecciones() {
-        mostrarLoading(true);
-        
-        try {
-            const params = new URLSearchParams();
-            
-            if (filtroEstablecimiento.value) params.append('establecimiento_id', filtroEstablecimiento.value);
-            if (filtroFechaDesde.value) params.append('fecha_desde', filtroFechaDesde.value);
-            if (filtroFechaHasta.value) params.append('fecha_hasta', filtroFechaHasta.value);
-            if (filtroEstado.value) params.append('estado', filtroEstado.value);
-            
-            const response = await fetch(`/api/inspecciones/buscar?${params.toString()}`);
-            if (response.ok) {
-                inspecciones = await response.json();
-                mostrarResultados();
-            } else {
-                throw new Error('Error en la búsqueda');
-            }
-        } catch (error) {
-            console.error('Error buscando inspecciones:', error);
-            mostrarError('Error al buscar inspecciones');
-        } finally {
-            mostrarLoading(false);
-        }
-    }
-    
-    function mostrarResultados() {
-        if (inspecciones.length === 0) {
-            sinResultados.classList.remove('hidden');
-            listaInspecciones.innerHTML = '';
-            contadorResultados.textContent = '0 inspecciones encontradas';
-            return;
-        }
-        
-        sinResultados.classList.add('hidden');
-        contadorResultados.textContent = `${inspecciones.length} inspección${inspecciones.length !== 1 ? 'es' : ''} encontrada${inspecciones.length !== 1 ? 's' : ''}`;
-        
-        const html = inspecciones.map(inspeccion => crearCardInspeccion(inspeccion)).join('');
-        listaInspecciones.innerHTML = html;
-        
-        // Agregar event listeners a las cards
-        document.querySelectorAll('[data-inspeccion-id]').forEach(card => {
-            card.addEventListener('click', () => verDetalleInspeccion(card.dataset.inspeccionId));
-        });
-    }
-    
-    function crearCardInspeccion(inspeccion) {
-        const fecha = new Date(inspeccion.fecha).toLocaleDateString('es-ES');
-        const estadoClass = `estado-${inspeccion.estado.toLowerCase().replace(' ', '-')}`;
-        
-        return `
-            <div class="inspeccion-card bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg p-4 cursor-pointer hover:shadow-md transition-all duration-200 mb-4" 
-                 data-inspeccion-id="${inspeccion.id}">
-                <div class="flex justify-between items-start mb-3">
-                    <div>
-                        <h4 class="font-semibold text-slate-900 dark:text-white">${inspeccion.establecimiento_nombre}</h4>
-                        <p class="text-sm text-slate-600 dark:text-slate-400">${fecha}</p>
+                <!-- Grid de filtros responsive -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
+                    <!-- Establecimiento -->
+                    <div class="space-y-2">
+                        <label for="filtro-establecimiento" class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <i class="fas fa-building mr-1 text-gray-400"></i>
+                            Establecimiento
+                        </label>
+                        <select id="filtro-establecimiento" class="w-full px-3 py-2.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
+                            <option value="">Todos los establecimientos</option>
+                        </select>
                     </div>
-                    <span class="estado-badge ${estadoClass}">${inspeccion.estado}</span>
-                </div>
-                
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                        <span class="font-medium text-slate-700 dark:text-slate-300">Inspector:</span>
-                        <p class="text-slate-600 dark:text-slate-400">${inspeccion.inspector_nombre || 'N/A'}</p>
+
+                    <!-- Encargado -->
+                    <div class="space-y-2">
+                        <label for="filtro-encargado" class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <i class="fas fa-user mr-1 text-gray-400"></i>
+                            Encargado
+                        </label>
+                        <select id="filtro-encargado" disabled class="w-full px-3 py-2.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed transition-colors">
+                            <option value="">Seleccione establecimiento</option>
+                        </select>
                     </div>
-                    <div>
-                        <span class="font-medium text-slate-700 dark:text-slate-300">Puntaje:</span>
-                        <p class="text-slate-600 dark:text-slate-400">${inspeccion.puntaje_total || 0}/${inspeccion.puntaje_maximo || 0}</p>
+
+                    <!-- Fecha Desde -->
+                    <div class="space-y-2">
+                        <label for="filtro-fecha-desde" class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <i class="fas fa-calendar-alt mr-1 text-gray-400"></i>
+                            Desde
+                        </label>
+                        <input type="date" id="filtro-fecha-desde" class="w-full px-3 py-2.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
                     </div>
-                    <div>
-                        <span class="font-medium text-slate-700 dark:text-slate-300">Cumplimiento:</span>
-                        <p class="text-slate-600 dark:text-slate-400">${inspeccion.porcentaje_cumplimiento || 0}%</p>
+
+                    <!-- Fecha Hasta -->
+                    <div class="space-y-2">
+                        <label for="filtro-fecha-hasta" class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <i class="fas fa-calendar-alt mr-1 text-gray-400"></i>
+                            Hasta
+                        </label>
+                        <input type="date" id="filtro-fecha-hasta" class="w-full px-3 py-2.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
                     </div>
-                    <div>
-                        <span class="font-medium text-slate-700 dark:text-slate-300">Items:</span>
-                        <p class="text-slate-600 dark:text-slate-400">${inspeccion.items_evaluados || 0} evaluados</p>
+
+                    <!-- Estado -->
+                    <div class="space-y-2 sm:col-span-2 lg:col-span-1">
+                        <label for="filtro-estado" class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <i class="fas fa-info-circle mr-1 text-gray-400"></i>
+                            Estado
+                        </label>
+                        <select id="filtro-estado" class="w-full px-3 py-2.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
+                            <option value="">Todos los estados</option>
+                            <option value="pendiente"><i class="fa-solid fa-hourglass-half"></i> Pendiente</option>
+                            <option value="en proceso"><i class="fas fa-sync-alt mr-2"></i>En Proceso</option>
+                            <option value="completada"><i class="fas fa-check text-green-600 mr-1"></i> Completada</option>
+                        </select>
                     </div>
                 </div>
-                
-                ${inspeccion.observaciones ? `
-                    <div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600">
-                        <span class="font-medium text-slate-700 dark:text-slate-300">Observaciones:</span>
-                        <p class="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">${inspeccion.observaciones}</p>
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }
-    
-    async function verDetalleInspeccion(inspeccionId) {
-        try {
-            const response = await fetch(`/api/inspecciones/${inspeccionId}/detalle`);
-            if (response.ok) {
-                const detalle = await response.json();
-                mostrarModalDetalle(detalle);
-            } else {
-                throw new Error('Error cargando detalle');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            mostrarError('Error al cargar el detalle de la inspección');
-        }
-    }
-    
-    function mostrarModalDetalle(detalle) {
-        // Aquí se puede implementar el contenido del modal con el detalle completo
-        contenidoModal.innerHTML = `
-            <div class="space-y-6">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <h4 class="font-semibold text-slate-900 dark:text-white">Establecimiento</h4>
-                        <p class="text-slate-600 dark:text-slate-400">${detalle.establecimiento_nombre}</p>
-                    </div>
-                    <div>
-                        <h4 class="font-semibold text-slate-900 dark:text-white">Fecha</h4>
-                        <p class="text-slate-600 dark:text-slate-400">${new Date(detalle.fecha).toLocaleDateString('es-ES')}</p>
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-3 gap-4 p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-blue-600">${detalle.puntaje_total || 0}</div>
-                        <div class="text-sm text-slate-600 dark:text-slate-400">Puntaje Total</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-green-600">${detalle.porcentaje_cumplimiento || 0}%</div>
-                        <div class="text-sm text-slate-600 dark:text-slate-400">Cumplimiento</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-purple-600">${detalle.items_evaluados || 0}</div>
-                        <div class="text-sm text-slate-600 dark:text-slate-400">Items Evaluados</div>
-                    </div>
-                </div>
-                
-                ${detalle.observaciones ? `
-                    <div>
-                        <h4 class="font-semibold text-slate-900 dark:text-white mb-2">Observaciones</h4>
-                        <p class="text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">${detalle.observaciones}</p>
-                    </div>
-                ` : ''}
-                
-                <div class="flex justify-end space-x-3">
-                    <button onclick="editarInspeccion(${detalle.id})" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200">
-                        Editar Inspección
+
+                <!-- Botones de acción - Mobile First -->
+                <div class="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-6">
+                    <button id="btn-buscar" class="flex-1 sm:flex-none px-4 py-3 sm:py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg transition-all duration-200 flex items-center justify-center font-medium shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95">
+                        <i class="fas fa-search mr-2"></i>
+                        <span class="text-sm sm:text-base">Buscar Inspecciones</span>
+                    </button>
+                    <button id="btn-limpiar" class="flex-1 sm:flex-none px-4 py-3 sm:py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-all duration-200 flex items-center justify-center font-medium shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95">
+                        <i class="fas fa-eraser mr-2"></i>
+                        <span class="text-sm sm:text-base">Limpiar</span>
                     </button>
                 </div>
             </div>
-        `;
-        
-        modalVistaPrevia.classList.remove('hidden');
+        </div>
+
+        <!-- Resultados de Búsqueda - Mobile First -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <!-- Header de resultados -->
+            <div class="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-list text-green-600 text-sm sm:text-base"></i>
+                        <h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                            Resultados de Búsqueda
+                        </h3>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <span id="contador-resultados" class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                            0 inspecciones
+                        </span>
+                        <!-- Toggle vista móvil/desktop -->
+                        <div class="hidden sm:flex items-center space-x-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                            <button id="btn-vista-cards" class="p-1.5 rounded text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                                <i class="fas fa-th text-xs"></i>
+                            </button>
+                            <button id="btn-vista-lista" class="p-1.5 rounded bg-blue-600 text-white">
+                                <i class="fas fa-list text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estado de carga mejorado -->
+            <div id="loading-resultados" class="hidden p-6 sm:p-8">
+                <div class="flex flex-col items-center justify-center space-y-4">
+                    <div class="relative">
+                        <div class="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-200 dark:border-blue-800 rounded-full animate-spin border-t-blue-600"></div>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <i class="fas fa-search text-blue-600 text-lg sm:text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <h4 class="text-sm sm:text-base font-medium text-gray-900 dark:text-white mb-1">
+                            Buscando inspecciones...
+                        </h4>
+                        <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                            Esto puede tomar unos segundos
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenedor de resultados -->
+            <div id="contenedor-resultados">
+                <!-- Estado vacío mejorado -->
+                <div id="sin-resultados" class="p-6 sm:p-8">
+                    <div class="text-center">
+                        <div class="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-search text-gray-400 text-2xl sm:text-3xl"></i>
+                        </div>
+                        <h3 class="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">
+                            No se encontraron inspecciones
+                        </h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                            Utiliza los filtros para buscar inspecciones específicas.
+                        </p>
+                        <button id="btn-sugerencia-filtros" class="inline-flex items-center px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+                            <i class="fas fa-lightbulb mr-2"></i>
+                            Ver sugerencias
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Vista de cards (móvil) -->
+                <div id="lista-inspecciones" class="block sm:hidden p-4 space-y-3">
+                    <!-- Cards se generan dinámicamente por JavaScript -->
+                </div>
+
+                <!-- Vista de tabla (desktop) -->
+                <div id="vista-tabla" class="hidden sm:block overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    <i class="fas fa-hashtag mr-1"></i>ID
+                                </th>
+                                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    <i class="fas fa-calendar mr-1"></i>Fecha
+                                </th>
+                                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    <i class="fas fa-building mr-1"></i>Establecimiento
+                                </th>
+                                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    <i class="fas fa-user mr-1"></i>Encargado
+                                </th>
+                                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    <i class="fas fa-info-circle mr-1"></i>Estado
+                                </th>
+                                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    <i class="fas fa-chart-line mr-1"></i>Cumplimiento
+                                </th>
+                                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    <i class="fas fa-cogs mr-1"></i>Acciones
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-resultados" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            <!-- Filas se generan dinámicamente por JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Paginación -->
+            <div id="paginacion" class="hidden px-4 sm:px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                <div class="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
+                    <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                        <span id="info-pagina">Mostrando 1-10 de 50 resultados</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button id="btn-anterior" class="px-3 py-2 text-xs sm:text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                            <i class="fas fa-chevron-left mr-1"></i>
+                            Anterior
+                        </button>
+                        <div class="flex space-x-1">
+                            <button class="px-3 py-2 text-xs sm:text-sm bg-blue-600 text-white border border-blue-600 rounded-lg">1</button>
+                            <button class="px-3 py-2 text-xs sm:text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500">2</button>
+                            <button class="px-3 py-2 text-xs sm:text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500">3</button>
+                        </div>
+                        <button id="btn-siguiente" class="px-3 py-2 text-xs sm:text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                            Siguiente
+                            <i class="fas fa-chevron-right ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Vista Previa - Mobile First -->
+<div id="modal-vista-previa" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden shadow-2xl">
+        <!-- Header del modal -->
+        <div class="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-eye text-white text-sm sm:text-base"></i>
+                </div>
+                <div>
+                    <h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                        Vista Previa de Inspección
+                    </h3>
+                    <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                        Detalles completos de la inspección
+                    </p>
+                </div>
+            </div>
+            <button id="cerrar-modal" class="w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg flex items-center justify-center transition-colors">
+                <i class="fas fa-times text-gray-600 dark:text-gray-300"></i>
+            </button>
+        </div>
+
+        <!-- Contenido del modal -->
+        <div id="contenido-modal" class="p-4 sm:p-6 max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-140px)] overflow-y-auto">
+            <!-- Loading state -->
+            <div id="modal-loading" class="flex flex-col items-center justify-center py-12">
+                <div class="w-12 h-12 border-4 border-blue-200 dark:border-blue-800 rounded-full animate-spin border-t-blue-600 mb-4"></div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Cargando detalles...</p>
+            </div>
+
+            <!-- Contenido se carga dinámicamente -->
+            <div id="modal-contenido" class="hidden">
+                <!-- El contenido se insertará aquí por JavaScript -->
+            </div>
+        </div>
+
+        <!-- Footer del modal -->
+        <div class="flex items-center justify-end space-x-3 p-4 sm:p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+            <button id="btn-cerrar-modal" class="px-4 py-2 text-sm bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors">
+                Cerrar
+            </button>
+            <button id="btn-ver-completa" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-external-link-alt mr-2"></i>
+                Ver Completa
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de sugerencias de filtros -->
+<div id="modal-sugerencias" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full">
+        <div class="p-6">
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="w-10 h-10 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-lightbulb text-yellow-600"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    Sugerencias de Búsqueda
+                </h3>
+            </div>
+            <div class="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+                <div class="flex items-start space-x-2">
+                    <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+                    <span>Selecciona un establecimiento específico para ver inspecciones relacionadas</span>
+                </div>
+                <div class="flex items-start space-x-2">
+                    <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+                    <span>Utiliza rangos de fechas para filtrar inspecciones por período</span>
+                </div>
+                <div class="flex items-start space-x-2">
+                    <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+                    <span>Filtra por estado para ver inspecciones pendientes o completadas</span>
+                </div>
+            </div>
+            <button id="btn-cerrar-sugerencias" class="w-full mt-6 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                Entendido
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+<script src="{{ url_for('static', filename='js/buscar-inspecciones.js') }}"></script>
+
+<script>
+// Mobile-first enhancements
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle filtros en móvil
+    const btnToggleFiltros = document.getElementById('btn-toggle-filtros');
+    const seccionFiltros = document.getElementById('seccion-filtros');
+
+    if (btnToggleFiltros && seccionFiltros) {
+        btnToggleFiltros.addEventListener('click', function() {
+            seccionFiltros.classList.toggle('hidden');
+            const icon = this.querySelector('i');
+            if (icon) {
+                icon.className = seccionFiltros.classList.contains('hidden')
+                    ? 'fas fa-filter text-gray-600 dark:text-gray-300'
+                    : 'fas fa-times text-gray-600 dark:text-gray-300';
+            }
+        });
     }
-    
-    function cerrarModalPrevia() {
-        modalVistaPrevia.classList.add('hidden');
+
+    // Toggle vista cards/lista
+    const btnVistaCards = document.getElementById('btn-vista-cards');
+    const btnVistaLista = document.getElementById('btn-vista-lista');
+    const vistaCards = document.getElementById('vista-cards');
+    const vistaTabla = document.getElementById('vista-tabla');
+
+    if (btnVistaCards && btnVistaLista) {
+        btnVistaCards.addEventListener('click', function() {
+            btnVistaCards.classList.add('bg-blue-600', 'text-white');
+            btnVistaLista.classList.remove('bg-blue-600', 'text-white');
+            vistaCards?.classList.remove('hidden');
+            vistaTabla?.classList.add('hidden');
+        });
+
+        btnVistaLista.addEventListener('click', function() {
+            btnVistaLista.classList.add('bg-blue-600', 'text-white');
+            btnVistaCards.classList.remove('bg-blue-600', 'text-white');
+            vistaTabla?.classList.remove('hidden');
+            vistaCards?.classList.add('hidden');
+        });
     }
-    
-    function limpiarFiltros() {
-        filtroEstablecimiento.value = '';
-        filtroFechaDesde.value = '';
-        filtroFechaHasta.value = '';
-        filtroEstado.value = '';
-        buscarInspecciones();
+
+    // Modal de sugerencias
+    const btnSugerenciaFiltros = document.getElementById('btn-sugerencia-filtros');
+    const modalSugerencias = document.getElementById('modal-sugerencias');
+    const btnCerrarSugerencias = document.getElementById('btn-cerrar-sugerencias');
+
+    if (btnSugerenciaFiltros && modalSugerencias) {
+        btnSugerenciaFiltros.addEventListener('click', function() {
+            modalSugerencias.classList.remove('hidden');
+        });
     }
-    
-    function mostrarLoading(mostrar) {
-        if (mostrar) {
-            loadingResultados.classList.remove('hidden');
-            sinResultados.classList.add('hidden');
-        } else {
-            loadingResultados.classList.add('hidden');
+
+    if (btnCerrarSugerencias && modalSugerencias) {
+        btnCerrarSugerencias.addEventListener('click', function() {
+            modalSugerencias.classList.add('hidden');
+        });
+    }
+
+    // Cerrar modales con click fuera
+    [modalSugerencias, document.getElementById('modal-vista-previa')].forEach(modal => {
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.add('hidden');
+                }
+            });
         }
-    }
-    
-    function mostrarError(mensaje) {
-        // Implementar notificación de error
-        console.error(mensaje);
-    }
-    
-    // Función global para editar inspección
-    window.editarInspeccion = function(inspeccionId) {
-        window.location.href = `/?editar=${inspeccionId}`;
-    };
+    });
+
+    // Mejorar experiencia táctil
+    const touchElements = document.querySelectorAll('button, .inspeccion-card');
+    touchElements.forEach(element => {
+        element.addEventListener('touchstart', function() {
+            this.style.transform = 'scale(0.98)';
+        });
+
+        element.addEventListener('touchend', function() {
+            this.style.transform = 'scale(1)';
+        });
+    });
+
+    // Lazy loading para imágenes (si las hay)
+    const images = document.querySelectorAll('img[data-src]');
+    const imageObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                img.src = img.dataset.src;
+                img.classList.remove('loading-shimmer');
+                imageObserver.unobserve(img);
+            }
+        });
+    });
+
+    images.forEach(img => imageObserver.observe(img));
+
+    // Mejorar accesibilidad
+    const focusableElements = document.querySelectorAll('button, input, select, a');
+    focusableElements.forEach(element => {
+        element.addEventListener('focus', function() {
+            this.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.3)';
+        });
+
+        element.addEventListener('blur', function() {
+            this.style.boxShadow = '';
+        });
+    });
 });
+
+// Función para crear cards de inspección dinámicamente
+function crearCardInspeccion(inspeccion) {
+    const card = document.createElement('div');
+    card.className = 'inspeccion-card bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 card-enter';
+
+    const estadoClass = {
+        'pendiente': 'estado-pendiente',
+        'en proceso': 'estado-en-proceso',
+        'completada': 'estado-completada'
+    };
+
+    const estadoIcon = {
+        'pendiente': 'fa-clock',
+        'en proceso': 'fa-spinner',
+        'completada': 'fa-check-circle'
+    };
+
+    card.innerHTML = `
+        <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center space-x-3">
+                <div class="flex-shrink-0">
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-semibold text-sm">#${inspeccion.id}</span>
+                    </div>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        ${inspeccion.encargado || 'Sin asignar'}
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                        ${inspeccion.fecha || 'Fecha no disponible'}
+                    </div>
+                </div>
+            </div>
+            <span class="estado-badge ${estadoClass[inspeccion.estado] || 'estado-pendiente'}">
+                <i class="fas ${estadoIcon[inspeccion.estado] || 'fa-clock'}"></i>
+                ${inspeccion.estado || 'Pendiente'}
+            </span>
+        </div>
+
+        <div class="space-y-3">
+            <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                <span><i class="fas fa-building mr-1"></i>${inspeccion.establecimiento || 'Sin establecimiento'}</span>
+                <span><i class="fas fa-chart-line mr-1"></i>${inspeccion.cumplimiento || 0}%</span>
+            </div>
+
+            ${inspeccion.cumplimiento ? `
+                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div class="progreso-barra" style="width: ${inspeccion.cumplimiento}%"></div>
+                </div>
+            ` : ''}
+
+            <div class="flex justify-end">
+                <button onclick="verInspeccion(${inspeccion.id})"
+                        class="w-8 h-8 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg flex items-center justify-center transition-colors">
+                    <i class="fas fa-eye text-blue-600 text-sm"></i>
+                </button>
+            </div>
+        </div>
+    `;
+
+    return card;
+}
+
+// Función para actualizar contador con animación
+function actualizarContador(total) {
+    const contador = document.getElementById('contador-resultados');
+    if (contador) {
+        contador.style.transform = 'scale(1.1)';
+        contador.textContent = `${total} inspecciones`;
+        setTimeout(() => {
+            contador.style.transform = 'scale(1)';
+        }, 200);
+    }
+}
+
+// Función mejorada para mostrar loading
+function mostrarLoading(mostrar) {
+    const loading = document.getElementById('loading-resultados');
+    const resultados = document.getElementById('contenedor-resultados');
+
+    if (mostrar) {
+        loading?.classList.remove('hidden');
+        resultados.style.opacity = '0.5';
+    } else {
+        loading?.classList.add('hidden');
+        resultados.style.opacity = '1';
+    }
+}
+
+<script>
+// Inicialización específica para buscar_inspecciones.html
+document.addEventListener('DOMContentLoaded', function() {
+
+    // Esperar a que se cargue el archivo JS principal
+    const checkJSLoaded = setInterval(() => {
+        if (typeof buscarInspecciones !== 'undefined') {
+            clearInterval(checkJSLoaded);
+
+            // Inicializar sistema de búsqueda
+            inicializarSistemaBusqueda();
+        }
+    }, 100);
+
+    // Timeout por si el JS no se carga
+    setTimeout(() => {
+        if (typeof buscarInspecciones === 'undefined') {
+            inicializarSistemaBusquedaFallback();
+        }
+    }, 3000);
+});
+
+// Función de inicialización principal
+function inicializarSistemaBusqueda() {
+    try {
+        // Verificar dependencias críticas
+        if (typeof sanitizeText === 'undefined') {
+        }
+
+        // Inicializar sistema desde el archivo JS
+        if (typeof inicializarBuscarInspecciones === 'function') {
+            inicializarBuscarInspecciones();
+        } else {
+            inicializarSistemaBusquedaFallback();
+        }
+
+    } catch (error) {
+        inicializarSistemaBusquedaFallback();
+    }
+}
+
+// Función fallback por si el JS principal no funciona
+function inicializarSistemaBusquedaFallback() {
+
+    // Variables globales
+    let filtroEstablecimiento = document.getElementById('filtro-establecimiento');
+    let filtroEncargado = document.getElementById('filtro-encargado');
+    let btnBuscar = document.getElementById('btn-buscar');
+    let btnLimpiar = document.getElementById('btn-limpiar');
+
+    // Configurar eventos básicos
+    if (btnBuscar) {
+        btnBuscar.addEventListener('click', () => {
+            mostrarLoading(true);
+            setTimeout(() => mostrarLoading(false), 1000);
+        });
+    }
+
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', () => {
+            if (filtroEstablecimiento) filtroEstablecimiento.value = '';
+            if (filtroEncargado) filtroEncargado.value = '';
+        });
+    }
+
+    // Cargar establecimientos básicos
+    if (filtroEstablecimiento) {
+        cargarEstablecimientosBasicos();
+    }
+
+}
+
+// Carga básica de establecimientos
+async function cargarEstablecimientosBasicos() {
+    try {
+        const response = await fetch('/api/establecimientos');
+        if (response.ok) {
+            const establecimientos = await response.json();
+            const select = document.getElementById('filtro-establecimiento');
+
+            if (select) {
+                select.innerHTML = '<option value="">Todos los establecimientos</option>';
+                establecimientos.forEach(est => {
+                    const option = document.createElement('option');
+                    option.value = est.id;
+                    option.textContent = est.nombre || 'Establecimiento sin nombre';
+                    select.appendChild(option);
+                });
+                `);
+            }
+        }
+    } catch (error) {
+        :', error);
+    }
+}
+
+// Funciones de utilidad mejoradas
+function mostrarLoading(mostrar) {
+    const loading = document.getElementById('loading-resultados');
+    const resultados = document.getElementById('contenedor-resultados');
+
+    if (mostrar) {
+        if (loading) loading.classList.remove('hidden');
+        if (resultados) resultados.style.opacity = '0.5';
+    } else {
+        if (loading) loading.classList.add('hidden');
+        if (resultados) resultados.style.opacity = '1';
+    }
+}
+
+function actualizarContador(total) {
+    const contador = document.getElementById('contador-resultados');
+    if (contador) {
+        contador.style.transform = 'scale(1.1)';
+        contador.textContent = `${total} inspecciones`;
+        setTimeout(() => {
+            contador.style.transform = 'scale(1)';
+        }, 200);
+    }
+}
+
+// Funciones globales para compatibilidad
+window.verDetalleInspeccion = function(inspeccionId) {
+    window.location.href = `/inspecciones/${inspeccionId}/detalle`;
+};
+
+window.mostrarModalDetalle = function(detalle) {
+    // Implementación básica del modal
+};
+
+window.cerrarModalPrevia = function() {
+    const modal = document.getElementById('modal-vista-previa');
+    if (modal) modal.classList.add('hidden');
+};
+
+window.mostrarLoading = mostrarLoading;
+window.actualizarContador = actualizarContador;
 </script>
 {% endblock %}

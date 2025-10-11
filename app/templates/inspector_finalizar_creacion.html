@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+
+{% block title %}Finalizar Creación - {{ plantilla.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .resumen-item {
+        transition: all 0.2s ease;
+    }
+    .resumen-item:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-check-circle text-white text-xl"></i>
+                            </div>
+                            <div>
+                                <h1 class="text-2xl font-bold text-white">
+                                    Finalizar Creación del Establecimiento
+                                </h1>
+                                <p class="text-green-100">
+                                    Revisa los items seleccionados e ingresa los datos del establecimiento
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <a href="javascript:history.back()"
+                               class="inline-flex items-center px-4 py-2 border border-white/30 rounded-xl text-sm font-medium text-white bg-white/10 hover:bg-white/20 transition-all duration-200">
+                                <i class="fas fa-arrow-left mr-2"></i>
+                                Volver
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resumen de selección -->
+                <div class="p-6">
+                    <div class="bg-slate-50 dark:bg-slate-700 rounded-xl p-4 border border-slate-200 dark:border-slate-600">
+                        <div class="flex items-start space-x-4">
+                            <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-clipboard-check text-white text-lg"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Resumen de Selección</h3>
+                                <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                                    Plantilla base: <span class="font-medium">{{ plantilla.nombre }}</span>
+                                </p>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
+                                    <div>
+                                        <span class="text-slate-500 dark:text-slate-400">Items de plantilla:</span>
+                                        <span id="resumen-plantilla" class="ml-2 font-medium text-blue-600 dark:text-blue-400">-</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-slate-500 dark:text-slate-400">Items adicionales:</span>
+                                        <span id="resumen-adicionales" class="ml-2 font-medium text-purple-600 dark:text-purple-400">-</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-slate-500 dark:text-slate-400">Total de items:</span>
+                                        <span id="resumen-total" class="ml-2 font-medium text-green-600 dark:text-green-400">-</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-slate-500 dark:text-slate-400">Estado:</span>
+                                        <span id="resumen-estado" class="ml-2 font-medium text-slate-600 dark:text-slate-400">Cargando...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario de datos del establecimiento -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div class="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
+                <h2 class="text-lg font-semibold text-white flex items-center">
+                    <i class="fas fa-building mr-2"></i>
+                    Datos del Establecimiento
+                </h2>
+                <p class="text-sm text-slate-300 mt-1">
+                    Complete la información básica del establecimiento
+                </p>
+            </div>
+
+            <form id="form-crear-establecimiento" class="p-6 space-y-6">
+                <!-- Campo oculto para plantilla_id -->
+                <input type="hidden" name="plantilla_id" value="{{ plantilla.id }}">
+                <input type="hidden" name="items_seleccionados" id="items-seleccionados-input" value="">
+                <input type="hidden" name="items_adicionales" id="items-adicionales-input" value="">
+
+                <!-- Nombre del establecimiento -->
+                <div>
+                    <label for="nombre" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        <i class="fas fa-building mr-1"></i>
+                        Nombre del Establecimiento *
+                    </label>
+                    <input type="text" name="nombre" id="nombre" required maxlength="100"
+                           class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200"
+                           placeholder="Ej: Restaurante El Castillo">
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Nombre completo y oficial del establecimiento
+                    </p>
+                </div>
+
+                <!-- Tipo de establecimiento -->
+                <div>
+                    <label for="tipo_establecimiento_id" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        <i class="fas fa-tag mr-1"></i>
+                        Tipo de Establecimiento *
+                    </label>
+                    <select name="tipo_establecimiento_id" id="tipo_establecimiento_id" required
+                            class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200">
+                        <option value="">Seleccione un tipo...</option>
+                        {% for tipo in tipos_establecimiento %}
+                        <option value="{{ tipo.id }}" {% if tipo.id == plantilla.tipo_establecimiento_id %}selected{% endif %}>
+                            {{ tipo.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Tipo de negocio o establecimiento (pre-seleccionado según la plantilla)
+                    </p>
+                </div>
+
+                <!-- Dirección -->
+                <div>
+                    <label for="direccion" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        <i class="fas fa-map-pin mr-1"></i>
+                        Dirección
+                    </label>
+                    <input type="text" name="direccion" id="direccion" maxlength="200"
+                           class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200"
+                           placeholder="Ej: Calle Principal 123, Ciudad">
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Dirección completa del establecimiento (opcional)
+                    </p>
+                </div>
+
+                <!-- Teléfono -->
+                <div>
+                    <label for="telefono" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        <i class="fas fa-phone mr-1"></i>
+                        Teléfono
+                    </label>
+                    <input type="tel" name="telefono" id="telefono" maxlength="20"
+                           class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200"
+                           placeholder="Ej: +51 123 456 789">
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Número de teléfono de contacto (opcional)
+                    </p>
+                </div>
+
+                <!-- Correo electrónico -->
+                <div>
+                    <label for="correo" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        <i class="fas fa-envelope mr-1"></i>
+                        Correo Electrónico
+                    </label>
+                    <input type="email" name="correo" id="correo" maxlength="100"
+                           class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all duration-200"
+                           placeholder="Ej: contacto@establecimiento.com">
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Correo electrónico de contacto (opcional)
+                    </p>
+                </div>
+
+                <!-- Vista previa de items seleccionados -->
+                <div class="bg-slate-50 dark:bg-slate-700 rounded-xl p-4 border border-slate-200 dark:border-slate-600">
+                    <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 flex items-center">
+                        <i class="fas fa-eye mr-2"></i>
+                        Vista Previa de Items Seleccionados
+                    </h3>
+                    <div id="vista-previa-items" class="max-h-40 overflow-y-auto">
+                        <div class="text-center py-4">
+                            <i class="fas fa-spinner fa-spin text-slate-400 text-xl"></i>
+                            <p class="mt-2 text-slate-500 dark:text-slate-400 text-sm">
+                                Cargando vista previa...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="flex justify-end space-x-4 pt-6 border-t border-slate-200 dark:border-slate-600">
+                    <a href="javascript:history.back()"
+                       class="px-6 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200">
+                        <i class="fas fa-times mr-2"></i>
+                        Volver
+                    </a>
+                    <button type="submit"
+                            class="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fas fa-save mr-2"></i>
+                        Crear Establecimiento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+let seleccionItems = null;
+
+// Inicializar
+document.addEventListener('DOMContentLoaded', function() {
+    cargarSeleccionItems();
+    configurarFormulario();
+});
+
+// Cargar selección de items desde sessionStorage
+function cargarSeleccionItems() {
+    try {
+        const seleccion = sessionStorage.getItem('seleccion_items_establecimiento');
+        if (!seleccion) {
+            mostrarMensaje('No se encontró selección de items. Vuelve al paso anterior.', 'error');
+            setTimeout(() => {
+                window.location.href = `/plantillas/{{ plantilla.id }}/crear-establecimiento`;
+            }, 2000);
+            return;
+        }
+
+        seleccionItems = JSON.parse(seleccion);
+
+        // Verificar que corresponde a la plantilla actual
+        if (seleccionItems.plantilla_id != {{ plantilla.id }}) {
+            mostrarMensaje('La selección de items no corresponde a esta plantilla.', 'error');
+            sessionStorage.removeItem('seleccion_items_establecimiento');
+            setTimeout(() => {
+                window.location.href = `/plantillas/{{ plantilla.id }}/crear-establecimiento`;
+            }, 2000);
+            return;
+        }
+
+        // Actualizar resumen
+        actualizarResumen();
+        cargarVistaPreviaItems();
+
+    } catch (error) {
+        console.error('Error cargando selección:', error);
+        mostrarMensaje('Error al cargar la selección de items', 'error');
+    }
+}
+
+// Actualizar resumen en la interfaz
+function actualizarResumen() {
+    document.getElementById('resumen-plantilla').textContent = seleccionItems.items_plantilla.length;
+    document.getElementById('resumen-adicionales').textContent = seleccionItems.items_adicionales.length;
+    document.getElementById('resumen-total').textContent = seleccionItems.items_plantilla.length + seleccionItems.items_adicionales.length;
+    document.getElementById('resumen-estado').textContent = 'Listo para crear';
+}
+
+// Cargar vista previa de items seleccionados
+async function cargarVistaPreviaItems() {
+    try {
+        const container = document.getElementById('vista-previa-items');
+
+        if (seleccionItems.items_plantilla.length === 0 && seleccionItems.items_adicionales.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-exclamation-triangle text-yellow-500 text-xl"></i>
+                    <p class="mt-2 text-yellow-600 dark:text-yellow-400 text-sm">
+                        No hay items seleccionados
+                    </p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+
+        // Items de plantilla
+        if (seleccionItems.items_plantilla.length > 0) {
+            html += `<div class="mb-3"><strong class="text-sm text-blue-600 dark:text-blue-400">Items de plantilla (${seleccionItems.items_plantilla.length}):</strong></div>`;
+
+            // Aquí podríamos cargar los detalles de los items de plantilla
+            // Por simplicidad, mostramos solo el conteo
+            html += `<div class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                ${seleccionItems.items_plantilla.length} items seleccionados de la plantilla
+            </div>`;
+        }
+
+        // Items adicionales
+        if (seleccionItems.items_adicionales.length > 0) {
+            html += `<div class="mb-3"><strong class="text-sm text-purple-600 dark:text-purple-400">Items adicionales (${seleccionItems.items_adicionales.length}):</strong></div>`;
+
+            // Aquí podríamos cargar los detalles de los items adicionales
+            // Por simplicidad, mostramos solo el conteo
+            html += `<div class="text-sm text-slate-600 dark:text-slate-400">
+                ${seleccionItems.items_adicionales.length} items adicionales agregados
+            </div>`;
+        }
+
+        container.innerHTML = html;
+
+    } catch (error) {
+        console.error('Error cargando vista previa:', error);
+        document.getElementById('vista-previa-items').innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-exclamation-circle text-red-500 text-xl"></i>
+                <p class="mt-2 text-red-600 dark:text-red-400 text-sm">
+                    Error al cargar vista previa
+                </p>
+            </div>
+        `;
+    }
+}
+
+// Configurar formulario
+function configurarFormulario() {
+    const form = document.getElementById('form-crear-establecimiento');
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        if (!seleccionItems) {
+            mostrarMensaje('No hay selección de items válida', 'error');
+            return;
+        }
+
+        // Preparar datos
+        document.getElementById('items-seleccionados-input').value = JSON.stringify(seleccionItems.items_plantilla);
+        document.getElementById('items-adicionales-input').value = JSON.stringify(seleccionItems.items_adicionales);
+
+        // Deshabilitar botón
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creando...';
+
+        try {
+            const formData = new FormData(form);
+
+            const response = await fetch('/plantillas/guardar-establecimiento-personalizado', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Limpiar sessionStorage
+                sessionStorage.removeItem('seleccion_items_establecimiento');
+
+                mostrarMensaje(result.message, 'success');
+                setTimeout(() => {
+                    window.location.href = '{{ url_for("inspeccion.dashboard_page") }}';
+                }, 2000);
+            } else {
+                mostrarMensaje(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarMensaje('Error al procesar la solicitud', 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    });
+}
+
+// Función utilitaria para mostrar mensajes
+function mostrarMensaje(mensaje, tipo) {
+    const mensajeDiv = document.createElement('div');
+    mensajeDiv.className = `fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg transition-all duration-300 ${
+        tipo === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+    }`;
+    mensajeDiv.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas ${tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>
+            <span>${mensaje}</span>
+        </div>
+    `;
+
+    document.body.appendChild(mensajeDiv);
+
+    setTimeout(() => {
+        mensajeDiv.remove();
+    }, 3000);
+}
+</script>
+
+{% endblock %}</content>
+<parameter name="filePath">c:\Users\ASUS\Desktop\Desarrollo_CastilloDeChancay\AlimentosYBebidas\app\templates\inspector_finalizar_creacion.html
