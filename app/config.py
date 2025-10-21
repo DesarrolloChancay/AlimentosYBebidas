@@ -35,21 +35,20 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Configuración de Socket.IO
-    # En producción (Render) usar gevent, en desarrollo usar threading
+    # En producción (Render) usar threading para evitar problemas de compatibilidad
     if FLASK_ENV == 'production':
-        SOCKETIO_ASYNC_MODE = 'gevent'
+        SOCKETIO_ASYNC_MODE = 'threading'  # Más compatible con Render
     else:
         SOCKETIO_ASYNC_MODE = 'threading'
 
-    # Configuración específica para entornos asíncronos (gevent)
-    if FLASK_ENV == 'production' and SOCKETIO_ASYNC_MODE == 'gevent':
-        # Configuración para compatibilidad con gevent
+    # Configuración específica para producción
+    if FLASK_ENV == 'production':
+        # Configuración para compatibilidad con threading
         SQLALCHEMY_ENGINE_OPTIONS = {
             'pool_pre_ping': True,
             'pool_recycle': 300,
             'pool_size': 5,
             'max_overflow': 10,
-            'pool_timeout': 30,
         }
     else:
         # Configuración estándar para desarrollo
