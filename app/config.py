@@ -41,6 +41,23 @@ class Config:
     else:
         SOCKETIO_ASYNC_MODE = 'threading'
 
+    # Configuración específica para entornos asíncronos (eventlet)
+    if FLASK_ENV == 'production' and SOCKETIO_ASYNC_MODE == 'eventlet':
+        # Configuración para compatibilidad con eventlet
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_pre_ping': True,
+            'pool_recycle': 300,
+            'pool_size': 10,
+            'max_overflow': 20,
+            'pool_timeout': 30,
+        }
+    else:
+        # Configuración estándar para desarrollo
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_pre_ping': True,
+            'pool_recycle': 300,
+        }
+
     # Configuración adicional para producción
     if FLASK_ENV == 'production':
         # Deshabilitar reloader en producción
