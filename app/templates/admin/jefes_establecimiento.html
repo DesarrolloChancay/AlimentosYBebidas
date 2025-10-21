@@ -167,9 +167,10 @@
                                             class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button onclick="desactivarJefe({{ jefe.id }})"
-                                            class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors">
-                                        <i class="fas fa-user-times"></i>
+                                    <button onclick="toggleJefe({{ jefe.id }}, {{ jefe.activo|tojson }})"
+                                            class="{% if jefe.activo %}text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300{% else %}text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300{% endif %} transition-colors"
+                                            title="{% if jefe.activo %}Desactivar jefe{% else %}Activar jefe{% endif %}">
+                                        <i class="fas {% if jefe.activo %}fa-user-times{% else %}fa-user-check{% endif %}"></i>
                                     </button>
                                 </div>
                             </td>
@@ -390,7 +391,206 @@
     </div>
 </div>
 
-<!-- Modal Confirmación Desactivar Jefe -->
+<!-- Modal Editar Jefe de Establecimiento -->
+<div id="modal-editar-jefe" class="fixed inset-0 overflow-y-auto h-full w-full hidden" style="z-index: 9999; backdrop-filter: blur(4px); background-color: rgba(0,0,0,0.5);">
+    <div class="relative top-4 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-lg bg-white dark:bg-slate-800 overflow-y-auto max-h-[90vh]">
+        <div class="mt-3">
+            <!-- Encabezado del Modal -->
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
+                        <i class="fas fa-user-edit mr-2 text-indigo-500"></i>
+                        Editar Jefe de Establecimiento
+                    </h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                        Modificar la información del jefe y su asignación
+                    </p>
+                </div>
+                <button onclick="cerrarModalEditarJefe()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Formulario -->
+            <form id="form-editar-jefe" class="space-y-6">
+                <!-- Información Personal -->
+                <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-6">
+                    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-user mr-2 text-blue-500"></i>
+                        Información Personal
+                    </h4>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="editar-nombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Nombre *
+                            </label>
+                            <input type="text"
+                                   id="editar-nombre"
+                                   name="nombre"
+                                   required
+                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="Ingrese el nombre">
+                        </div>
+
+                        <div>
+                            <label for="editar-apellido" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Apellido *
+                            </label>
+                            <input type="text"
+                                   id="editar-apellido"
+                                   name="apellido"
+                                   required
+                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="Ingrese el apellido">
+                        </div>
+
+                        <div>
+                            <label for="editar-correo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Correo Electrónico *
+                            </label>
+                            <input type="email"
+                                   id="editar-correo"
+                                   name="correo"
+                                   required
+                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="correo@ejemplo.com">
+                        </div>
+
+                        <div>
+                            <label for="editar-telefono" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Teléfono
+                            </label>
+                            <input type="tel"
+                                   id="editar-telefono"
+                                   name="telefono"
+                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="+51 999 999 999">
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label for="editar-dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                DNI *
+                            </label>
+                            <input type="text"
+                                   id="editar-dni"
+                                   name="dni"
+                                   required
+                                   maxlength="8"
+                                   pattern="[0-9]{8}"
+                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="12345678">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Asignación de Establecimiento -->
+                <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-6">
+                    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-building mr-2 text-green-500"></i>
+                        Asignación de Establecimiento
+                    </h4>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label for="editar-establecimiento_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Establecimiento *
+                            </label>
+                            <select id="editar-establecimiento_id"
+                                    name="establecimiento_id"
+                                    required
+                                    class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+                                <option value="">Cargando establecimientos...</option>
+                            </select>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                Solo se muestran establecimientos disponibles
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="editar-fecha_inicio" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Fecha de Inicio *
+                                </label>
+                                <input type="date"
+                                       id="editar-fecha_inicio"
+                                       name="fecha_inicio"
+                                       required
+                                       class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+                            </div>
+
+                            <div>
+                                <label for="editar-fecha_fin" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Fecha de Fin (Opcional)
+                                </label>
+                                <input type="date"
+                                       id="editar-fecha_fin"
+                                       name="fecha_fin"
+                                       class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="editar-comentario" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Comentario (Opcional)
+                            </label>
+                            <textarea id="editar-comentario"
+                                      name="comentario"
+                                      rows="3"
+                                      class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                      placeholder="Comentarios adicionales sobre la asignación..."></textarea>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input type="checkbox"
+                                   id="editar-activo"
+                                   name="activo"
+                                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <label for="editar-activo" class="ml-2 block text-sm text-gray-900 dark:text-white">
+                                Jefe activo
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información Importante -->
+                <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                                Información Importante
+                            </h3>
+                            <div class="mt-2 text-sm text-yellow-700 dark:text-yellow-400">
+                                <ul class="list-disc pl-5 space-y-1">
+                                    <li>Los cambios en el correo electrónico requerirán que el jefe inicie sesión nuevamente</li>
+                                    <li>Si cambias el establecimiento, asegúrate de que no tenga otro jefe asignado</li>
+                                    <li>Los cambios en las fechas afectan la validez de la asignación</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones -->
+                <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <button type="button"
+                            onclick="cerrarModalEditarJefe()"
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            class="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fas fa-save mr-2"></i>
+                        Actualizar Jefe de Establecimiento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <div id="modal-confirmar-desactivar" class="fixed inset-0 overflow-y-auto h-full w-full hidden" style="z-index: 9999; backdrop-filter: blur(4px); background-color: rgba(0,0,0,0.5);">
     <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-lg bg-white dark:bg-slate-800 overflow-y-auto max-h-[80vh]">
         <div class="mt-3">
@@ -485,6 +685,182 @@
     </div>
 </div>
 
+<!-- Modal Detalles del Jefe de Establecimiento -->
+<div id="modal-detalles-jefe" class="fixed inset-0 overflow-y-auto h-full w-full hidden" style="z-index: 9999; backdrop-filter: blur(4px); background-color: rgba(0,0,0,0.5);">
+    <div class="relative top-4 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-lg bg-white dark:bg-slate-800 overflow-y-auto max-h-[90vh]">
+        <div class="mt-3">
+            <!-- Encabezado del Modal -->
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
+                        <i class="fas fa-user-tie mr-2 text-blue-500"></i>
+                        Detalles del Jefe de Establecimiento
+                    </h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                        Información completa del jefe y su establecimiento asignado
+                    </p>
+                </div>
+                <button onclick="cerrarModalDetallesJefe()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Contenedor de carga -->
+            <div id="detalles-loading" class="flex items-center justify-center py-12">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                <p class="ml-4 text-gray-600 dark:text-gray-400">Cargando detalles...</p>
+            </div>
+
+            <!-- Contenido de detalles -->
+            <div id="detalles-content" class="hidden space-y-6">
+                <!-- Información Personal -->
+                <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-6">
+                    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-user mr-2 text-blue-500"></i>
+                        Información Personal
+                    </h4>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Nombre Completo</label>
+                                <p id="detalle-nombre-completo" class="text-lg font-semibold text-gray-900 dark:text-white">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Correo Electrónico</label>
+                                <p id="detalle-correo" class="text-gray-900 dark:text-white">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Teléfono</label>
+                                <p id="detalle-telefono" class="text-gray-900 dark:text-white">-</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">DNI</label>
+                                <p id="detalle-dni" class="text-gray-900 dark:text-white">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Estado de Cuenta</label>
+                                <span id="detalle-estado-cuenta" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">-</span>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Fecha de Creación</label>
+                                <p id="detalle-fecha-creacion" class="text-gray-900 dark:text-white">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información del Establecimiento -->
+                <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-6">
+                    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-building mr-2 text-green-500"></i>
+                        Establecimiento Asignado
+                    </h4>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Nombre del Establecimiento</label>
+                                <p id="detalle-establecimiento-nombre" class="text-lg font-semibold text-gray-900 dark:text-white">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Dirección</label>
+                                <p id="detalle-establecimiento-direccion" class="text-gray-900 dark:text-white">-</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Tipo de Establecimiento</label>
+                                <p id="detalle-establecimiento-tipo" class="text-gray-900 dark:text-white">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Teléfono</label>
+                                <p id="detalle-establecimiento-telefono" class="text-gray-900 dark:text-white">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información de la Asignación -->
+                <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-6">
+                    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-calendar-check mr-2 text-purple-500"></i>
+                        Información de la Asignación
+                    </h4>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Fecha de Inicio</label>
+                                <p id="detalle-fecha-inicio" class="text-gray-900 dark:text-white">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Fecha de Fin</label>
+                                <p id="detalle-fecha-fin" class="text-gray-900 dark:text-white">-</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Estado de Asignación</label>
+                                <span id="detalle-estado-asignacion" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">-</span>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Comentario</label>
+                                <p id="detalle-comentario" class="text-gray-900 dark:text-white">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estadísticas -->
+                <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-6">
+                    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-chart-bar mr-2 text-orange-500"></i>
+                        Estadísticas y Actividad
+                    </h4>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="text-center">
+                            <div class="bg-blue-100 dark:bg-blue-900/20 rounded-lg p-4">
+                                <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="detalle-total-inspecciones">0</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Inspecciones Realizadas</div>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <div class="bg-green-100 dark:bg-green-900/20 rounded-lg p-4">
+                                <div class="text-2xl font-bold text-green-600 dark:text-green-400" id="detalle-total-encargados">0</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Encargados Activos</div>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <div class="bg-purple-100 dark:bg-purple-900/20 rounded-lg p-4">
+                                <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Última Inspección</div>
+                                <div class="text-lg font-semibold text-purple-600 dark:text-purple-400" id="detalle-ultima-inspeccion">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones -->
+            <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button type="button"
+                        onclick="cerrarModalDetallesJefe()"
+                        class="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Verificar si estamos en un contexto seguro
 console.log('Contexto seguro:', window.isSecureContext);
@@ -494,6 +870,7 @@ console.log('Clipboard API disponible:', !!navigator.clipboard);
 // Variables globales
 let establecimientosDisponibles = [];
 let jefeIdParaDesactivar = null;
+let jefeActivoActual = null;
 let jefeIdParaRestablecer = null;
 
 // Esperar a que el DOM esté completamente cargado
@@ -507,7 +884,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const alertClass = tipo === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800';
 
         const alert = document.createElement('div');
-        alert.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border ${alertClass} max-w-md`;
+        alert.className = `fixed top-4 right-4 z-[11000] p-4 rounded-lg shadow-lg border ${alertClass} max-w-md`;
         alert.innerHTML = `
             <div class="flex items-start">
                 <div class="flex-shrink-0">
@@ -563,6 +940,18 @@ document.addEventListener('DOMContentLoaded', function() {
     window.cerrarModalCrearJefe = function() {
         console.log('Cerrando modal de crear jefe...');
         const modal = document.getElementById('modal-crear-jefe');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto'; // Restaurar scroll del body
+            console.log('Modal cerrado correctamente');
+        }
+    };
+
+    // Función para cerrar modal de editar jefe
+    window.cerrarModalEditarJefe = function() {
+        console.log('Cerrando modal de editar jefe...');
+        const modal = document.getElementById('modal-editar-jefe');
         if (modal) {
             modal.classList.add('hidden');
             modal.style.display = 'none';
@@ -685,9 +1074,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.log('No hay contrasena_temporal, mostrando alerta...');
                         cerrarModalCrearJefe();
                         mostrarAlerta('success', data.message);
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
+                        // Refrescar tabla y estadísticas sin recargar página
+                        refrescarTablaJefes();
+                        refrescarEstadisticas();
                     }
                 } else {
                     console.log('Error en respuesta:', data.message);
@@ -720,45 +1109,537 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Validación de fechas
-    const fechaInicio = document.getElementById('fecha_inicio');
-    const fechaFin = document.getElementById('fecha_fin');
+    // Event listener para el formulario de edición
+    const formEditar = document.getElementById('form-editar-jefe');
+    if (formEditar) {
+        formEditar.addEventListener('submit', async function(e) {
+            console.log('Formulario de edición enviado');
+            e.preventDefault();
 
-    if (fechaInicio) {
-        fechaInicio.addEventListener('change', function() {
-            if (fechaFin && fechaFin.value && this.value > fechaFin.value) {
-                fechaFin.value = '';
-                mostrarAlerta('error', 'La fecha de fin debe ser posterior a la fecha de inicio');
+            const jefeId = this.getAttribute('data-jefe-id');
+            if (!jefeId) {
+                mostrarAlerta('error', 'Error: No se pudo identificar el jefe a actualizar');
+                return;
             }
-        });
-    }
 
-    if (fechaFin) {
-        fechaFin.addEventListener('change', function() {
-            if (fechaInicio && fechaInicio.value && this.value < fechaInicio.value) {
-                this.value = '';
-                mostrarAlerta('error', 'La fecha de fin debe ser posterior a la fecha de inicio');
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Actualizando...';
+
+            try {
+                // Recopilar datos del formulario
+                const formData = {
+                    nombre: document.getElementById('editar-nombre').value.trim(),
+                    apellido: document.getElementById('editar-apellido').value.trim(),
+                    correo: document.getElementById('editar-correo').value.trim(),
+                    telefono: document.getElementById('editar-telefono').value.trim(),
+                    dni: document.getElementById('editar-dni').value.trim(),
+                    establecimiento_id: document.getElementById('editar-establecimiento_id').value,
+                    fecha_inicio: document.getElementById('editar-fecha_inicio').value,
+                    fecha_fin: document.getElementById('editar-fecha_fin').value || null,
+                    comentario: document.getElementById('editar-comentario').value.trim(),
+                    activo: document.getElementById('editar-activo').checked
+                };
+
+                console.log('Datos del formulario de edición:', formData);
+
+                // Validaciones básicas
+                if (!formData.nombre || !formData.apellido || !formData.correo || !formData.dni || !formData.establecimiento_id || !formData.fecha_inicio) {
+                    throw new Error('Todos los campos marcados con * son obligatorios');
+                }
+
+                // Validar formato de email
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(formData.correo)) {
+                    throw new Error('El formato del correo electrónico no es válido');
+                }
+
+                // Validar DNI
+                if (!/^\d{8}$/.test(formData.dni)) {
+                    throw new Error('El DNI debe tener exactamente 8 dígitos');
+                }
+
+                console.log('Enviando datos de actualización al servidor...');
+
+                // Determinar la URL correcta según el contexto
+                let url = `/api/jefes-establecimiento/${jefeId}`;
+                if (window.location.pathname.startsWith('/inspector/')) {
+                    url = `/inspector/api/jefes-establecimiento/${jefeId}`;
+                }
+
+                // Enviar datos
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                console.log('Respuesta del servidor:', response.status);
+
+                const data = await response.json();
+                console.log('Datos de respuesta:', data);
+
+                if (data.success) {
+                    console.log('Actualización exitosa');
+                    cerrarModalEditarJefe();
+                    mostrarAlerta('success', data.message);
+                    // Refrescar tabla y estadísticas sin recargar página
+                    refrescarTablaJefes();
+                    refrescarEstadisticas();
+                } else {
+                    console.log('Error en respuesta:', data.message);
+                    throw new Error(data.message);
+                }
+
+            } catch (error) {
+                console.error('Error en la actualización:', error);
+                mostrarAlerta('error', error.message);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalText;
             }
         });
     }
 
     // Función para ver detalles del jefe
-    window.verDetalles = function(jefeId) {
-        // Implementar modal con detalles
+    window.verDetalles = async function(jefeId) {
         console.log('Ver detalles del jefe:', jefeId);
-        mostrarAlerta('info', 'Funcionalidad de detalles próximamente disponible');
+
+        // Mostrar modal y loading
+        const modal = document.getElementById('modal-detalles-jefe');
+        const loading = document.getElementById('detalles-loading');
+        const content = document.getElementById('detalles-content');
+
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'block';
+            modal.style.visibility = 'visible';
+            document.body.style.overflow = 'hidden';
+
+            loading.classList.remove('hidden');
+            content.classList.add('hidden');
+
+            try {
+                // Determinar la URL correcta según el contexto
+                let url = `/api/jefes-establecimiento/${jefeId}/detalles`;
+                if (window.location.pathname.startsWith('/inspector/')) {
+                    url = `/inspector/api/jefes-establecimiento/${jefeId}/detalles`;
+                }
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.success && data.jefe) {
+                    // Llenar los detalles
+                    llenarDetallesJefe(data.jefe);
+
+                    // Ocultar loading y mostrar contenido
+                    loading.classList.add('hidden');
+                    content.classList.remove('hidden');
+                } else {
+                    throw new Error(data.message || 'Error al cargar detalles del jefe');
+                }
+            } catch (error) {
+                console.error('Error al cargar detalles:', error);
+                mostrarAlerta('error', error.message || 'Error al cargar detalles del jefe');
+                cerrarModalDetallesJefe();
+            }
+        }
+    };
+
+    // Función para llenar los detalles del jefe en el modal
+    function llenarDetallesJefe(jefe) {
+        // Información personal
+        document.getElementById('detalle-nombre-completo').textContent = `${jefe.usuario.nombre} ${jefe.usuario.apellido}`;
+        document.getElementById('detalle-correo').textContent = jefe.usuario.correo;
+        document.getElementById('detalle-telefono').textContent = jefe.usuario.telefono || 'No especificado';
+        document.getElementById('detalle-dni').textContent = jefe.usuario.dni;
+
+        // Estado de cuenta
+        const estadoCuenta = document.getElementById('detalle-estado-cuenta');
+        if (jefe.usuario.activo) {
+            estadoCuenta.className = 'inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
+            estadoCuenta.textContent = 'Activo';
+        } else {
+            estadoCuenta.className = 'inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
+            estadoCuenta.textContent = 'Inactivo';
+        }
+
+        // Fecha de creación
+        if (jefe.usuario.fecha_creacion) {
+            const fecha = new Date(jefe.usuario.fecha_creacion);
+            document.getElementById('detalle-fecha-creacion').textContent = fecha.toLocaleDateString('es-ES');
+        } else {
+            document.getElementById('detalle-fecha-creacion').textContent = 'No disponible';
+        }
+
+        // Información del establecimiento
+        document.getElementById('detalle-establecimiento-nombre').textContent = jefe.establecimiento.nombre;
+        document.getElementById('detalle-establecimiento-direccion').textContent = jefe.establecimiento.direccion || 'No especificada';
+        document.getElementById('detalle-establecimiento-tipo').textContent = jefe.establecimiento.tipo_establecimiento || 'No especificado';
+        document.getElementById('detalle-establecimiento-telefono').textContent = jefe.establecimiento.telefono || 'No especificado';
+
+        // Información de la asignación
+        if (jefe.fecha_inicio) {
+            const fechaInicio = new Date(jefe.fecha_inicio);
+            document.getElementById('detalle-fecha-inicio').textContent = fechaInicio.toLocaleDateString('es-ES');
+        } else {
+            document.getElementById('detalle-fecha-inicio').textContent = 'No especificada';
+        }
+
+        if (jefe.fecha_fin) {
+            const fechaFin = new Date(jefe.fecha_fin);
+            document.getElementById('detalle-fecha-fin').textContent = fechaFin.toLocaleDateString('es-ES');
+        } else {
+            document.getElementById('detalle-fecha-fin').textContent = 'Sin fecha de fin';
+        }
+
+        // Estado de asignación
+        const estadoAsignacion = document.getElementById('detalle-estado-asignacion');
+        if (jefe.activo) {
+            estadoAsignacion.className = 'inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
+            estadoAsignacion.textContent = 'Activo';
+        } else {
+            estadoAsignacion.className = 'inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
+            estadoAsignacion.textContent = 'Inactivo';
+        }
+
+        document.getElementById('detalle-comentario').textContent = jefe.comentario || 'Sin comentarios';
+
+        // Estadísticas
+        document.getElementById('detalle-total-inspecciones').textContent = jefe.estadisticas.total_inspecciones;
+        document.getElementById('detalle-total-encargados').textContent = jefe.estadisticas.total_encargados;
+
+        if (jefe.estadisticas.ultima_inspeccion) {
+            const ultimaInspeccion = new Date(jefe.estadisticas.ultima_inspeccion);
+            document.getElementById('detalle-ultima-inspeccion').textContent = ultimaInspeccion.toLocaleDateString('es-ES');
+        } else {
+            document.getElementById('detalle-ultima-inspeccion').textContent = 'Nunca';
+        }
+    }
+
+    // Función para cerrar modal de detalles
+    window.cerrarModalDetallesJefe = function() {
+        console.log('Cerrando modal de detalles del jefe...');
+        const modal = document.getElementById('modal-detalles-jefe');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            console.log('Modal cerrado correctamente');
+        }
     };
 
     // Función para editar jefe
-    window.editarJefe = function(jefeId) {
-        // Implementar edición
+    window.editarJefe = async function(jefeId) {
         console.log('Editar jefe:', jefeId);
-        mostrarAlerta('info', 'Funcionalidad de edición próximamente disponible');
+
+        // Mostrar modal y loading
+        const modal = document.getElementById('modal-editar-jefe');
+        const form = document.getElementById('form-editar-jefe');
+
+        if (modal && form) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'block';
+            modal.style.visibility = 'visible';
+            document.body.style.overflow = 'hidden';
+
+            // Resetear formulario
+            form.reset();
+
+            try {
+                // Determinar la URL correcta según el contexto
+                let url = `/api/jefes-establecimiento/${jefeId}/editar`;
+                if (window.location.pathname.startsWith('/inspector/')) {
+                    url = `/inspector/api/jefes-establecimiento/${jefeId}/editar`;
+                }
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.success && data.jefe) {
+                    // Llenar el formulario con los datos
+                    llenarFormularioEditar(data.jefe, data.establecimientos);
+                } else {
+                    throw new Error(data.message || 'Error al cargar datos del jefe');
+                }
+            } catch (error) {
+                console.error('Error al cargar datos para editar:', error);
+                mostrarAlerta('error', error.message || 'Error al cargar datos del jefe');
+                cerrarModalEditarJefe();
+            }
+        }
     };
 
-    // Función para desactivar jefe
-    window.desactivarJefe = function(jefeId) {
+    // Función para llenar el formulario de edición
+    function llenarFormularioEditar(jefe, establecimientos) {
+        // Información personal
+        document.getElementById('editar-nombre').value = jefe.usuario.nombre;
+        document.getElementById('editar-apellido').value = jefe.usuario.apellido;
+        document.getElementById('editar-correo').value = jefe.usuario.correo;
+        document.getElementById('editar-telefono').value = jefe.usuario.telefono || '';
+        document.getElementById('editar-dni').value = jefe.usuario.dni;
+
+        // Asignación
+        const selectEstablecimiento = document.getElementById('editar-establecimiento_id');
+        selectEstablecimiento.innerHTML = '<option value="">Seleccione un establecimiento</option>';
+
+        // Agregar establecimientos
+        establecimientos.forEach(est => {
+            const option = document.createElement('option');
+            option.value = est.id;
+            option.textContent = `${est.nombre} - ${est.direccion}`;
+            if (est.selected) {
+                option.selected = true;
+            }
+            selectEstablecimiento.appendChild(option);
+        });
+
+        // Fechas
+        document.getElementById('editar-fecha_inicio').value = jefe.fecha_inicio ? jefe.fecha_inicio.split('T')[0] : '';
+        document.getElementById('editar-fecha_fin').value = jefe.fecha_fin ? jefe.fecha_fin.split('T')[0] : '';
+        document.getElementById('editar-comentario').value = jefe.comentario || '';
+        document.getElementById('editar-activo').checked = jefe.activo;
+
+        // Guardar el ID del jefe para la actualización
+        document.getElementById('form-editar-jefe').setAttribute('data-jefe-id', jefe.id);
+    }
+
+    // Función para refrescar la tabla de jefes
+    async function refrescarTablaJefes() {
+        try {
+            console.log('Refrescando tabla de jefes...');
+            
+            // Determinar la URL correcta según el contexto
+            let url = '/api/jefes-establecimiento/lista';
+            if (window.location.pathname.startsWith('/inspector/')) {
+                url = '/inspector/api/jefes-establecimiento/lista';
+            }
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.success && data.jefes) {
+                actualizarTablaJefes(data.jefes);
+                console.log('Tabla de jefes refrescada correctamente');
+            } else {
+                console.error('Error al refrescar tabla:', data.message);
+                mostrarAlerta('error', 'Error al actualizar la tabla');
+            }
+        } catch (error) {
+            console.error('Error al refrescar tabla de jefes:', error);
+            mostrarAlerta('error', 'Error al actualizar la tabla');
+        }
+    }
+
+    // Función para refrescar las estadísticas
+    async function refrescarEstadisticas() {
+        try {
+            console.log('Refrescando estadísticas...');
+            
+            // Determinar la URL correcta según el contexto
+            let url = '/api/jefes-establecimiento/estadisticas';
+            if (window.location.pathname.startsWith('/inspector/')) {
+                url = '/inspector/api/jefes-establecimiento/estadisticas';
+            }
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.success && data.estadisticas) {
+                actualizarEstadisticas(data.estadisticas);
+                console.log('Estadísticas refrescadas correctamente');
+            } else {
+                console.error('Error al refrescar estadísticas:', data.message);
+            }
+        } catch (error) {
+            console.error('Error al refrescar estadísticas:', error);
+        }
+    }
+
+    // Función para actualizar el contenido de la tabla
+    function actualizarTablaJefes(jefes) {
+        const tbody = document.querySelector('tbody.bg-white');
+        if (!tbody) {
+            console.error('No se encontró el tbody de la tabla');
+            return;
+        }
+
+        if (jefes.length === 0) {
+            // Mostrar mensaje de no hay jefes
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="px-6 py-12 text-center">
+                        <div class="flex flex-col items-center">
+                            <i class="fas fa-user-tie text-gray-400 text-6xl mb-4"></i>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No hay jefes de establecimiento</h3>
+                            <p class="text-gray-500 dark:text-gray-400 mb-6">
+                                Comienza creando el primer jefe de establecimiento para asignarlo a un establecimiento.
+                            </p>
+                            <button onclick="abrirModalCrearJefe()"
+                                     class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                                <i class="fas fa-plus mr-2"></i>
+                                Crear Primer Jefe
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        // Construir filas de la tabla
+        let html = '';
+        jefes.forEach(jefe => {
+            const iniciales = `${jefe.nombre[0]}${jefe.apellido ? jefe.apellido[0] : ''}`;
+            const fechaFinDisplay = jefe.fecha_fin ? `<br><span class="text-xs text-red-500">Hasta: ${jefe.fecha_fin}</span>` : '';
+            
+            html += `
+                <tr class="hover:bg-gray-50 dark:hover:bg-slate-700">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                <div class="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center">
+                                    <span class="text-sm font-medium text-white">${iniciales}</span>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                    ${jefe.nombre} ${jefe.apellido || ''}
+                                </div>
+                                <div class="text-sm text-gray-500 dark:text-gray-400">
+                                    ${jefe.correo}
+                                </div>
+                                ${jefe.telefono ? `<div class="text-sm text-gray-500 dark:text-gray-400">${jefe.telefono}</div>` : ''}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-medium text-gray-900 dark:text-white">
+                            ${jefe.establecimiento_nombre}
+                        </div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">
+                            ${jefe.establecimiento_direccion}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                        ${jefe.fecha_inicio}${fechaFinDisplay}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        ${jefe.activo ? 
+                            '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"><i class="fas fa-check-circle mr-1"></i>Activo</span>' :
+                            '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"><i class="fas fa-times-circle mr-1"></i>Inactivo</span>'
+                        }
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div class="flex items-center space-x-2">
+                            <button onclick="verDetalles(${jefe.id})"
+                                    class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button onclick="restablecerContrasena(${jefe.id}, '${jefe.correo}')"
+                                    class="text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300 transition-colors"
+                                    title="Restablecer contraseña">
+                                <i class="fas fa-key"></i>
+                            </button>
+                            <button onclick="editarJefe(${jefe.id})"
+                                    class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="toggleJefe(${jefe.id}, ${jefe.activo})"
+                                    class="${jefe.activo ? 'text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300' : 'text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300'} transition-colors"
+                                    title="${jefe.activo ? 'Desactivar jefe' : 'Activar jefe'}">
+                                <i class="fas ${jefe.activo ? 'fa-user-times' : 'fa-user-check'}"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+    }
+
+    // Función para actualizar las estadísticas
+    function actualizarEstadisticas(estadisticas) {
+        // Actualizar contador de jefes activos
+        const jefesElement = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-3.gap-6.mb-8 .bg-white.dark\\:bg-slate-800:nth-child(1) p.text-2xl.font-bold');
+        if (jefesElement) {
+            jefesElement.textContent = estadisticas.jefes_activos;
+        }
+
+        // Actualizar contador de establecimientos
+        const establecimientosElement = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-3.gap-6.mb-8 .bg-white.dark\\:bg-slate-800:nth-child(2) p.text-2xl.font-bold');
+        if (establecimientosElement) {
+            establecimientosElement.textContent = estadisticas.establecimientos;
+        }
+
+        // Actualizar porcentaje de asignaciones
+        const asignacionesElement = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-3.gap-6.mb-8 .bg-white.dark\\:bg-slate-800:nth-child(3) p.text-2xl.font-bold');
+        if (asignacionesElement) {
+            asignacionesElement.textContent = estadisticas.asignaciones;
+        }
+    }
+
+    // Función para activar/desactivar jefe
+    window.toggleJefe = function(jefeId, estaActivo) {
+        console.log('toggleJefe llamado con:', jefeId, estaActivo, typeof estaActivo);
         jefeIdParaDesactivar = jefeId;
+        jefeActivoActual = estaActivo;
+        
+        // Obtener referencias a los elementos del modal
+        const modal = document.getElementById('modal-confirmar-desactivar');
+        const tituloModal = modal.querySelector('h3');
+        const contenidoBox = modal.querySelector('.space-y-4 > div:first-child');
+        const botonConfirmar = modal.querySelector('.space-y-4 button:last-child');
+        
+        if (estaActivo) {
+            console.log('Entrando en caso desactivar (jefe activo)');
+            tituloModal.innerHTML = '<i class="fas fa-user-times mr-2 text-red-500"></i>Confirmar Desactivación';
+            contenidoBox.className = 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4';
+            contenidoBox.innerHTML = `
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-red-400"></i>
+                    </div>
+                    <div class="ml-3 flex-1">
+                        <h4 class="text-sm font-medium text-red-800 dark:text-red-200">
+                            ¿Está seguro de que desea desactivar este jefe de establecimiento?
+                        </h4>
+                        <p class="text-sm text-red-700 dark:text-red-300 mt-1">
+                            Esta acción puede afectar las inspecciones asignadas y no se puede deshacer fácilmente.
+                        </p>
+                    </div>
+                </div>
+            `;
+            botonConfirmar.className = 'px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors';
+            botonConfirmar.innerHTML = '<i class="fas fa-user-times mr-2"></i>Desactivar Jefe';
+        } else {
+            console.log('Entrando en caso activar (jefe inactivo)');
+            tituloModal.innerHTML = '<i class="fas fa-user-check mr-2 text-green-500"></i>Confirmar Activación';
+            contenidoBox.className = 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4';
+            contenidoBox.innerHTML = `
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-check-circle text-green-400"></i>
+                    </div>
+                    <div class="ml-3 flex-1">
+                        <h4 class="text-sm font-medium text-green-800 dark:text-green-200">
+                            ¿Está seguro de que desea reactivar este jefe de establecimiento?
+                        </h4>
+                        <p class="text-sm text-green-700 dark:text-green-300 mt-1">
+                            El jefe podrá acceder nuevamente al sistema.
+                        </p>
+                    </div>
+                </div>
+            `;
+            botonConfirmar.className = 'px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors';
+            botonConfirmar.innerHTML = '<i class="fas fa-user-check mr-2"></i>Activar Jefe';
+        }
+        
         abrirModalConfirmarDesactivar();
     };
 
@@ -781,14 +1662,46 @@ document.addEventListener('DOMContentLoaded', function() {
             document.body.style.overflow = 'auto';
         }
         jefeIdParaDesactivar = null;
+        jefeActivoActual = null;
     }
 
     function confirmarDesactivarJefe() {
         if (!jefeIdParaDesactivar) return;
         
-        console.log('Desactivar jefe:', jefeIdParaDesactivar);
+        console.log('Toggle jefe:', jefeIdParaDesactivar, 'Estado actual:', jefeActivoActual);
+        
+        // Guardar los valores antes de cerrar el modal
+        const jefeId = jefeIdParaDesactivar;
+        const accion = jefeActivoActual ? 'desactivando' : 'activando';
         cerrarModalConfirmarDesactivar();
-        mostrarAlerta('info', 'Funcionalidad de desactivación próximamente disponible');
+
+        // Mostrar indicador de carga
+        mostrarAlerta('info', `${accion.charAt(0).toUpperCase() + accion.slice(1)} jefe de establecimiento...`);
+
+        // Hacer la llamada al backend
+        fetch(`/inspector/api/jefes-establecimiento/${jefeId}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Respuesta del servidor:', data);
+            
+            if (data.success) {
+                mostrarAlerta('success', data.message);
+                // Refrescar tabla y estadísticas sin recargar página
+                refrescarTablaJefes();
+                refrescarEstadisticas();
+            } else {
+                mostrarAlerta('error', data.message || `Error al ${accion} el jefe de establecimiento`);
+            }
+        })
+        .catch(error => {
+            console.error(`Error al ${accion} jefe:`, error);
+            mostrarAlerta('error', `Error al ${accion} el jefe de establecimiento`);
+        });
     }
 
     // Mostrar credenciales del usuario creado
@@ -892,7 +1805,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
 
                         <div class="flex justify-end pt-4">
-                            <button onclick="this.closest('.fixed').remove(); document.body.style.overflow = 'auto'; setTimeout(() => window.location.reload(), 1000);"
+                            <button onclick="this.closest('.fixed').remove(); document.body.style.overflow = 'auto'; refrescarTablaJefes(); refrescarEstadisticas();"
                                     class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
                                 <i class="fas fa-check mr-2"></i>
                                 He copiado las credenciales
@@ -1031,6 +1944,43 @@ document.addEventListener('DOMContentLoaded', function() {
     window.restablecerContrasena = restablecerContrasena;
     window.copiarTextoCompleto = copiarTextoCompleto;
     window.copiarAlPortapapeles = copiarAlPortapapeles;
+    window.refrescarTablaJefes = refrescarTablaJefes;
+    window.refrescarEstadisticas = refrescarEstadisticas;
+
+    // Validación de fechas para edición
+    const editarFechaInicio = document.getElementById('editar-fecha_inicio');
+    const editarFechaFin = document.getElementById('editar-fecha_fin');
+
+    if (editarFechaInicio) {
+        editarFechaInicio.addEventListener('change', function() {
+            if (editarFechaFin && editarFechaFin.value && this.value > editarFechaFin.value) {
+                editarFechaFin.value = '';
+                mostrarAlerta('error', 'La fecha de fin debe ser posterior a la fecha de inicio');
+            }
+        });
+    }
+
+    if (editarFechaFin) {
+        editarFechaFin.addEventListener('change', function() {
+            if (editarFechaInicio && editarFechaInicio.value && this.value < editarFechaInicio.value) {
+                this.value = '';
+                mostrarAlerta('error', 'La fecha de fin debe ser posterior a la fecha de inicio');
+            }
+        });
+    }
+
+    // Validación en tiempo real del DNI para edición
+    const editarDniInput = document.getElementById('editar-dni');
+    if (editarDniInput) {
+        editarDniInput.addEventListener('input', function(e) {
+            // Solo permitir números
+            this.value = this.value.replace(/\D/g, '');
+            // Limitar a 8 caracteres
+            if (this.value.length > 8) {
+                this.value = this.value.slice(0, 8);
+            }
+        });
+    }
 
     console.log('JavaScript inicializado correctamente');
 });

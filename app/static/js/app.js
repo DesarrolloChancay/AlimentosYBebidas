@@ -21,9 +21,16 @@ document.addEventListener('DOMContentLoaded', function () {
             firma_inspector: null,
             estado: 'borrador',
             encargado_aprobo: false,
-            inspector_firmo: false
+            inspector_firmo: false,
+            confirmada_por_encargado: false,
+            confirmador_nombre: null,
+            confirmador_rol: null,
+            confirmacionesPorEstablecimiento: {} // Estado de confirmación por establecimiento
         };
     }
+
+    // Cargar estado de confirmaciones desde sessionStorage
+    cargarEstadoConfirmaciones();
 
     // Ya no necesitamos verificación constante de sesión en JS
     // Todo se maneja desde el backend ahora
@@ -130,46 +137,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Nota: El event listener para selección de establecimiento se configura automáticamente
 
-    // Evento para botón de sincronización manual (solo Encargados)
+    // Evento para botón de sincronización manual (solo Encargados - ahora oculto ya que es automático)
     const btnSincronizar = document.getElementById('btn-sincronizar');
     if (btnSincronizar && userRole === 'Encargado') {
-        btnSincronizar.addEventListener('click', async function () {
-            const button = this;
-            const originalText = button.textContent;
-            const establecimientoId = window.inspeccionEstado?.establecimiento_id;
-            if (!establecimientoId) {
-                mostrarNotificacion('Debe seleccionar un establecimiento primero', 'warning');
-                return;
-            }
-
-            try {
-                // Cambiar texto del botón
-                button.textContent = '[SYNC] Sincronizando...';
-                button.disabled = true;
-
-                // Usar la nueva función robusta de sincronización inmediata
-                const exito = await sincronizarEstablecimientoInmediatamente(establecimientoId);
-
-                if (exito) {
-                    mostrarNotificacion('Sincronización manual exitosa', 'success');
-
-                    // Actualizar timestamp de última sincronización
-                    ultimaSincronizacion = Date.now();
-
-                    // Mostrar notificación con estadísticas
-                    const itemsSincronizados = Object.keys(window.inspeccionEstado.items || {}).length;
-                    mostrarNotificacion(`Sincronizado: ${itemsSincronizados} calificaciones cargadas`, 'success');
-                } else {
-                    throw new Error('Error al sincronizar');
-                }
-            } catch (error) {
-                mostrarNotificacion('Error al sincronizar con el inspector', 'error');
-            } finally {
-                // Restaurar botón
-                button.textContent = originalText;
-                button.disabled = false;
-            }
-        });
+        // Ocultar el botón ya que la sincronización es automática
+        btnSincronizar.style.display = 'none';
     }
 
     // Event listener para observaciones generales con throttling
@@ -178,6 +150,10 @@ document.addEventListener('DOMContentLoaded', function () {
         let observacionesTimeout = null;
 
         observacionesTextarea.addEventListener('input', function () {
+            if (userRole === 'Inspector' || userRole === 'Administrador') {
+                reiniciarConfirmacionEncargadoPorCambio();
+            }
+
             // Marcar que hay cambios pendientes
             marcarCambiosPendientes();
 
@@ -197,6 +173,10 @@ document.addEventListener('DOMContentLoaded', function () {
         observacionesTextarea.addEventListener('blur', function () {
             // Marcar que hay cambios pendientes si el valor cambió realmente
             if (window.inspeccionEstado.observaciones !== this.value) {
+                if (userRole === 'Inspector' || userRole === 'Administrador') {
+                    reiniciarConfirmacionEncargadoPorCambio();
+                }
+
                 marcarCambiosPendientes();
                 window.inspeccionEstado.observaciones = this.value;
 
@@ -291,6 +271,9 @@ window.inspeccionEstado = {
     observaciones: '',
     encargado_aprobo: false,
     inspector_firmo: false,
+    confirmacionesPorEstablecimiento: {}, // Nuevo: estado de confirmación por establecimiento
+    confirmador_nombre: null,
+    confirmador_rol: null,
     resumen: {
         puntaje_total: 0,
         puntaje_maximo_posible: 0,  // Cambiado de puntaje_maximo a puntaje_maximo_posible
@@ -298,6 +281,36 @@ window.inspeccionEstado = {
         puntos_criticos_perdidos: 0
     }
 };
+
+// Funciones para persistir estado de confirmaciones en sessionStorage
+/**
+ * Carga el estado de confirmaciones desde sessionStorage al inicializar la aplicación.
+ * Se ejecuta al cargar la página para restaurar el estado de confirmaciones por establecimiento.
+ */
+function cargarEstadoConfirmaciones() {
+    try {
+        const estadoGuardado = sessionStorage.getItem('confirmacionesPorEstablecimiento');
+        if (estadoGuardado) {
+            const confirmaciones = JSON.parse(estadoGuardado);
+            window.inspeccionEstado.confirmacionesPorEstablecimiento = confirmaciones;
+        }
+    } catch (error) {
+        console.warn('Error al cargar estado de confirmaciones desde sessionStorage:', error);
+    }
+}
+
+/**
+ * Guarda el estado actual de confirmaciones en sessionStorage.
+ * Se ejecuta cada vez que cambia el estado de confirmación de un establecimiento.
+ */
+function guardarEstadoConfirmaciones() {
+    try {
+        const estadoActual = window.inspeccionEstado.confirmacionesPorEstablecimiento;
+        sessionStorage.setItem('confirmacionesPorEstablecimiento', JSON.stringify(estadoActual));
+    } catch (error) {
+        console.warn('Error al guardar estado de confirmaciones en sessionStorage:', error);
+    }
+}
 
 // Variables globales
 let socket = null;
@@ -489,6 +502,13 @@ function inicializarSocketIO() {
 
                 // Para encargados, sincronizar inmediatamente si hay establecimiento
                 if (userRole === 'Encargado' && window.inspeccionEstado.establecimiento_id) {
+                    // Unirse a la sala del establecimiento
+                    socket.emit('join_establecimiento', {
+                        establecimiento_id: window.inspeccionEstado.establecimiento_id,
+                        usuario_id: window.userId || 1,
+                        role: userRole
+                    });
+
                     await sincronizarEstablecimientoInmediatamente(window.inspeccionEstado.establecimiento_id);
                 }
 
@@ -522,6 +542,13 @@ function inicializarSocketIO() {
 
                 // Para encargados, forzar sincronización inmediata del establecimiento
                 if (userRole === 'Encargado' && window.inspeccionEstado.establecimiento_id) {
+                    // Unirse a la sala del establecimiento
+                    socket.emit('join_establecimiento', {
+                        establecimiento_id: window.inspeccionEstado.establecimiento_id,
+                        usuario_id: window.userId || 1,
+                        role: userRole
+                    });
+
                     await sincronizarEstablecimientoInmediatamente(window.inspeccionEstado.establecimiento_id);
                 }
 
@@ -564,8 +591,27 @@ function inicializarSocketIO() {
 
     // Nuevo evento para tiempo real completo en establecimiento
     socket.on('inspeccion_tiempo_real', function (data) {
-        if (userRole === 'Encargado' && data.establecimiento_id) {
-            actualizarDatosTiempoRealCompletos(data);
+        if (!data || !data.establecimiento_id) {
+            return;
+        }
+
+        if (userRole === 'Encargado') {
+            const sincronizacionParcial = actualizarDatosTiempoRealCompletos(data);
+
+            if (!sincronizacionParcial) {
+                mostrarNotificacion('Sincronizacion completa solicitada al servidor', 'info');
+
+                sincronizarEstablecimientoInmediatamente(data.establecimiento_id).then(exito => {
+                    if (exito) {
+                        mostrarNotificacion('Datos sincronizados automaticamente', 'success');
+                    }
+                });
+            }
+            return;
+        }
+
+        if (userRole === 'Inspector' || userRole === 'Administrador') {
+            actualizarEstadoTiempoRealInspector(data);
         }
     });
 
@@ -646,13 +692,8 @@ function inicializarSocketIO() {
 
     socket.on('encargado_aprobo', function (data) {
         // Evento encargado_aprobo recibido
-        console.log('DEBUG - Evento encargado_aprobo recibido:', data);
         if (userRole === 'Inspector') {
             mostrarNotificacion(data.mensaje, 'success');
-            console.log('DEBUG - Actualizando estado para Inspector - ANTES:', {
-                encargado_aprobo: window.inspeccionEstado.encargado_aprobo,
-                firma_encargado: window.inspeccionEstado.firma_encargado
-            });
             window.inspeccionEstado.encargado_aprobo = true;
 
             // SIEMPRE actualizar con la firma real cuando llegue del encargado
@@ -666,10 +707,6 @@ function inicializarSocketIO() {
 
             // Actualizar interfaz inmediatamente
             actualizarInterfazFirmas();
-            console.log('DEBUG - Estado actualizado para Inspector - DESPUÉS:', {
-                encargado_aprobo: window.inspeccionEstado.encargado_aprobo,
-                firma_encargado: window.inspeccionEstado.firma_encargado
-            });
 
             // Estado actualizado - Encargado aprobó
         }
@@ -677,14 +714,9 @@ function inicializarSocketIO() {
 
     socket.on('notificacion_general', function (data) {
         // Evento notificacion_general recibido
-        console.log('DEBUG - Evento notificacion_general recibido:', data);
         if (data.para_rol === userRole || data.para_rol === 'Todos') {
             if (data.tipo === 'encargado_aprobo' && userRole === 'Inspector') {
                 // Procesando notificación de aprobación para Inspector
-                console.log('DEBUG - Procesando notificacion_general de encargado_aprobo - ANTES:', {
-                    encargado_aprobo: window.inspeccionEstado.encargado_aprobo,
-                    firma_encargado: window.inspeccionEstado.firma_encargado
-                });
                 window.inspeccionEstado.encargado_aprobo = true;
 
                 // SIEMPRE actualizar con la firma real del encargado
@@ -698,10 +730,6 @@ function inicializarSocketIO() {
 
                 actualizarInterfazFirmas();
                 mostrarNotificacion(data.mensaje, 'success');
-                console.log('DEBUG - Estado actualizado via notificacion_general - DESPUÉS:', {
-                    encargado_aprobo: window.inspeccionEstado.encargado_aprobo,
-                    firma_encargado: window.inspeccionEstado.firma_encargado
-                });
             }
         }
     });
@@ -727,42 +755,39 @@ function inicializarSocketIO() {
     });
 
     // Evento cuando un encargado confirma la inspección
-    socket.on('inspeccion_confirmada', function (data) {
-        
+    socket.on('encargado_aprobo', function (data) {
+
         // Para todos los encargados y jefes: deshabilitar botón
         if (userRole === 'Encargado' || userRole === 'Jefe de Establecimiento') {
             mostrarNotificacion(
-                `Inspección confirmada por ${data.confirmador_nombre} (${data.confirmador_rol})`,
+                `Inspección confirmada por ${data.confirmador_nombre || 'Encargado'} (${data.confirmador_rol || 'Encargado'})`,
                 'success'
             );
-            deshabilitarBotonConfirmar(data.confirmador_nombre, data.confirmador_rol);
+            deshabilitarBotonConfirmar(data.confirmador_nombre || 'Encargado', data.confirmador_rol || 'Encargado');
         }
-        
+
         // Para inspectores: actualizar estado y habilitar guardado
         if (userRole === 'Inspector' || userRole === 'Administrador') {
             mostrarNotificacion(
-                `${data.confirmador_nombre} confirmó la inspección`,
+                `Encargado confirmó la inspección`,
                 'success'
             );
-            
-            // Actualizar estado global
-            if (window.inspeccionEstado) {
-                window.inspeccionEstado.confirmada_por_encargado = true;
-                window.inspeccionEstado.confirmador_nombre = data.confirmador_nombre;
+
+            // Actualizar estado por establecimiento
+            if (!window.inspeccionEstado.confirmacionesPorEstablecimiento[data.establecimiento_id]) {
+                window.inspeccionEstado.confirmacionesPorEstablecimiento[data.establecimiento_id] = {};
             }
-            
+            window.inspeccionEstado.confirmacionesPorEstablecimiento[data.establecimiento_id] = {
+                confirmada_por_encargado: true,
+                confirmador_nombre: data.confirmador_nombre || 'Encargado',
+                confirmador_rol: data.confirmador_rol || 'Encargado'
+            };
+
+            // Guardar estado de confirmaciones en sessionStorage
+            guardarEstadoConfirmaciones();
+
             // Habilitar botón de completar inspección
-            const btnCompletar = document.querySelector('button[value="completar"]');
-            if (btnCompletar) {
-                btnCompletar.disabled = false;
-                btnCompletar.classList.remove('opacity-50', 'cursor-not-allowed');
-                btnCompletar.innerHTML = `
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    Completar Inspección
-                `;
-            }
+            deshabilitarBotonCompletarInspector();
         }
     });
 }
@@ -907,7 +932,6 @@ function mantenerConexionActiva() {
 
 function unirseAInspeccion(inspeccionId) {
     if (socket && inspeccionId) {
-        console.log('DEBUG - Uniéndose a inspección:', inspeccionId, 'Socket conectado:', socket.connected);
         inspeccionActualId = inspeccionId;
         socket.emit('join_inspeccion', {
             inspeccion_id: inspeccionId,
@@ -972,11 +996,15 @@ function actualizarItemEnTiempoReal(data) {
 }
 
 function actualizarDatosTiempoRealCompletos(data) {
-    if (userRole !== 'Encargado') return;
+    if (userRole !== 'Encargado') {
+        return false;
+    }
 
     if (!data) {
-        return;
+        return false;
     }
+
+    let huboCambios = false;
 
     if (data.items) {
         Object.keys(data.items).forEach(itemId => {
@@ -987,11 +1015,13 @@ function actualizarDatosTiempoRealCompletos(data) {
                 if (itemElement) {
                     const allRadios = document.querySelectorAll(`input[data-item-id="${itemId}"]`);
                     allRadios.forEach(radio => {
-                        radio.checked = false;
+                        const estabaMarcado = radio.checked;
+                        radio.checked = radio === itemElement;
                         radio.disabled = true;
+                        if (radio === itemElement && !estabaMarcado) {
+                            huboCambios = true;
+                        }
                     });
-
-                    itemElement.checked = true;
 
                     const itemContainer = itemElement.closest('.item-container') || itemElement.parentElement;
                     if (itemContainer) {
@@ -1006,13 +1036,20 @@ function actualizarDatosTiempoRealCompletos(data) {
                     window.inspeccionEstado.items[itemId] = {};
                 }
 
+                const estadoPrevio = window.inspeccionEstado.items[itemId];
+                const ratingPrevio = estadoPrevio.rating;
+
                 window.inspeccionEstado.items[itemId] = {
-                    ...window.inspeccionEstado.items[itemId],
+                    ...estadoPrevio,
                     rating: itemData.rating,
-                    observacion: itemData.observacion || window.inspeccionEstado.items[itemId].observacion || '',
-                    puntaje_maximo: itemData.puntaje_maximo || window.inspeccionEstado.items[itemId].puntaje_maximo,
-                    riesgo: itemData.riesgo || window.inspeccionEstado.items[itemId].riesgo
+                    observacion: itemData.observacion || estadoPrevio.observacion || '',
+                    puntaje_maximo: itemData.puntaje_maximo || estadoPrevio.puntaje_maximo,
+                    riesgo: itemData.riesgo || estadoPrevio.riesgo
                 };
+
+                if (ratingPrevio !== itemData.rating) {
+                    huboCambios = true;
+                }
             }
         });
     }
@@ -1022,6 +1059,7 @@ function actualizarDatosTiempoRealCompletos(data) {
         if (observacionesTextarea) {
             if (observacionesTextarea.value !== data.observaciones) {
                 observacionesTextarea.value = data.observaciones;
+                huboCambios = true;
             }
             observacionesTextarea.disabled = true;
         }
@@ -1029,11 +1067,44 @@ function actualizarDatosTiempoRealCompletos(data) {
 
     if (data.resumen && Object.keys(data.resumen).length > 0) {
         actualizarResumenConPuntajes(data.resumen);
-    } else {
+        huboCambios = true;
+    } else if (huboCambios) {
         recalcularResumenEncargado();
     }
 
-    mostrarNotificacion('Inspector actualizó calificaciones', 'info');
+    if (typeof data.confirmada_por_encargado !== 'undefined') {
+        const estadoPrevioConfirmacion = Boolean(window.inspeccionEstado.confirmacionesPorEstablecimiento[data.establecimiento_id]?.confirmada_por_encargado);
+        const estadoNuevoConfirmacion = Boolean(data.confirmada_por_encargado);
+
+        if (!window.inspeccionEstado.confirmacionesPorEstablecimiento[data.establecimiento_id]) {
+            window.inspeccionEstado.confirmacionesPorEstablecimiento[data.establecimiento_id] = {};
+        }
+        window.inspeccionEstado.confirmacionesPorEstablecimiento[data.establecimiento_id] = {
+            ...window.inspeccionEstado.confirmacionesPorEstablecimiento[data.establecimiento_id],
+            confirmada_por_encargado: estadoNuevoConfirmacion,
+            confirmador_nombre: data.confirmador_nombre || null,
+            confirmador_rol: data.confirmador_rol || null
+        };
+
+        // Guardar estado de confirmaciones en sessionStorage
+        guardarEstadoConfirmaciones();
+
+        if (estadoNuevoConfirmacion) {
+            deshabilitarBotonConfirmar(data.confirmador_nombre || 'Encargado', data.confirmador_rol || 'Encargado');
+        } else {
+            restaurarBotonConfirmarEncargado();
+        }
+
+        if (estadoPrevioConfirmacion !== estadoNuevoConfirmacion) {
+            huboCambios = true;
+        }
+    }
+
+    if (huboCambios) {
+        mostrarNotificacion('Inspector actualizo calificaciones', 'info');
+    }
+
+    return huboCambios;
 }
 
 function actualizarResumenConPuntajes(puntajes) {
@@ -1203,7 +1274,7 @@ function abrirVistaPrevia(src, filename = 'Evidencia') {
             return;
         }
     }
-    
+
     // const safeFilename = sanitizeText(filename); // Asumiendo que tienes esta función
     const safeFilename = filename;
 
@@ -1241,7 +1312,7 @@ function abrirVistaPrevia(src, filename = 'Evidencia') {
     closeButton.className = 'text-gray-400 hover:text-gray-600 transition-colors';
     closeButton.onclick = cerrarModal;
     closeButton.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>`;
-    
+
     header.appendChild(title);
     header.appendChild(closeButton);
 
@@ -1266,7 +1337,7 @@ function abrirVistaPrevia(src, filename = 'Evidencia') {
     openNewTabButton.className = 'px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2';
     openNewTabButton.target = '_blank'; // Abrir en nueva pestaña
     openNewTabButton.rel = 'noopener noreferrer';
-    
+
     // *** LÓGICA CLAVE PARA ABRIR EN NUEVA PESTAÑA ***
     if (isBase64) {
         // Para Base64, el href es el propio dato. El navegador lo manejará.
@@ -1276,7 +1347,7 @@ function abrirVistaPrevia(src, filename = 'Evidencia') {
         // Para URLs, el href es la URL validada.
         openNewTabButton.href = validatedSrc;
     }
-    
+
     openNewTabButton.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg><span>Abrir</span>`;
 
     const closeFooterButton = document.createElement('button');
@@ -1702,28 +1773,39 @@ function configurarEventoEstablecimiento(selectElement) {
         const establecimientoId = this.value;
 
         if (establecimientoId) {
+            // Inicializar estado de confirmación para el nuevo establecimiento
+            if (!window.inspeccionEstado.confirmacionesPorEstablecimiento[establecimientoId]) {
+                window.inspeccionEstado.confirmacionesPorEstablecimiento[establecimientoId] = {
+                    confirmada_por_encargado: false,
+                    confirmador_nombre: null,
+                    confirmador_rol: null
+                };
+            }
+
+            // Deshabilitar el botón de completar inspección para el inspector
+            deshabilitarBotonCompletarInspector();
+
             // Esperar un poco para asegurar que el DOM esté listo
             await new Promise(resolve => setTimeout(resolve, 50));
-            
-                // Cargar firmas disponibles para el establecimiento
-                if (typeof cargarFirmasEstablecimiento === 'function') {
-                    await cargarFirmasEstablecimiento(establecimientoId);
-                }
-                
-                // Esta es la lógica original para cargar items del establecimiento
-                if (typeof cargarItemsEstablecimiento === 'function') {
-                    await cargarItemsEstablecimiento(establecimientoId);
-                }
 
-                // Unirse a la sala del establecimiento para tiempo real (IMPORTANTE para recibir eventos del encargado)
-                if (socket && userRole === 'Inspector') {
-                    console.log('DEBUG - Uniéndose a sala del establecimiento:', establecimientoId);
-                    socket.emit('join_establecimiento', {
-                        establecimiento_id: establecimientoId,
-                        usuario_id: window.userId || 1,
-                        role: userRole
-                    });
-                }            // Cargar datos guardados en cookies si existen
+            // Cargar firmas disponibles para el establecimiento
+            if (typeof cargarFirmasEstablecimiento === 'function') {
+                await cargarFirmasEstablecimiento(establecimientoId);
+            }
+
+            // Esta es la lógica original para cargar items del establecimiento
+            if (typeof cargarItemsEstablecimiento === 'function') {
+                await cargarItemsEstablecimiento(establecimientoId);
+            }
+
+            // Unirse a la sala del establecimiento para tiempo real (IMPORTANTE para recibir eventos del encargado)
+            if (socket && userRole === 'Inspector') {
+                socket.emit('join_establecimiento', {
+                    establecimiento_id: establecimientoId,
+                    usuario_id: window.userId || 1,
+                    role: userRole
+                });
+            }            // Cargar datos guardados en cookies si existen
             if (window.FormCookieManager) {
                 const cookieManager = new window.FormCookieManager();
                 if (cookieManager.hasFormData(establecimientoId)) {
@@ -1763,9 +1845,21 @@ function configurarEventoEstablecimiento(selectElement) {
                     }
                 }
             }
+
+            // IMPORTANTE: Resetear el estado de confirmación para nueva inspección
+            // Independientemente de las cookies anteriores, una nueva selección de establecimiento
+            // debe comenzar con confirmación pendiente
+            window.inspeccionEstado.confirmacionesPorEstablecimiento[establecimientoId] = {
+                confirmada_por_encargado: false,
+                confirmador_nombre: null,
+                confirmador_rol: null
+            };
+
+            // Asegurar que el botón esté deshabilitado para nueva inspección
+            deshabilitarBotonCompletarInspector();
         } else {
             // Limpiar interfaz cuando no hay establecimiento seleccionado
-            
+
             // Limpiar select de firmas
             const selectFirma = document.getElementById('firma-encargado-select');
             if (selectFirma) {
@@ -1774,7 +1868,7 @@ function configurarEventoEstablecimiento(selectElement) {
             if (typeof limpiarPreviewFirmaEncargado === 'function') {
                 limpiarPreviewFirmaEncargado();
             }
-            
+
             const itemsContainer = document.getElementById('items-container');
             if (itemsContainer) {
                 itemsContainer.innerHTML = '';
@@ -1866,26 +1960,26 @@ function mostrarDialogoSesionDuplicada() {
 
     // Crear container principal
     const container = document.createElement('div');
-    container.className = 'bg-white rounded-lg p-8 max-w-md mx-4 shadow-2xl';
+    container.className = 'bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md mx-4 shadow-2xl';
 
     // Header con icono
     const header = document.createElement('div');
     header.className = 'flex items-center mb-6';
 
     const iconContainer = document.createElement('div');
-    iconContainer.className = 'flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4';
+    iconContainer.className = 'flex-shrink-0 w-12 h-12 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mr-4';
 
-    const warningIcon = createSvgIcon("M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z", "w-6 h-6 text-red-600");
+    const warningIcon = createSvgIcon("M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z", "w-6 h-6 text-red-600 dark:text-red-400");
     iconContainer.appendChild(warningIcon);
 
     const textContainer = document.createElement('div');
 
     const title = document.createElement('h3');
-    title.className = 'text-lg font-bold text-gray-900';
+    title.className = 'text-lg font-bold text-gray-900 dark:text-gray-100';
     title.textContent = 'Sesión Duplicada';
 
     const subtitle = document.createElement('p');
-    subtitle.className = 'text-sm text-gray-600';
+    subtitle.className = 'text-sm text-gray-600 dark:text-gray-300';
     subtitle.textContent = 'El usuario ya está en línea';
 
     textContainer.appendChild(title);
@@ -1899,7 +1993,7 @@ function mostrarDialogoSesionDuplicada() {
     messageContainer.className = 'mb-6';
 
     const message = document.createElement('p');
-    message.className = 'text-gray-700 leading-relaxed';
+    message.className = 'text-gray-700 dark:text-gray-200 leading-relaxed';
     message.textContent = 'Su sesión ha sido cerrada porque se detectó que el mismo usuario está activo en otro dispositivo o navegador. Solo se permite una sesión activa por usuario.';
 
     messageContainer.appendChild(message);
@@ -2021,7 +2115,7 @@ async function cargarDatosTiempoRealEstablecimiento(establecimientoId) {
             if (data && Object.keys(data).length > 0) {
                 actualizarDatosTiempoRealCompletos(data);
                 mostrarNotificacion('Datos en tiempo real cargados', 'success');
-                
+
                 // Verificar si ya fue confirmada
                 if (data.confirmada_por_encargado) {
                     setTimeout(() => {
@@ -2132,6 +2226,10 @@ function configurarEventosItems() {
             const valorAnterior = window.inspeccionEstado.items[itemId]?.rating;
             if (valorAnterior === rating) {
                 return; // No hay cambio real, no hacer nada
+            }
+
+            if (userRole === 'Inspector' || userRole === 'Administrador') {
+                reiniciarConfirmacionEncargadoPorCambio();
             }
 
             // Marcar que hay cambios pendientes
@@ -2392,6 +2490,12 @@ async function guardarEstadoTemporal(forzarEmision = false) {
                     timestamp: Date.now()
                 };
 
+                const confirmaciones = window.inspeccionEstado.confirmacionesPorEstablecimiento || {};
+                const estadoConfirmacionActual = confirmaciones[window.inspeccionEstado.establecimiento_id] || {};
+                datosEmitir.confirmada_por_encargado = Boolean(estadoConfirmacionActual.confirmada_por_encargado);
+                datosEmitir.confirmador_nombre = estadoConfirmacionActual.confirmador_nombre || null;
+                datosEmitir.confirmador_rol = estadoConfirmacionActual.confirmador_rol || null;
+
 
                 socket.emit('item_rating_tiempo_real', datosEmitir);
 
@@ -2422,6 +2526,7 @@ async function guardarEstadoTemporal(forzarEmision = false) {
 // Función para sincronizar establecimiento inmediatamente (sin restricciones de tiempo)
 async function sincronizarEstablecimientoInmediatamente(establecimientoId) {
     try {
+        // Primero intentar obtener datos sincronizados del servidor
         const syncResponse = await fetch(`/api/inspecciones/sincronizado/establecimiento/${establecimientoId}`);
         if (syncResponse.ok) {
             const estadoSincronizado = await syncResponse.json();
@@ -2431,6 +2536,23 @@ async function sincronizarEstablecimientoInmediatamente(establecimientoId) {
                 return true;
             }
         }
+
+        // Si no hay datos sincronizados, intentar recuperar datos temporales del establecimiento
+        try {
+            const tempResponse = await fetch('/api/inspecciones/temporal/establecimiento/' + establecimientoId);
+            if (tempResponse.ok) {
+                const estadoTemporal = await tempResponse.json();
+                if (estadoTemporal && Object.keys(estadoTemporal).length > 0) {
+                    // Aplicar el estado temporal
+                    await aplicarEstadoSincronizado(estadoTemporal);
+                    mostrarNotificacion('Datos temporales cargados desde otro inspector', 'info');
+                    return true;
+                }
+            }
+        } catch (tempError) {
+            console.error('Error cargando datos temporales:', tempError);
+        }
+
         return false;
     } catch (syncError) {
         console.error('Error en sincronización inmediata:', syncError);
@@ -2481,10 +2603,16 @@ async function aplicarEstadoSincronizado(estado) {
         }
 
         // Verificar estado de confirmación para encargados/jefes
-        if ((userRole === 'Encargado' || userRole === 'Jefe de Establecimiento') && estado.confirmada_por_encargado) {
-            setTimeout(() => {
-                deshabilitarBotonConfirmar(estado.confirmador_nombre, estado.confirmador_rol);
-            }, 500);
+        if (userRole === 'Encargado' || userRole === 'Jefe de Establecimiento') {
+            if (estado.confirmada_por_encargado) {
+                setTimeout(() => {
+                    deshabilitarBotonConfirmar(estado.confirmador_nombre, estado.confirmador_rol);
+                }, 500);
+            } else {
+                setTimeout(() => {
+                    restaurarBotonConfirmarEncargado();
+                }, 500);
+            }
         }
 
         // Verificar estado de confirmación para inspectores
@@ -2570,6 +2698,9 @@ async function limpiarDatosTemporalesCompleto() {
             observaciones: '',
             encargado_aprobo: false,
             inspector_firmo: false,
+            confirmacionesPorEstablecimiento: {}, // Nuevo: estado de confirmación por establecimiento
+            confirmador_nombre: null,
+            confirmador_rol: null,
             resumen: { puntaje_total: 0, puntaje_maximo_posible: 0, porcentaje_cumplimiento: 0, puntos_criticos_perdidos: 0 }
         };
 
@@ -2617,6 +2748,9 @@ async function limpiarDatosTemporalesCompleto() {
 
         // Detener autosave
         detenerAutosave();
+
+        // Restaurar botón de confirmación para futuros flujos
+        restaurarBotonConfirmarEncargado();
 
 
     } catch (error) {
@@ -2710,12 +2844,12 @@ function mostrarAdvertenciaSesion() {
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
     modal.innerHTML = `
-        <div class="bg-white rounded-lg p-6 max-w-md mx-4">
-            <h3 class="text-lg font-semibold mb-4">Sesión por expirar</h3>
-            <p class="text-gray-600 mb-6">Su sesión expirará en 2 minutos debido a inactividad. ¿Desea continuar?</p>
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4 shadow-xl">
+            <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Sesión por expirar</h3>
+            <p class="text-gray-600 dark:text-gray-300 mb-6">Su sesión expirará en 2 minutos debido a inactividad. ¿Desea continuar?</p>
             <div class="flex justify-end gap-3">
-                <button id="cerrar-sesion-btn" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Cerrar sesión</button>
-                <button id="continuar-sesion-btn" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Continuar</button>
+                <button id="cerrar-sesion-btn" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded transition-colors">Cerrar sesión</button>
+                <button id="continuar-sesion-btn" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors">Continuar</button>
             </div>
         </div>
     `;
@@ -2827,32 +2961,13 @@ async function guardarInspeccionFinal(completar = false) {
         // Determinar la acción real basada en el estado de las firmas
         let accionReal = 'guardar'; // Por defecto siempre guardar
 
-        console.log('DEBUG - Estado de firmas al guardar:', {
-            completar: completar,
-            userRole: userRole,
-            encargado_aprobo: window.inspeccionEstado.encargado_aprobo,
-            inspector_firmo: window.inspeccionEstado.inspector_firmo,
-            firma_encargado: window.inspeccionEstado.firma_encargado,
-            firma_inspector: window.inspeccionEstado.firma_inspector
-        });
-
         if (completar && userRole === 'Inspector') {
             // Solo marcar como "completar" si ambas firmas están realmente confirmadas
-            console.log('DEBUG - Verificando condiciones para completar:', {
-                completar: completar,
-                userRole: userRole,
-                encargado_aprobo: window.inspeccionEstado.encargado_aprobo,
-                inspector_firmo: window.inspeccionEstado.inspector_firmo,
-                socket_connected: socket ? socket.connected : false,
-                inspeccion_id: window.inspeccionEstado.inspeccion_id
-            });
             if (window.inspeccionEstado.encargado_aprobo && window.inspeccionEstado.inspector_firmo) {
                 accionReal = 'completar';
-                console.log('DEBUG - Acción establecida a COMPLETAR');
             } else {
                 // Si no tiene ambas firmas, guardar como borrador aunque haya clickeado "completar"
                 accionReal = 'guardar';
-                console.log('DEBUG - Acción establecida a GUARDAR (faltan firmas)');
 
                 if (!window.inspeccionEstado.encargado_aprobo) {
                     mostrarNotificacion('El encargado debe aprobar la inspección primero', 'warning');
@@ -2894,11 +3009,6 @@ async function guardarInspeccionFinal(completar = false) {
             items: window.inspeccionEstado.items,
             accion: accionReal  // Usar la acción determinada, no la solicitada
         };
-
-        console.log('DEBUG - Datos de envío:', {
-            ...datosEnvio,
-            items_count: Object.keys(datosEnvio.items || {}).length
-        });
 
         // SIEMPRE enviar las firmas disponibles (el backend validará si son necesarias)
         if (window.inspeccionEstado.firma_encargado && window.inspeccionEstado.firma_encargado !== null) {
@@ -3238,6 +3348,8 @@ async function firmarComoEncargado() {
                 encargado_id: encargadoId,
                 establecimiento_id: window.inspeccionEstado.establecimiento_id,
                 firma_data: firmaData, // Incluir los datos reales de la firma
+                confirmador_nombre: window.userName || 'Encargado', // Nombre del confirmador
+                confirmador_rol: userRole || 'Encargado', // Rol del confirmador
                 timestamp: new Date().toISOString()
             });
 
@@ -3424,15 +3536,8 @@ function resetearFormularioCompleto() {
             progressBar.style.width = '0%';
         }
 
-        // 6. Limpiar interfaz de firmas
-        const firmaInspectorDiv = document.getElementById('firma-inspector');
-        const firmaEncargadoDiv = document.getElementById('firma-encargado');
-        if (firmaInspectorDiv) {
-            firmaInspectorDiv.innerHTML = '';
-        }
-        if (firmaEncargadoDiv) {
-            firmaEncargadoDiv.innerHTML = '';
-        }
+        // 6. NO limpiar interfaz de firmas - mantener las firmas del inspector y encargado
+        // Las firmas deben persistir después del reseteo del formulario
 
         // 7. Habilitar formulario para nueva inspección
         const form = document.getElementById('form-inspeccion');
@@ -3452,6 +3557,11 @@ function resetearFormularioCompleto() {
             cookieManager.clearFormData(establecimientoId);
         }
 
+        // 9. NO restaurar el botón de confirmación - mantener estado "Ya confirmada"
+        // El botón debe mantenerse como "Ya confirmada por [Nombre]" después del reseteo
+
+        // 10. Deshabilitar el botón de completar inspección para el inspector
+        deshabilitarBotonCompletarInspector();
 
     } catch (error) {
     }
@@ -3462,6 +3572,16 @@ function resetearFormularioCompleto() {
  */
 function limpiarEstadoTemporal() {
     try {
+        // Guardar el estado de confirmaciones por establecimiento antes de limpiar
+        const confirmacionesPrevias = window.inspeccionEstado?.confirmacionesPorEstablecimiento || {};
+
+        // Guardar las firmas actuales antes de limpiar
+        const firmaInspectorActual = window.inspeccionEstado?.firma_inspector;
+        const firmaEncargadoActual = window.inspeccionEstado?.firma_encargado;
+        const firmaInspectorIdActual = window.inspeccionEstado?.firma_inspector_id;
+        const firmaEncargadoIdActual = window.inspeccionEstado?.firma_encargado_id;
+        const inspectorFirmoActual = window.inspeccionEstado?.inspector_firmo;
+        const encargadoAproboActual = window.inspeccionEstado?.encargado_aprobo;
 
         // 1. Resetear estado global de inspección
         window.inspeccionEstado = {
@@ -3472,12 +3592,18 @@ function limpiarEstadoTemporal() {
             fecha: null,
             items: {},
             observaciones: '',
-            firma_encargado: null,
-            firma_inspector: null,
+            firma_encargado: firmaEncargadoActual, // Preservar firma del encargado
+            firma_inspector: firmaInspectorActual, // Preservar firma del inspector
+            firma_encargado_id: firmaEncargadoIdActual, // Preservar ID de firma del encargado
+            firma_inspector_id: firmaInspectorIdActual, // Preservar ID de firma del inspector
             estado: 'borrador',
-            encargado_aprobo: false,
-            inspector_firmo: false,
-            evidencias: []
+            encargado_aprobo: encargadoAproboActual, // Preservar estado de aprobación
+            inspector_firmo: inspectorFirmoActual, // Preservar estado de firma del inspector
+            evidencias: [],
+            confirmada_por_encargado: false,
+            confirmador_nombre: null,
+            confirmador_rol: null,
+            confirmacionesPorEstablecimiento: confirmacionesPrevias // Mantener estado de confirmaciones por establecimiento
         };
 
         // 2. Limpiar datos temporales del sessionStorage
@@ -3495,6 +3621,8 @@ function limpiarEstadoTemporal() {
             limpiarAutosave();
         }
 
+        // 5. Deshabilitar el botón de completar inspección para el inspector
+        deshabilitarBotonCompletarInspector();
 
     } catch (error) {
     }
@@ -3613,7 +3741,7 @@ window.addEventListener('load', function () {
  * - Para inspectores/admin: muestra selector con todas las firmas
  */
 async function cargarFirmasEstablecimiento(establecimientoId) {
-    
+
     if (!establecimientoId) {
         return;
     }
@@ -3645,40 +3773,38 @@ async function cargarFirmasEstablecimiento(establecimientoId) {
 
     try {
         const response = await fetch(`/jefe/firmas/obtener/${establecimientoId}`);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         const data = await response.json();
 
         // === PARA INSPECTORES/ADMIN/JEFE: Cargar SU PROPIA firma Y verificar firma del encargado ===
         if (currentUserRole === 'Inspector' || currentUserRole === 'Administrador' || currentUserRole === 'Jefe de Establecimiento') {
-            
-            console.log('DEBUG - Datos de firmas recibidos:', data);
-            
+
             if (data.success) {
                 // Procesar firma del inspector
                 if (data.firma_inspector && data.firma_inspector.ruta) {
-                    
+
                     // Verificar que el elemento esté en el DOM antes de intentar actualizarlo
                     if (!previewInspector) {
                     } else {
-                        
+
                         // Mostrar firma en preview usando función helper
                         mostrarPreviewFirmaInspector(data.firma_inspector.ruta);
-                        
+
                         // Verificar que se actualizó el DOM inmediatamente
                         setTimeout(() => {
                             const updatedContent = previewInspector ? previewInspector.innerHTML : 'ELEMENTO NO ENCONTRADO';
                         }, 10);
-                        
+
                         // Verificar después de 500ms
                         setTimeout(() => {
                             const updatedContent = previewInspector ? previewInspector.innerHTML : 'ELEMENTO NO ENCONTRADO';
                         }, 500);
                     }
-                    
+
                     // Guardar en estado global
                     if (window.inspeccionEstado) {
                         window.inspeccionEstado.firma_inspector = data.firma_inspector.ruta;
@@ -3686,19 +3812,19 @@ async function cargarFirmasEstablecimiento(establecimientoId) {
                         // Marcar como confirmada automáticamente
                         window.inspeccionEstado.inspector_firmo = true;
                     }
-                    
+
                     // Actualizar campo oculto
                     if (hiddenInputInspector) {
                         hiddenInputInspector.value = data.firma_inspector.ruta;
                     }
-                    
+
                     // Mostrar mensaje informativo
                     if (infoInspector) {
                         infoInspector.classList.remove('hidden');
                     }
-                    
+
                 } else {
-                    
+
                     if (previewInspector) {
                         previewInspector.innerHTML = `
                             <div class="text-center">
@@ -3733,13 +3859,13 @@ async function cargarFirmasEstablecimiento(establecimientoId) {
                         infoInspector.classList.add('hidden');
                     }
                 }
-                
+
                 // Procesar firma del encargado (si existe)
                 if (data.firma_encargado && data.firma_encargado.ruta) {
-                    
+
                     // Mostrar firma del encargado
                     mostrarPreviewFirmaEncargado(data.firma_encargado.ruta);
-                    
+
                     // Guardar en estado global
                     if (window.inspeccionEstado) {
                         window.inspeccionEstado.firma_encargado = data.firma_encargado.ruta;
@@ -3747,30 +3873,23 @@ async function cargarFirmasEstablecimiento(establecimientoId) {
                         // Marcar como aprobado automáticamente
                         window.inspeccionEstado.encargado_aprobo = true;
                     }
-                    
+
                     // Actualizar campo oculto
                     const hiddenInput = document.getElementById('firma-encargado-hidden');
                     if (hiddenInput) {
                         hiddenInput.value = data.firma_encargado.id;
                     }
-                    
+
                 } else {
                     // No hay firma del encargado
                     limpiarPreviewFirmaEncargado();
-                    
+
                     // Asegurar que no esté marcado como aprobado
                     if (window.inspeccionEstado) {
                         window.inspeccionEstado.encargado_aprobo = false;
                     }
                 }
-                
-                console.log('DEBUG - Estado final después de cargar firmas:', {
-                    firma_inspector: window.inspeccionEstado?.firma_inspector,
-                    firma_encargado: window.inspeccionEstado?.firma_encargado,
-                    inspector_firmo: window.inspeccionEstado?.inspector_firmo,
-                    encargado_aprobo: window.inspeccionEstado?.encargado_aprobo
-                });
-                
+
                 // Actualizar interfaz después de cargar las firmas
                 actualizarInterfazFirmas();
             } else {
@@ -3800,37 +3919,37 @@ async function cargarFirmasEstablecimiento(establecimientoId) {
             if (data.success) {
                 // Si es la firma propia del encargado (usuario logueado)
                 if (data.firma_encargado && data.firma_encargado.ruta) {
-                    
+
                     // Ocultar selector, mostrar info
                     if (selectContainer) selectContainer.classList.add('hidden');
                     if (infoPropiaDiv) infoPropiaDiv.classList.remove('hidden');
-                    
+
                     // Cargar automáticamente la firma
                     mostrarPreviewFirmaEncargado(data.firma_encargado.ruta);
-                    
+
                     // Guardar en estado global
                     window.inspeccionEstado.firma_encargado = data.firma_encargado.ruta;
                     window.inspeccionEstado.firma_encargado_id = data.firma_encargado.id;
                     // Marcar como aprobada automáticamente
                     window.inspeccionEstado.encargado_aprobo = true;
-                    
+
                     // Actualizar campo oculto
                     const hiddenInput = document.getElementById('firma-encargado-hidden');
                     if (hiddenInput) {
                         hiddenInput.value = data.firma_encargado.id;
                     }
-                    
-                    
+
+
                 } else {
                     // Encargado sin firma registrada
-                    
+
                     if (selectContainer) selectContainer.classList.add('hidden');
                     if (infoPropiaDiv) infoPropiaDiv.classList.add('hidden');
                     if (mensajeInfo) {
                         mensajeInfo.classList.remove('hidden');
                         mensajeTexto.textContent = data.message || 'No tiene firma registrada. Contacte al jefe del establecimiento.';
                     }
-                    
+
                     limpiarPreviewFirmaEncargado();
                 }
             } else {
@@ -3843,7 +3962,7 @@ async function cargarFirmasEstablecimiento(establecimientoId) {
             }
         }
     } catch (error) {
-        
+
         // Manejar errores de red/conexión
         if (currentUserRole === 'Inspector' || currentUserRole === 'Administrador' || currentUserRole === 'Jefe de Establecimiento') {
             if (previewInspector) {
@@ -3889,8 +4008,8 @@ async function cargarInspeccionesPendientes() {
 function mostrarInterfazInspeccionesPendientes(inspecciones) {
 
     const contenedorEstablecimiento = document.querySelector('.establecimiento-container') ||
-                                    document.querySelector('[data-establecimiento-container]') ||
-                                    document.getElementById('establecimiento-select-container');
+        document.querySelector('[data-establecimiento-container]') ||
+        document.getElementById('establecimiento-select-container');
 
 
     if (!contenedorEstablecimiento) {
@@ -3899,7 +4018,7 @@ function mostrarInterfazInspeccionesPendientes(inspecciones) {
     const interfazSeleccion = document.createElement('div');
     interfazSeleccion.id = 'inspecciones-pendientes-interfaz';
     interfazSeleccion.className = 'mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg';
-    
+
     interfazSeleccion.innerHTML = `
         <div class="flex items-center justify-between mb-3">
             <h3 class="text-lg font-semibold text-blue-800 dark:text-blue-200">
@@ -3962,24 +4081,46 @@ function mostrarInterfazInspeccionesPendientes(inspecciones) {
  * Configurar eventos para la interfaz de inspecciones pendientes
  */
 function configurarEventosInspeccionesPendientes(inspecciones) {
+    console.log('Configurando eventos para inspecciones pendientes:', inspecciones);
+    
     // Botón para nueva inspección
     const btnNueva = document.getElementById('btn-nueva-inspeccion');
     if (btnNueva) {
+        console.log('Botón Nueva Inspección encontrado');
         btnNueva.addEventListener('click', () => {
             ocultarInterfazInspeccionesPendientes();
             mostrarNotificacion('Iniciando nueva inspección', 'info');
+            limpiarEstadoTemporal();
+            resetearFormularioCompleto();
         });
     }
 
-    // Cards de inspecciones
+    // Cards de inspecciones - CORREGIR: usar getAttribute en lugar de dataset
     const cards = document.querySelectorAll('.inspection-card');
-    cards.forEach(card => {
-        card.addEventListener('click', async () => {
-            const inspeccionId = parseInt(card.dataset.inspeccionId);
-            const inspeccion = inspecciones.find(i => i.id === inspeccionId);
+    console.log(`Cards de inspecciones encontradas: ${cards.length}`);
+    
+    cards.forEach((card, index) => {
+        // IMPORTANTE: HTML usa data-inspeccion-id (con guiones), no data-inspeccion-id (camelCase)
+        // dataset.inspeccionId busca data-inspeccion-id, pero el HTML tiene data-inspeccion-id
+        const inspeccionIdAttr = card.getAttribute('data-inspeccion-id');
+        console.log(`Card ${index}: data-inspeccion-id = ${inspeccionIdAttr}`);
+        
+        card.addEventListener('click', async (e) => {
+            console.log('Click en card de inspección');
+            e.preventDefault();
+            e.stopPropagation();
             
+            const inspeccionId = inspeccionIdAttr; // Puede ser string o número
+            console.log('ID de inspección a retomar:', inspeccionId);
+            
+            const inspeccion = inspecciones.find(i => String(i.id) === String(inspeccionId));
+            console.log('Inspección encontrada:', inspeccion);
+
             if (inspeccion) {
                 await retomarInspeccion(inspeccionId, inspeccion);
+            } else {
+                console.error('No se encontró la inspección con ID:', inspeccionId);
+                mostrarNotificacion('Error: No se encontró la inspección', 'error');
             }
         });
     });
@@ -3990,7 +4131,11 @@ function configurarEventosInspeccionesPendientes(inspecciones) {
  */
 async function retomarInspeccion(inspeccionId, inspeccionData) {
     try {
-        mostrarNotificacion('🔄 Cargando inspección...', 'info');
+        console.log('=== Retomando inspección ===');
+        console.log('ID:', inspeccionId);
+        console.log('Datos:', inspeccionData);
+
+        mostrarNotificacion('Cargando inspección...', 'info');
 
         const response = await fetch(`/api/inspecciones/retomar/${inspeccionId}`, {
             method: 'POST',
@@ -3999,23 +4144,35 @@ async function retomarInspeccion(inspeccionId, inspeccionData) {
             }
         });
 
+        console.log('Response status:', response.status);
+
         if (!response.ok) {
             const error = await response.json();
+            console.error('Error del servidor:', error);
             throw new Error(error.error || 'Error al retomar inspección');
         }
 
         const data = await response.json();
+        console.log('Datos recibidos del servidor:', data);
+
+        if (!data.success || !data.inspeccion) {
+            console.error('Respuesta inválida del servidor:', data);
+            throw new Error('Respuesta inválida del servidor');
+        }
 
         // Ocultar interfaz de selección
         ocultarInterfazInspeccionesPendientes();
 
         // Cargar datos de la inspección en la interfaz
+        console.log('Cargando inspección en interfaz...');
         await cargarInspeccionEnInterfaz(data.inspeccion);
 
-        mostrarNotificacion(`✅ Inspección retomada: ${inspeccionData.establecimiento.nombre}`, 'success');
+        const nombreEstablecimiento = inspeccionData.establecimiento?.nombre || 'Establecimiento';
+        mostrarNotificacion(`Inspección retomada: ${nombreEstablecimiento}`, 'success');
 
     } catch (error) {
-        mostrarNotificacion(`❌ Error: ${error.message}`, 'error');
+        console.error('Error en retomarInspeccion:', error);
+        mostrarNotificacion(`Error: ${error.message}`, 'error');
     }
 }
 
@@ -4024,28 +4181,41 @@ async function retomarInspeccion(inspeccionId, inspeccionData) {
  */
 async function cargarInspeccionEnInterfaz(inspeccionData) {
     try {
+        console.log('=== Iniciando carga de inspección ===');
+        console.log('Datos recibidos:', inspeccionData);
+
         // Establecer el establecimiento
         const selectEstablecimiento = document.getElementById('establecimiento');
-        if (selectEstablecimiento) {
-            selectEstablecimiento.value = inspeccionData.establecimiento_id;
-            
-            // Disparar evento de cambio para cargar items
-            const event = new Event('change', { bubbles: true });
-            selectEstablecimiento.dispatchEvent(event);
+        if (!selectEstablecimiento) {
+            console.error('No se encontró el select de establecimiento');
+            mostrarNotificacion('Error: No se encontró el formulario', 'error');
+            return;
+        }
 
-            // Cargar firmas disponibles del establecimiento (incluyendo firma del encargado si existe)
-            if (typeof cargarFirmasEstablecimiento === 'function') {
-                await cargarFirmasEstablecimiento(inspeccionData.establecimiento_id);
-            }
+        console.log('Estableciendo establecimiento_id:', inspeccionData.establecimiento_id);
+        selectEstablecimiento.value = inspeccionData.establecimiento_id;
+
+        // Disparar evento de cambio para cargar items (esto es asíncrono)
+        const event = new Event('change', { bubbles: true });
+        selectEstablecimiento.dispatchEvent(event);
+
+        // Cargar firmas disponibles del establecimiento (incluyendo firma del encargado si existe)
+        if (typeof cargarFirmasEstablecimiento === 'function') {
+            console.log('Cargando firmas del establecimiento...');
+            await cargarFirmasEstablecimiento(inspeccionData.establecimiento_id);
         }
 
         // Establecer fecha
         const inputFecha = document.getElementById('fecha');
         if (inputFecha) {
             inputFecha.value = inspeccionData.fecha;
+            console.log('Fecha establecida:', inspeccionData.fecha);
         }
 
         // Actualizar estado global
+        // IMPORTANTE: Para inspecciones en_proceso (borradores), NO deben estar confirmadas
+        const esInspeccionBorrador = inspeccionData.estado === 'en_proceso' || inspeccionData.estado === 'temporal';
+        
         window.inspeccionEstado = {
             ...window.inspeccionEstado,
             inspeccion_id: inspeccionData.id,
@@ -4058,40 +4228,103 @@ async function cargarInspeccionEnInterfaz(inspeccionData) {
             // Determinar si el encargado ya aprobó basado en si hay firma del encargado
             encargado_aprobo: inspeccionData.firma_encargado ? true : false,
             // Determinar si el inspector ya firmó basado en si hay firma del inspector
-            inspector_firmo: inspeccionData.firma_inspector ? true : false
+            inspector_firmo: inspeccionData.firma_inspector ? true : false,
+            // Si es borrador, NO debe estar confirmada (aunque tenga firma del encargado)
+            confirmada_por_encargado: esInspeccionBorrador ? false : Boolean(inspeccionData.confirmada_por_encargado),
+            confirmador_nombre: esInspeccionBorrador ? null : (inspeccionData.confirmador_nombre || null),
+            confirmador_rol: esInspeccionBorrador ? null : (inspeccionData.confirmador_rol || null)
         };
 
-        // Unirse a la sala del establecimiento para tiempo real (IMPORTANTE para recibir eventos del encargado)
+        console.log('Estado global actualizado:', window.inspeccionEstado);
+        console.log('Es borrador?', esInspeccionBorrador);
+        console.log('Confirmada por encargado?', window.inspeccionEstado.confirmada_por_encargado);
+
+        // Si es borrador, asegurarse de que el botón del encargado esté habilitado
+        if (esInspeccionBorrador) {
+            console.log('Restaurando botón de confirmación (es borrador)...');
+            
+            // Limpiar confirmación del sessionStorage para este establecimiento
+            if (window.inspeccionEstado.confirmacionesPorEstablecimiento[inspeccionData.establecimiento_id]) {
+                window.inspeccionEstado.confirmacionesPorEstablecimiento[inspeccionData.establecimiento_id] = {
+                    confirmada_por_encargado: false,
+                    confirmador_nombre: null,
+                    confirmador_rol: null
+                };
+                // Guardar estado limpio en sessionStorage
+                guardarEstadoConfirmaciones();
+                console.log('Estado de confirmación limpiado en sessionStorage');
+            }
+            
+            // Restaurar botón de confirmación del encargado a su estado activo
+            if (typeof restaurarBotonConfirmarEncargado === 'function') {
+                // Usar timeout para asegurar que se ejecute después de que el DOM esté listo
+                setTimeout(() => {
+                    restaurarBotonConfirmarEncargado();
+                    console.log('Botón de confirmación restaurado');
+                }, 100);
+            }
+        }
+
+        // Unirse a la sala del establecimiento para tiempo real
         if (socket && userRole === 'Inspector') {
-            console.log('DEBUG - Uniéndose a sala del establecimiento al retomar inspección:', inspeccionData.establecimiento_id);
             socket.emit('join_establecimiento', {
                 establecimiento_id: inspeccionData.establecimiento_id,
                 usuario_id: window.userId || 1,
                 role: userRole
             });
+            console.log('Unido a sala de establecimiento');
         }
 
-        // Esperar a que se carguen los items del establecimiento
-        setTimeout(() => {
-            // Aplicar calificaciones guardadas
-            if (inspeccionData.items && Object.keys(inspeccionData.items).length > 0) {
-                aplicarCalificacionesAInterfaz(inspeccionData.items);
-            }
+        // Esperar con reintentos a que los items se carguen
+        let intentos = 0;
+        const maxIntentos = 20;
+        const intervalo = setInterval(() => {
+            intentos++;
+            console.log(`Intento ${intentos}/${maxIntentos} - Verificando si los items están cargados...`);
 
-            // Cargar observaciones
-            const observacionesTextarea = document.getElementById('observaciones-generales');
-            if (observacionesTextarea && inspeccionData.observaciones) {
-                observacionesTextarea.value = inspeccionData.observaciones;
-            }
+            // Verificar si hay radio buttons en el DOM (señal de que los items se cargaron)
+            const radioButtons = document.querySelectorAll('input[type="radio"][data-item-id]');
+            console.log(`Radio buttons encontrados: ${radioButtons.length}`);
 
-            // Actualizar interfaz
-            actualizarResumen();
-            actualizarInterfazResumen();
-            
-        }, 1000);
+            if (radioButtons.length > 0 || intentos >= maxIntentos) {
+                clearInterval(intervalo);
+
+                if (radioButtons.length > 0) {
+                    console.log('Items cargados correctamente. Aplicando calificaciones...');
+
+                    // Aplicar calificaciones guardadas
+                    if (inspeccionData.items && Object.keys(inspeccionData.items).length > 0) {
+                        console.log('Aplicando calificaciones:', inspeccionData.items);
+                        aplicarCalificacionesAInterfaz(inspeccionData.items);
+                    }
+
+                    // Cargar observaciones
+                    const observacionesTextarea = document.getElementById('observaciones-generales');
+                    if (observacionesTextarea && inspeccionData.observaciones) {
+                        observacionesTextarea.value = inspeccionData.observaciones;
+                        console.log('Observaciones cargadas');
+                    }
+
+                    // Actualizar interfaz
+                    if (typeof actualizarResumen === 'function') {
+                        actualizarResumen();
+                    }
+                    if (typeof actualizarInterfazResumen === 'function') {
+                        actualizarInterfazResumen();
+                    }
+
+                    console.log('=== Carga de inspección completada ===');
+                    mostrarNotificacion('Inspección cargada correctamente', 'success');
+                } else {
+                    console.error('Timeout: Los items no se cargaron después de múltiples intentos');
+                    mostrarNotificacion('Advertencia: Los items del formulario no se cargaron completamente', 'warning');
+                }
+            }
+        }, 250); // Verificar cada 250ms
 
     } catch (error) {
-        mostrarNotificacion('❌ Error cargando datos de la inspección', 'error');
+        console.error('Error en cargarInspeccionEnInterfaz:', error);
+        mostrarNotificacion('Error cargando datos de la inspección', 'error');
     }
 }
 
@@ -4275,13 +4508,13 @@ function limpiarPreviewFirmaEncargado() {
     if (!preview) return;
 
     preview.innerHTML = '<p class="text-slate-400 text-sm">Vista previa de la firma</p>';
-    
+
     // Limpiar estado global
     if (window.inspeccionEstado) {
         window.inspeccionEstado.firma_encargado = null;
         window.inspeccionEstado.firma_encargado_id = null;
     }
-    
+
     // Limpiar campo oculto
     const hiddenInput = document.getElementById('firma-encargado-hidden');
     if (hiddenInput) {
@@ -4334,8 +4567,11 @@ async function confirmarInspeccionEncargado() {
  * Deshabilitar botón de confirmar cuando ya fue confirmada
  */
 function deshabilitarBotonConfirmar(confirmador, rol) {
-    const boton = document.querySelector('button[value="confirmar"]');
+    const boton = document.querySelector('button[onclick="confirmarInspeccionEncargado()"]') || document.querySelector('button[value="confirmar"]');
     if (!boton) return;
+
+    const nombreConfirmador = confirmador || 'Encargado';
+    const rolConfirmador = rol ? ` (${rol})` : '';
 
     boton.disabled = true;
     boton.classList.remove('bg-gradient-to-r', 'from-green-500', 'to-emerald-600', 'hover:from-green-600', 'hover:to-emerald-700');
@@ -4344,7 +4580,149 @@ function deshabilitarBotonConfirmar(confirmador, rol) {
         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
-        Ya confirmada por ${confirmador}
+        Ya confirmada por ${nombreConfirmador}${rolConfirmador}
     `;
 }
 
+/**
+ * Descripcion: Restaura el boton de confirmacion del encargado a su estado activo original.
+ * Logica: Busca el boton asociado a confirmar inspecciones, elimina estilos de deshabilitado y aplica
+ * nuevamente las clases base con el icono por defecto para permitir nuevas confirmaciones.
+ * @example
+ * restaurarBotonConfirmarEncargado();
+ */
+function restaurarBotonConfirmarEncargado() {
+    const boton = document.querySelector('button[onclick="confirmarInspeccionEncargado()"]') || document.querySelector('button[value="confirmar"]');
+    if (!boton) {
+        return;
+    }
+
+    boton.disabled = false;
+    boton.className = 'px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center';
+    boton.innerHTML = `
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Confirmar Inspecci&oacute;n
+    `;
+}
+
+/**
+ * Descripcion: Deshabilita el boton de completar inspeccion para el inspector hasta que el encargado confirme.
+ * Logica: Busca el boton de completar inspeccion, lo deshabilita y cambia su apariencia para indicar que espera confirmacion.
+ * Verifica el estado de confirmacion por establecimiento actual.
+ * @example
+ * deshabilitarBotonCompletarInspector();
+ */
+function deshabilitarBotonCompletarInspector() {
+    const btnCompletar = document.querySelector('button[value="completar"]');
+    if (!btnCompletar) {
+        return;
+    }
+
+    // Verificar si el establecimiento actual está confirmado
+    const establecimientoActual = window.inspeccionEstado.establecimiento_id;
+    const estaConfirmado = window.inspeccionEstado.confirmacionesPorEstablecimiento[establecimientoActual]?.confirmada_por_encargado;
+
+    if (estaConfirmado) {
+        // Si está confirmado, habilitar el botón
+        btnCompletar.disabled = false;
+        btnCompletar.classList.remove('opacity-50', 'cursor-not-allowed');
+        btnCompletar.innerHTML = `
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Guardar Inspección
+        `;
+    } else {
+        // Si no está confirmado, deshabilitar el botón
+        btnCompletar.disabled = true;
+        btnCompletar.classList.add('opacity-50', 'cursor-not-allowed');
+        btnCompletar.innerHTML = `
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Esperando Confirmación del Encargado
+        `;
+    }
+}
+
+/**
+ * Descripcion: Reinicia el estado de confirmacion cuando el inspector modifica la inspeccion.
+ * Logica: Marca la confirmacion como pendiente en memoria, limpia los datos del confirmador y actualiza los botones de inspector y encargado segun corresponda.
+ * @example
+ * reiniciarConfirmacionEncargadoPorCambio();
+ */
+function reiniciarConfirmacionEncargadoPorCambio() {
+    const establecimientoId = window.inspeccionEstado?.establecimiento_id;
+    if (!establecimientoId) {
+        return;
+    }
+
+    if (!window.inspeccionEstado.confirmacionesPorEstablecimiento) {
+        window.inspeccionEstado.confirmacionesPorEstablecimiento = {};
+    }
+
+    const estadoPrevio = window.inspeccionEstado.confirmacionesPorEstablecimiento[establecimientoId];
+
+    window.inspeccionEstado.confirmacionesPorEstablecimiento[establecimientoId] = {
+        confirmada_por_encargado: false,
+        confirmador_nombre: null,
+        confirmador_rol: null
+    };
+
+    window.inspeccionEstado.confirmada_por_encargado = false;
+    window.inspeccionEstado.confirmador_nombre = null;
+    window.inspeccionEstado.confirmador_rol = null;
+
+    const yaPendiente = estadoPrevio
+        && estadoPrevio.confirmada_por_encargado === false
+        && estadoPrevio.confirmador_nombre === null
+        && estadoPrevio.confirmador_rol === null;
+
+    if (!yaPendiente) {
+        guardarEstadoConfirmaciones();
+    }
+
+    if (userRole === 'Inspector' || userRole === 'Administrador') {
+        deshabilitarBotonCompletarInspector();
+    }
+
+    if (userRole === 'Encargado' || userRole === 'Jefe de Establecimiento') {
+        restaurarBotonConfirmarEncargado();
+    }
+}
+
+/**
+ * Descripcion: Sincroniza en el cliente inspector el estado de confirmacion recibido en tiempo real.
+ * Logica: Actualiza la tabla de confirmaciones por establecimiento, refresca el boton de completar y conserva los datos del confirmador si la aprobacion sigue vigente.
+ * @param {Object} data - Datos recibidos desde el servidor.
+ * @example
+ * actualizarEstadoTiempoRealInspector({ establecimiento_id: 7, confirmada_por_encargado: false });
+ */
+function actualizarEstadoTiempoRealInspector(data) {
+    if (!data || !data.establecimiento_id) {
+        return;
+    }
+
+    if (!window.inspeccionEstado.confirmacionesPorEstablecimiento) {
+        window.inspeccionEstado.confirmacionesPorEstablecimiento = {};
+    }
+
+    const establecimientoId = data.establecimiento_id;
+
+    window.inspeccionEstado.confirmacionesPorEstablecimiento[establecimientoId] = {
+        confirmada_por_encargado: Boolean(data.confirmada_por_encargado),
+        confirmador_nombre: data.confirmador_nombre || null,
+        confirmador_rol: data.confirmador_rol || null
+    };
+
+    if (window.inspeccionEstado.establecimiento_id === establecimientoId) {
+        window.inspeccionEstado.confirmada_por_encargado = Boolean(data.confirmada_por_encargado);
+        window.inspeccionEstado.confirmador_nombre = data.confirmador_nombre || null;
+        window.inspeccionEstado.confirmador_rol = data.confirmador_rol || null;
+        deshabilitarBotonCompletarInspector();
+    }
+
+    guardarEstadoConfirmaciones();
+}

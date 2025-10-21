@@ -120,3 +120,93 @@ def api_restablecer_contrasena_jefe(jefe_id):
         JSON con resultado de la operación
     """
     return InspectorController.restablecer_contrasena_jefe(jefe_id)
+
+
+@inspector_bp.route('/api/jefes-establecimiento/<int:jefe_id>/detalles', methods=['GET'])
+@login_required
+@role_required('Inspector', 'Administrador')
+def api_obtener_detalles_jefe(jefe_id):
+    """
+    API para obtener detalles completos de un jefe de establecimiento
+    
+    Args:
+        jefe_id: ID del jefe de establecimiento
+    
+    Returns:
+        JSON con detalles del jefe
+    """
+    return InspectorController.obtener_detalles_jefe(jefe_id)
+
+
+@inspector_bp.route('/api/jefes-establecimiento/<int:jefe_id>/editar', methods=['GET'])
+@login_required
+@role_required('Inspector', 'Administrador')
+def api_obtener_jefe_para_editar(jefe_id):
+    """
+    API para obtener datos de un jefe para editar
+    
+    Args:
+        jefe_id: ID del jefe de establecimiento
+    
+    Returns:
+        JSON con datos del jefe para editar
+    """
+    return InspectorController.obtener_jefe_para_editar(jefe_id)
+
+
+@inspector_bp.route('/api/jefes-establecimiento/<int:jefe_id>', methods=['PUT'])
+@login_required
+@role_required('Inspector', 'Administrador')
+def api_actualizar_jefe_establecimiento(jefe_id):
+    """
+    API para actualizar datos de un jefe de establecimiento
+    
+    Args:
+        jefe_id: ID del jefe de establecimiento
+    
+    Returns:
+        JSON con resultado de la actualización
+    """
+    return InspectorController.actualizar_jefe_establecimiento(jefe_id)
+
+
+@inspector_bp.route('/api/jefes-establecimiento/<int:jefe_id>/toggle', methods=['POST'])
+@login_required
+@role_required('Inspector', 'Administrador')
+def api_toggle_jefe_establecimiento(jefe_id):
+    """
+    API para activar o desactivar un jefe de establecimiento
+    
+    Args:
+        jefe_id: ID del jefe de establecimiento
+    
+    Returns:
+        JSON con resultado de la operación
+    """
+    return InspectorController.toggle_jefe_establecimiento(jefe_id)
+
+
+@inspector_bp.route('/api/jefes-establecimiento/lista', methods=['GET'])
+@login_required
+@role_required('Inspector', 'Administrador')
+def api_obtener_lista_jefes():
+    """
+    API para obtener lista de jefes de establecimiento para actualizar tabla
+    
+    Returns:
+        JSON con lista de jefes
+    """
+    return InspectorController.obtener_lista_jefes()
+
+
+@inspector_bp.route('/api/jefes-establecimiento/estadisticas', methods=['GET'])
+@login_required
+@role_required('Inspector', 'Administrador')
+def api_obtener_estadisticas_jefes():
+    """
+    API para obtener estadísticas de jefes de establecimiento
+    
+    Returns:
+        JSON con estadísticas
+    """
+    return InspectorController.obtener_estadisticas_jefes()

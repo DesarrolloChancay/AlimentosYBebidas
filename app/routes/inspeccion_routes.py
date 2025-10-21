@@ -300,6 +300,17 @@ def limpiar_inspeccion_temporal():
     return InspeccionesController.limpiar_inspeccion_temporal()
 
 
+@inspeccion_bp.route("/api/inspecciones/temporal/establecimiento/<int:establecimiento_id>", methods=["GET"])
+@login_required
+@role_required(["Inspector", "Administrador"])
+def obtener_datos_temporales_establecimiento(establecimiento_id):
+    """
+    Obtener datos temporales de inspección para un establecimiento específico
+    PERMISOS: Inspector y Administrador
+    """
+    return InspeccionesController.obtener_datos_temporales_establecimiento(establecimiento_id)
+
+
 @inspeccion_bp.route("/api/inspecciones/sincronizado/establecimiento/<int:establecimiento_id>", methods=["GET"])
 @login_required
 def obtener_estado_sincronizado_establecimiento(establecimiento_id):
@@ -740,7 +751,7 @@ def obtener_inspecciones_pendientes():
     return InspeccionesController.obtener_inspecciones_pendientes()
 
 
-@inspeccion_bp.route("/api/inspecciones/retomar/<int:inspeccion_id>", methods=["POST"])
+@inspeccion_bp.route("/api/inspecciones/retomar/<inspeccion_id>", methods=["POST"])
 @login_required
 @role_required(["Inspector", "Administrador"])
 def retomar_inspeccion(inspeccion_id):
@@ -1055,7 +1066,7 @@ def eliminar_establecimiento(establecimiento_id):
     try:
         from app.models.Inspecciones_models import (
             Establecimiento, Inspeccion, ItemEvaluacionEstablecimiento,
-            EncargadoEstablecimiento, PlanSemanal, FirmaEncargadoPorJefe, JefeEstablecimiento
+            EncargadoEstablecimiento, PlanSemanal, FirmaEncarg
         )
         from app.extensions import db
 
@@ -1604,14 +1615,8 @@ def obtener_items_actuales_establecimiento(establecimiento_id):
         # Preparar resultado
         resultado = []
         for item in items:
-            # Determinar el riesgo basado en el item de plantilla o base
-            riesgo = 'Medio'  # Valor por defecto
-            item_plantilla = ItemPlantillaChecklist.query.filter_by(
-                item_base_id=item.item_base_id,
-                activo=True
-            ).first()
-            if item_plantilla:
-                riesgo = item_plantilla.riesgo
+            # Usar el riesgo directamente del item base
+            riesgo = item.item_base.riesgo
 
             resultado.append({
                 'id': item.id,
@@ -1644,3 +1649,119 @@ def obtener_items_actuales_establecimiento(establecimiento_id):
 
     except Exception as e:
         return jsonify({"error": f"Error al obtener items actuales: {str(e)}"}), 500
+
+
+# =========================
+# NUEVAS RUTAS PARA GESTIÓN DE ITEMS INDIVIDUALES
+# =========================
+
+@inspeccion_bp.route("/api/establecimientos/<int:establecimiento_id>/items/individual", methods=["POST"])
+@login_required
+@role_required(["Administrador", "Inspector"])
+def agregar_item_individual_establecimiento(establecimiento_id):
+    """
+    Agregar un item individual de la base de datos a un establecimiento
+    PERMISOS: Administrador e Inspector
+    """
+    try:
+        data = request.get_json()
+        item_base_id = data.get("item_base_id")
+        descripcion_personalizada = data.get("descripcion_personalizada")
+        factor_ajuste = data.get("factor_ajuste", 1.00)
+
+        if not item_base_id:
+            return jsonify({"error": "ID del item base es obligatorio"}), 400
+
+        return InspeccionesController.agregar_item_individual_a_establecimiento(
+            establecimiento_id, item_base_id, descripcion_personalizada, factor_ajuste
+        )
+
+    except Exception as e:
+        return jsonify({"error": f"Error al agregar item individual: {str(e)}"}), 500
+
+
+@inspeccion_bp.route("/api/establecimientos/<int:establecimiento_id>/items/personalizado", methods=["POST"])
+@login_required
+@role_required(["Administrador", "Inspector"])
+def crear_item_personalizado_establecimiento(establecimiento_id):
+    """
+    Crear un nuevo item personalizado para un establecimiento
+    PERMISOS: Administrador e Inspector
+    """
+    try:
+        data = request.get_json()
+        categoria_id = data.get("categoria_id")
+        descripcion = data.get("descripcion")
+        riesgo = data.get("riesgo")
+        puntaje_minimo = data.get("puntaje_minimo", 0)
+        puntaje_maximo = data.get("puntaje_maximo", 5)
+        factor_ajuste = data.get("factor_ajuste", 1.00)
+
+        if not all([categoria_id, descripcion, riesgo]):
+            return jsonify({"error": "Faltan datos requeridos"}), 400
+
+        return InspeccionesController.crear_item_personalizado_para_establecimiento(
+            establecimiento_id, categoria_id, descripcion, riesgo, puntaje_minimo, puntaje_maximo, factor_ajuste
+        )
+
+    except Exception as e:
+        return jsonify({"error": f"Error al crear item personalizado: {str(e)}"}), 500
+
+
+@inspeccion_bp.route("/api/establecimientos/<int:establecimiento_id>/completar", methods=["POST"])
+@login_required
+@role_required(["Administrador", "Inspector"])
+def completar_establecimiento_route(establecimiento_id):
+    """
+    Completar la creación de un establecimiento después de agregar items
+    PERMISOS: Administrador e Inspector
+    """
+    try:
+        return InspeccionesController.completar_establecimiento(establecimiento_id)
+
+    except Exception as e:
+        return jsonify({"error": f"Error al completar establecimiento: {str(e)}"}), 500
+
+
+@inspeccion_bp.route("/establecimientos/crear", methods=["GET"])
+@login_required
+@role_required(["Administrador", "Inspector"])
+def crear_establecimiento_page():
+    """
+    Página para crear un nuevo establecimiento vacío
+    PERMISOS: Administrador e Inspector
+    """
+    try:
+        user_role = session.get("user_role")
+        user_name = session.get("user_name")
+
+        return render_template(
+            "crear_establecimiento_vacio.html",
+            user_role=user_role,
+            user_name=user_name,
+            title="Crear Establecimiento"
+        )
+
+    except Exception as e:
+        flash(f"Error al cargar la página: {str(e)}", "error")
+        return redirect(url_for("inspeccion.index"))
+
+
+@inspeccion_bp.route("/api/establecimientos/<int:establecimiento_id>/items/base-disponibles", methods=["GET"])
+@login_required
+@role_required(["Administrador", "Inspector"])
+def obtener_items_base_disponibles_establecimiento(establecimiento_id):
+    """
+    Obtener items base disponibles para agregar a un establecimiento
+    PERMISOS: Administrador e Inspector
+    """
+    try:
+        categoria_id = request.args.get("categoria_id", type=int)
+        query = request.args.get("query", "")
+
+        return InspeccionesController.obtener_items_base_disponibles(
+            establecimiento_id, categoria_id, query
+        )
+
+    except Exception as e:
+        return jsonify({"error": f"Error al obtener items base disponibles: {str(e)}"}), 500

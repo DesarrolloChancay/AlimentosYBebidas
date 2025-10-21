@@ -50,20 +50,38 @@ def handle_item_rating_tiempo_real(data):
     items = data.get('items', {})
     observaciones = data.get('observaciones', '')
     timestamp = data.get('timestamp')
+    confirmada_por_encargado = data.get('confirmada_por_encargado')
+    confirmador_nombre = data.get('confirmador_nombre')
+    confirmador_rol = data.get('confirmador_rol')
 
     
     if establecimiento_id:
         room = f"establecimiento_{establecimiento_id}"
             
-        # Actualizar datos en tiempo real para el endpoint del encargado
         clave_tiempo_real = f"establecimiento_{establecimiento_id}"
+        estado_prev = datos_tiempo_real.get(clave_tiempo_real, {})
+
+        if confirmada_por_encargado is None:
+            confirmada_por_encargado = estado_prev.get('confirmada_por_encargado', False)
+        if confirmada_por_encargado:
+            if confirmador_nombre is None:
+                confirmador_nombre = estado_prev.get('confirmador_nombre')
+            if confirmador_rol is None:
+                confirmador_rol = estado_prev.get('confirmador_rol')
+        else:
+            confirmador_nombre = None
+            confirmador_rol = None
+
         datos_tiempo_real[clave_tiempo_real] = {
             'establecimiento_id': establecimiento_id,
             'actualizado_por': actualizado_por,
             'resumen': resumen,
             'timestamp': timestamp,
             'items': items,
-            'observaciones': observaciones
+            'observaciones': observaciones,
+            'confirmada_por_encargado': bool(confirmada_por_encargado),
+            'confirmador_nombre': confirmador_nombre,
+            'confirmador_rol': confirmador_rol
         }
         
         # Emitir datos completos de tiempo real incluyendo resumen actualizado
@@ -73,7 +91,10 @@ def handle_item_rating_tiempo_real(data):
             'resumen': resumen,
             'timestamp': timestamp,
             'items': items,
-            'observaciones': observaciones
+            'observaciones': observaciones,
+            'confirmada_por_encargado': bool(confirmada_por_encargado),
+            'confirmador_nombre': confirmador_nombre,
+            'confirmador_rol': confirmador_rol
         }
         
         

@@ -91,39 +91,13 @@ function abrirVistaPrevia(src) {
     // Footer
     const footer = document.createElement("div");
     footer.className = "px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3";
-    
-    // Botón abrir en nueva pestaña
-    const openButton = document.createElement("button");
-    openButton.className = "px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors flex items-center space-x-2";
-    openButton.onclick = function() { 
-        const fullUrl = new URL(imageSrc, window.location.origin);
-        
-        // Validar URL antes de abrir
-        try {
-            if (fullUrl.origin === window.location.origin) {
-                window.open(fullUrl.href, '_blank', 'noopener,noreferrer');
-            } else {
-            }
-        } catch (e) {
-        }
-    };
-    
-    // Crear icono de forma segura
-    const openIcon = createSvgIcon("M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14", "w-4 h-4");
-    
-    const openText = document.createElement("span");
-    openText.textContent = "Abrir en nueva pestaña";
-    
-    openButton.appendChild(openIcon);
-    openButton.appendChild(openText);
-    
+
     // Botón cerrar
     const closeButton = document.createElement("button");
     closeButton.className = "px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-800 transition-colors";
     closeButton.onclick = cerrarModal;
     closeButton.textContent = "Cerrar";
-    
-    footer.appendChild(openButton);
+
     footer.appendChild(closeButton);
 
     // Ensamblar modal

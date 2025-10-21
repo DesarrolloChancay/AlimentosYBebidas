@@ -613,6 +613,25 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// Función para formatear fecha en formato peruano con hora AM/PM
+function formatFechaPeru(fechaStr) {
+    if (!fechaStr) return 'Fecha no disponible';
+    
+    try {
+        const fecha = new Date(fechaStr);
+        return new Intl.DateTimeFormat('es-PE', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        }).format(fecha);
+    } catch (error) {
+        return fechaStr; // Retornar la cadena original si hay error
+    }
+}
+
 // Función para crear cards de inspección dinámicamente
 function crearCardInspeccion(inspeccion) {
     const card = document.createElement('div');
@@ -643,7 +662,7 @@ function crearCardInspeccion(inspeccion) {
                         ${inspeccion.encargado || 'Sin asignar'}
                     </div>
                     <div class="text-xs text-gray-500 dark:text-gray-400">
-                        ${inspeccion.fecha || 'Fecha no disponible'}
+                        ${formatFechaPeru(inspeccion.fecha)}
                     </div>
                 </div>
             </div>
@@ -703,7 +722,6 @@ function mostrarLoading(mostrar) {
     }
 }
 
-<script>
 // Inicialización específica para buscar_inspecciones.html
 document.addEventListener('DOMContentLoaded', function() {
 
@@ -791,11 +809,10 @@ async function cargarEstablecimientosBasicos() {
                     option.textContent = est.nombre || 'Establecimiento sin nombre';
                     select.appendChild(option);
                 });
-                `);
             }
         }
     } catch (error) {
-        :', error);
+        console.error('Error al cargar establecimientos:', error);
     }
 }
 

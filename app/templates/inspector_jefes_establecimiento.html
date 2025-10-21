@@ -162,9 +162,10 @@
                                             class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button onclick="desactivarJefe({{ jefe.id }})"
-                                            class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors">
-                                        <i class="fas fa-user-times"></i>
+                                    <button onclick="desactivarJefe({{ jefe.id }}, {{ jefe.activo|lower }})"
+                                            class="{% if jefe.activo %}text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300{% else %}text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300{% endif %} transition-colors"
+                                            title="{% if jefe.activo %}Desactivar jefe{% else %}Activar jefe{% endif %}">
+                                        <i class="fas {% if jefe.activo %}fa-user-times{% else %}fa-user-check{% endif %}"></i>
                                     </button>
                                 </div>
                             </td>
@@ -406,7 +407,7 @@ function mostrarAlerta(tipo, mensaje) {
     const alertClass = tipo === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800';
 
     const alert = document.createElement('div');
-    alert.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border ${alertClass} max-w-md`;
+    alert.className = `fixed top-4 right-4 z-[11000] p-4 rounded-lg shadow-lg border ${alertClass} max-w-md`;
     alert.innerHTML = `
         <div class="flex items-start">
             <div class="flex-shrink-0">
@@ -445,11 +446,40 @@ function editarJefe(jefeId) {
     console.log('Editar jefe:', jefeId);
 }
 
-// Función para desactivar jefe
-function desactivarJefe(jefeId) {
-    if (confirm('¿Está seguro de que desea desactivar este jefe de establecimiento?')) {
-        // Implementar desactivación
-        console.log('Desactivar jefe:', jefeId);
+// Función para activar/desactivar jefe
+function desactivarJefe(jefeId, estaActivo) {
+    const accion = estaActivo ? 'desactivar' : 'activar';
+    const mensaje = `¿Está seguro de que desea ${accion} este jefe de establecimiento?`;
+    
+    if (confirm(mensaje)) {
+        // Mostrar indicador de carga
+        mostrarAlerta('info', `${accion.charAt(0).toUpperCase() + accion.slice(1)} jefe de establecimiento...`);
+
+        // Hacer la llamada al backend
+        fetch(`/inspector/api/jefes-establecimiento/${jefeId}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Respuesta del servidor:', data);
+            
+            if (data.success) {
+                mostrarAlerta('success', data.message);
+                // Recargar la página para mostrar los cambios
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                mostrarAlerta('error', data.message || `Error al ${accion} el jefe de establecimiento`);
+            }
+        })
+        .catch(error => {
+            console.error(`Error al ${accion} jefe:`, error);
+            mostrarAlerta('error', `Error al ${accion} el jefe de establecimiento`);
+        });
     }
 }
 

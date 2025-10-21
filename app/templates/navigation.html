@@ -1,162 +1,167 @@
 <!-- ===== NAVEGACIÓN PRINCIPAL 100% MOBILE-FIRST ===== -->
 {% if session.user_id and session.get('cambiar_contrasena_obligatorio') != True %}
 <nav class="bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 shadow-xl border-b border-blue-500/20 dark:border-slate-700/30 backdrop-blur-xl sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
-        <div class="flex justify-between items-center h-16 sm:h-18 lg:h-20">
+    <div class="max-w-full mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 2xl:px-8">
+        <div class="flex justify-between items-center h-16 sm:h-18 lg:h-20 2xl:h-18">
 
             <!-- ===== LOGO Y BRANDING ===== -->
-            <div class="flex items-center gap-2 sm:gap-3 lg:gap-4">
+            <div class="flex items-center gap-2 sm:gap-2.5 lg:gap-3 2xl:gap-3">
                 <a href="{{ url_for('inspeccion.index') }}">
                     <div class="flex items-center gap-2 cursor-pointer group">
-                        <img class="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 rounded-lg sm:rounded-xl shadow-md sm:shadow-lg ring-1 sm:ring-2 ring-white/20 sm:ring-white/30 group-hover:ring-blue-400/60 transition-all duration-300"
+                        <img class="h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 2xl:h-11 2xl:w-11 rounded-lg sm:rounded-lg shadow-md sm:shadow-md ring-1 sm:ring-1 ring-white/20 sm:ring-white/30 group-hover:ring-blue-400/60 transition-all duration-300"
                             src="{{ url_for('static', filename='img/cropped-CASTILLO-DE-CHANCAY-32x32.png') }}"
                             alt="Castillo de Chancay">
-                        <div class="ml-1 sm:ml-2">
-                            <span class="text-lg sm:text-xl lg:text-2xl font-extrabold text-white tracking-tight group-hover:text-blue-200 transition-colors duration-300">Inspecciones</span>
-                            <p class="text-xs text-blue-200 dark:text-slate-400 font-medium hidden sm:block">Castillo de Chancay</p>
+                        <div class="ml-1 sm:ml-1.5">
+                            <span class="text-lg sm:text-lg lg:text-xl 2xl:text-xl font-extrabold text-white tracking-tight group-hover:text-blue-200 transition-colors duration-300">Inspecciones</span>
+                            <p class="text-xs sm:text-xs lg:text-xs 2xl:text-xs text-blue-200 dark:text-slate-400 font-medium hidden sm:block">Castillo de Chancay</p>
                         </div>
                     </div>
                 </a>
             </div>
 
             <!-- ===== NAVEGACIÓN DESKTOP ===== -->
-            <div class="hidden lg:flex lg:items-center gap-1 xl:gap-2">
+            <div class="hidden md:flex md:items-center gap-1 md:gap-1 lg:gap-1.5 xl:gap-1.5 2xl:gap-2">
                 <!-- Dashboard -->
                 <a href="{{ url_for('inspeccion.dashboard_page') }}"
-                   class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base {% if request.endpoint == 'inspeccion.dashboard_page' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
-                    <span class="ph ph-chart-bar text-lg xl:text-xl"></span>
-                    <span class="hidden xl:inline">Dashboard</span>
+                   class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'inspeccion.dashboard_page' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
+                    <span class="ph ph-chart-bar text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
+                    <span class="hidden md:inline lg:inline xl:inline 2xl:inline">Dashboard</span>
                 </a>
 
                 {% if session.user_role in ['Inspector', 'Administrador'] %}
                 <a href="{{ url_for('inspeccion.index') }}"
-                   class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base {% if request.endpoint == 'inspeccion.index' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
-                    <span class="ph ph-plus-circle text-lg xl:text-xl"></span>
-                    <span class="hidden xl:inline">Nueva</span>
+                   class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'inspeccion.index' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
+                    <span class="ph ph-plus-circle text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
+                    <span class="hidden md:inline lg:inline xl:inline 2xl:inline">Nueva</span>
                 </a>
 
                 <!-- ===== GESTIÓN ===== -->
                 <div class="relative group">
-                    <button class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base group-hover:bg-white/10">
-                        <span class="ph ph-folder text-lg xl:text-xl"></span>
-                        <span class="hidden xl:inline">Gestión</span>
-                        <svg class="w-3 h-3 xl:w-4 xl:h-4 ml-1 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm group-hover:bg-white/10">
+                        <span class="ph ph-folder text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
+                        <span class="hidden md:inline lg:inline xl:inline 2xl:inline">Gestión</span>
+                        <svg class="w-2.5 h-2.5 md:w-2.5 md:h-2.5 lg:w-3 lg:h-3 xl:w-3 xl:h-3 2xl:w-3 2xl:h-3 ml-0.5 md:ml-0.5 lg:ml-0.5 xl:ml-1 2xl:ml-1 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
 
                     <!-- Dropdown Menu Gestión -->
-                    <div class="absolute right-0 mt-2 w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right z-50">
-                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 py-2">
+                    <div class="absolute right-0 mt-1 md:mt-1 lg:mt-1.5 xl:mt-1.5 2xl:mt-2 w-48 md:w-48 lg:w-56 xl:w-60 2xl:w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right z-50">
+                        <div class="bg-white dark:bg-slate-800 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg shadow-lg md:shadow-lg lg:shadow-lg xl:shadow-lg 2xl:shadow-lg ring-1 ring-black/5 dark:ring-white/10 py-1 md:py-1 lg:py-1 xl:py-1 2xl:py-1">
                             <a href="{{ url_for('inspeccion.configuracion_sistema') }}#establecimientos"
-                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium">
-                                <span class="ph ph-buildings text-lg"></span>
+                               class="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-2.5 2xl:gap-3 px-3 md:px-3 lg:px-3 xl:px-3 2xl:px-3 py-2 md:py-2 lg:py-2 xl:py-2 2xl:py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm">
+                                <span class="ph ph-buildings text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
                                 Establecimientos
                             </a>
+                            <a href="{{ url_for('inspeccion.crear_establecimiento_page') }}"
+                               class="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-2.5 2xl:gap-3 px-3 md:px-3 lg:px-3 xl:px-3 2xl:px-3 py-2 md:py-2 lg:py-2 xl:py-2 2xl:py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm">
+                                <span class="ph ph-plus-circle text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
+                                Nuevo Establecimiento
+                            </a>
                             <a href="{{ url_for('plantillas.listar_plantillas') }}"
-                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium">
-                                <span class="ph ph-clipboard text-lg"></span>
+                               class="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-2.5 2xl:gap-3 px-3 md:px-3 lg:px-3 xl:px-3 2xl:px-3 py-2 md:py-2 lg:py-2 xl:py-2 2xl:py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm">
+                                <span class="ph ph-clipboard text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
                                 Plantillas de Checklists
                             </a>
                             {% if session.user_role in ['Inspector', 'Administrador'] %}
                             <a href="{{ url_for('inspector.gestionar_jefes_establecimiento') }}"
-                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'inspector.gestionar_jefes_establecimiento' or request.endpoint == 'inspector.crear_jefe_establecimiento' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
-                                <span class="ph ph-user-tie text-lg"></span>
+                               class="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-2.5 2xl:gap-3 px-3 md:px-3 lg:px-3 xl:px-3 2xl:px-3 py-2 md:py-2 lg:py-2 xl:py-2 2xl:py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'inspector.gestionar_jefes_establecimiento' or request.endpoint == 'inspector.crear_jefe_establecimiento' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-user-tie text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
                                 Jefes de Establecimiento
                             </a>
                             {% endif %}
                         </div>
                     </div>
                 </div>
-                
+
                 <a href="{{ url_for('inspector.perfil') }}"
-                   class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base {% if request.endpoint == 'inspector.perfil' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
-                    <span class="ph ph-signature text-lg xl:text-xl"></span>
-                    <span class="hidden xl:inline">Mi Firma</span>
+                   class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'inspector.perfil' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
+                    <span class="ph ph-signature text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
+                    <span class="hidden md:inline lg:inline xl:inline 2xl:inline">Mi Firma</span>
                 </a>
                 {% endif %}
 
                 <a href="{{ url_for('inspeccion.buscar_inspecciones') }}"
-                   class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base {% if request.endpoint == 'inspeccion.buscar_inspecciones' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
-                    <span class="ph ph-clipboard-text text-lg xl:text-xl"></span>
-                    <span class="hidden xl:inline">Historial</span>
+                   class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'inspeccion.buscar_inspecciones' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
+                    <span class="ph ph-clipboard-text text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
+                    <span class="hidden md:inline lg:inline xl:inline 2xl:inline">Historial</span>
                 </a>
 
                 {% if session.user_role == 'Jefe de Establecimiento' %}
                 <a href="{{ url_for('jefe.dashboard') }}"
-                   class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base {% if request.endpoint == 'jefe.dashboard' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
-                    <span class="ph ph-crown text-lg xl:text-xl"></span>
-                    <span class="hidden xl:inline">Panel Jefe</span>
+                   class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'jefe.dashboard' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
+                    <span class="ph ph-crown text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
+                    <span class="hidden md:inline lg:inline xl:inline 2xl:inline">Panel Jefe</span>
                 </a>
                 <a href="{{ url_for('jefe.gestionar_encargados') }}"
-                   class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base {% if request.endpoint == 'jefe.gestionar_encargados' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
-                    <span class="ph ph-users text-lg xl:text-xl"></span>
-                    <span class="hidden xl:inline">Encargados</span>
+                   class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'jefe.gestionar_encargados' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
+                    <span class="ph ph-users text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
+                    <span class="hidden md:inline lg:inline xl:inline 2xl:inline">Encargados</span>
                 </a>
                 {% endif %}
 
                 {% if session.user_role in ['Administrador', 'Inspector'] %}
                 <a href="{{ url_for('inspeccion.configuracion_sistema') }}"
-                   class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base {% if request.endpoint == 'inspeccion.configuracion_sistema' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
-                    <span class="ph ph-gear text-lg xl:text-xl"></span>
-                    <span class="hidden xl:inline">Config</span>
+                   class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'inspeccion.configuracion_sistema' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
+                    <span class="ph ph-gear text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
+                    <span class="hidden md:inline lg:inline xl:inline 2xl:inline">Config</span>
                 </a>
                 {% endif %}
 
                 {% if session.user_role == 'Administrador' %}
                 <!-- ===== PANEL DE ADMINISTRACIÓN ===== -->
                 <div class="relative group">
-                    <button class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base group-hover:bg-white/10">
-                        <span class="ph ph-crown text-lg xl:text-xl"></span>
-                        <span class="hidden xl:inline">Admin</span>
-                        <svg class="w-3 h-3 xl:w-4 xl:h-4 ml-1 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm group-hover:bg-white/10">
+                        <span class="ph ph-crown text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
+                        <span class="hidden md:inline lg:inline xl:inline 2xl:inline">Admin</span>
+                        <svg class="w-2.5 h-2.5 md:w-2.5 md:h-2.5 lg:w-3 lg:h-3 xl:w-3 xl:h-3 2xl:w-3 2xl:h-3 ml-0.5 md:ml-0.5 lg:ml-0.5 xl:ml-1 2xl:ml-1 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
 
                     <!-- Dropdown Menu Admin -->
-                    <div class="absolute right-0 mt-2 w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right z-50">
-                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 py-2">
+                    <div class="absolute right-0 mt-1 md:mt-1 lg:mt-1.5 xl:mt-1.5 2xl:mt-2 w-52 md:w-52 lg:w-60 xl:w-64 2xl:w-72 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right z-50">
+                        <div class="bg-white dark:bg-slate-800 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg shadow-lg md:shadow-lg lg:shadow-lg xl:shadow-lg 2xl:shadow-lg ring-1 ring-black/5 dark:ring-white/10 py-1 md:py-1 lg:py-1 xl:py-1 2xl:py-1">
                             <a href="{{ url_for('admin.dashboard') }}"
-                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'admin.dashboard' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
-                                <span class="ph ph-chart-pie text-lg"></span>
+                               class="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-2.5 2xl:gap-3 px-3 md:px-3 lg:px-3 xl:px-3 2xl:px-3 py-2 md:py-2 lg:py-2 xl:py-2 2xl:py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'admin.dashboard' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-chart-pie text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
                                 Dashboard Admin
                             </a>
-                            <div class="border-t border-gray-100 dark:border-slate-700 my-2"></div>
+                            <div class="border-t border-gray-100 dark:border-slate-700 my-0.5 md:my-0.5 lg:my-1 xl:my-1 2xl:my-1"></div>
                             <a href="{{ url_for('admin.gestionar_usuarios') }}"
-                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'admin.gestionar_usuarios' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
-                                <span class="ph ph-users text-lg"></span>
+                               class="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-2.5 2xl:gap-3 px-3 md:px-3 lg:px-3 xl:px-3 2xl:px-3 py-2 md:py-2 lg:py-2 xl:py-2 2xl:py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'admin.gestionar_usuarios' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-users text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
                                 Gestión de Usuarios
                             </a>
                             <a href="{{ url_for('admin.gestionar_roles') }}"
-                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'admin.gestionar_roles' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
-                                <span class="ph ph-shield-check text-lg"></span>
+                               class="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-2.5 2xl:gap-3 px-3 md:px-3 lg:px-3 xl:px-3 2xl:px-3 py-2 md:py-2 lg:py-2 xl:py-2 2xl:py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'admin.gestionar_roles' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-shield-check text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
                                 Roles y Permisos
                             </a>
                             <a href="{{ url_for('admin.gestionar_establecimientos') }}"
-                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'admin.gestionar_establecimientos' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
-                                <span class="ph ph-buildings text-lg"></span>
+                               class="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-2.5 2xl:gap-3 px-3 md:px-3 lg:px-3 xl:px-3 2xl:px-3 py-2 md:py-2 lg:py-2 xl:py-2 2xl:py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'admin.gestionar_establecimientos' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-buildings text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
                                 Establecimientos
                             </a>
                             <a href="{{ url_for('admin.gestionar_jefes_establecimiento') }}"
-                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'admin.gestionar_jefes_establecimiento' or request.endpoint == 'admin.crear_jefe_establecimiento' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
-                                <span class="ph ph-user-tie text-lg"></span>
+                               class="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-2.5 2xl:gap-3 px-3 md:px-3 lg:px-3 xl:px-3 2xl:px-3 py-2 md:py-2 lg:py-2 xl:py-2 2xl:py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'admin.gestionar_jefes_establecimiento' or request.endpoint == 'admin.crear_jefe_establecimiento' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-user-tie text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
                                 Jefes de Establecimiento
                             </a>
                             <a href="{{ url_for('admin.gestionar_inspectores') }}"
-                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'admin.gestionar_inspectores' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
-                                <span class="ph ph-user-gear text-lg"></span>
+                               class="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-2.5 2xl:gap-3 px-3 md:px-3 lg:px-3 xl:px-3 2xl:px-3 py-2 md:py-2 lg:py-2 xl:py-2 2xl:py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'admin.gestionar_inspectores' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-user-gear text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
                                 Inspectores
                             </a>
-                            <div class="border-t border-gray-100 dark:border-slate-700 my-2"></div>
+                            <div class="border-t border-gray-100 dark:border-slate-700 my-0.5 md:my-0.5 lg:my-1 xl:my-1 2xl:my-1"></div>
                             <a href="{{ url_for('admin.configuraciones') }}"
-                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'admin.configuraciones' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
-                                <span class="ph ph-gear-six text-lg"></span>
+                               class="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-2.5 2xl:gap-3 px-3 md:px-3 lg:px-3 xl:px-3 2xl:px-3 py-2 md:py-2 lg:py-2 xl:py-2 2xl:py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'admin.configuraciones' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-gear-six text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
                                 Configuraciones
                             </a>
                             <a href="{{ url_for('admin.auditoria') }}"
-                               class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium {% if request.endpoint == 'admin.auditoria' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
-                                <span class="ph ph-file-search text-lg"></span>
+                               class="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-2.5 2xl:gap-3 px-3 md:px-3 lg:px-3 xl:px-3 2xl:px-3 py-2 md:py-2 lg:py-2 xl:py-2 2xl:py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'admin.auditoria' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-file-search text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
                                 Auditoría
                             </a>
                         </div>
@@ -165,35 +170,35 @@
 
                 <!-- ===== REPORTES ===== -->
                 <div class="relative group">
-                    <button class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-lg xl:rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-sm xl:text-base group-hover:bg-white/10">
-                        <svg class="w-4 h-4 xl:w-5 xl:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm group-hover:bg-white/10">
+                        <svg class="w-3 h-3 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 xl:w-4 xl:h-4 2xl:w-4 2xl:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
-                        <span class="hidden xl:inline">Reportes</span>
-                        <svg class="w-3 h-3 xl:w-4 xl:h-4 ml-1 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <span class="hidden md:inline lg:inline xl:inline 2xl:inline">Reportes</span>
+                        <svg class="w-2.5 h-2.5 md:w-2.5 md:h-2.5 lg:w-3 lg:h-3 xl:w-3 xl:h-3 2xl:w-3 2xl:h-3 ml-0.5 md:ml-0.5 lg:ml-0.5 xl:ml-1 2xl:ml-1 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
 
                     <!-- Dropdown Menu -->
-                    <div class="absolute right-0 mt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right">
-                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 py-2">
-                            <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="absolute right-0 mt-1 md:mt-1 lg:mt-1.5 xl:mt-1.5 2xl:mt-2 w-44 md:w-48 lg:w-52 xl:w-56 2xl:w-60 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right">
+                        <div class="bg-white dark:bg-slate-800 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg shadow-lg md:shadow-lg lg:shadow-lg xl:shadow-lg 2xl:shadow-lg ring-1 ring-black/5 dark:ring-white/10 py-1 md:py-1 lg:py-1 xl:py-1 2xl:py-1">
+                            <a href="#" class="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-2.5 2xl:gap-3 px-3 md:px-3 lg:px-3 xl:px-3 2xl:px-3 py-2 md:py-2 lg:py-2 xl:py-2 2xl:py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm">
+                                <svg class="w-3 h-3 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 xl:w-4 xl:h-4 2xl:w-4 2xl:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                                 </svg>
                                 Reporte Semanal
                             </a>
-                            <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <a href="#" class="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-2.5 2xl:gap-3 px-3 md:px-3 lg:px-3 xl:px-3 2xl:px-3 py-2 md:py-2 lg:py-2 xl:py-2 2xl:py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm">
+                                <svg class="w-3 h-3 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 xl:w-4 xl:h-4 2xl:w-4 2xl:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                                 </svg>
                                 Dashboard Analítico
                             </a>
-                            <div class="border-t border-gray-100 dark:border-slate-700 my-2"></div>
-                            <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="border-t border-gray-100 dark:border-slate-700 my-0.5 md:my-0.5 lg:my-1 xl:my-1 2xl:my-1"></div>
+                            <a href="#" class="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-2.5 2xl:gap-3 px-3 md:px-3 lg:px-3 xl:px-3 2xl:px-3 py-2 md:py-2 lg:py-2 xl:py-2 2xl:py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm">
+                                <svg class="w-3 h-3 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 xl:w-4 xl:h-4 2xl:w-4 2xl:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                 </svg>
                                 Exportar Datos
@@ -205,26 +210,29 @@
             </div>
 
             <!-- ===== INFO USUARIO Y CONTROLES ===== -->
-            <div class="flex items-center space-x-2 sm:space-x-3">
+            <div class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2">
                 <!-- Info de Usuario -->
-                <div class="hidden xl:flex items-center space-x-3 bg-white/10 dark:bg-slate-800/50 backdrop-blur-sm rounded-xl px-4 py-2">
+                <div class="hidden xl:flex items-center gap-1 md:gap-1.5 lg:gap-1.5 2xl:gap-2 bg-white/10 dark:bg-slate-800/50 backdrop-blur-sm rounded-md md:rounded-lg lg:rounded-lg 2xl:rounded-lg px-2 md:px-2.5 lg:px-3 2xl:px-3 py-1 md:py-1 lg:py-1.5 2xl:py-1.5">
                     <div class="flex-shrink-0">
-                        <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
-                            <span class="text-white text-sm font-bold">
+                        <div class="w-8 md:w-8 lg:w-9 2xl:w-10 h-8 md:h-8 lg:h-9 2xl:h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                            <span class="text-white text-xs md:text-xs lg:text-sm 2xl:text-sm font-bold">
                                 {{ session.user_name[0].upper() if session.user_name else 'U' }}
                             </span>
                         </div>
                     </div>
                     <div class="text-right">
-                        <p class="text-sm font-medium text-white">{{ session.user_name or 'Usuario' }}</p>
-                        <p class="text-xs text-blue-200 dark:text-slate-400">{{ session.user_role or 'Rol' }}</p>
+                        <p class="text-xs md:text-xs lg:text-sm 2xl:text-sm font-medium text-white">{{ session.user_name or 'Usuario' }}</p>
+                        <p class="text-xs md:text-xs lg:text-xs 2xl:text-xs text-blue-200 dark:text-slate-400">{{ session.user_role or 'Rol' }}</p>
+                        {% if session.user_establecimiento %}
+                        <p class="text-xs md:text-xs lg:text-xs 2xl:text-xs text-blue-200 dark:text-slate-400">{{ session.user_establecimiento }}</p>
+                        {% endif %}
                     </div>
                 </div>
 
                 <!-- Botón de Logout -->
                 <button onclick="cerrarSesion()"
-                        class="flex items-center space-x-2 bg-red-500/20 hover:bg-red-500/30 text-red-100 hover:text-white px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl transition-all duration-300 border border-red-400/30 hover:border-red-400/50 min-h-[44px]">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        class="flex items-center gap-1 md:gap-1 lg:gap-1 2xl:gap-1 bg-red-500/20 hover:bg-red-500/30 text-red-100 hover:text-white px-1.5 md:px-2 lg:px-2.5 2xl:px-2.5 py-1 md:py-1 lg:py-1.5 2xl:py-1.5 rounded-md md:rounded-md lg:rounded-lg 2xl:rounded-lg transition-all duration-300 border border-red-400/30 hover:border-red-400/50 min-h-[40px] text-xs md:text-xs lg:text-xs 2xl:text-xs">
+                    <svg class="w-3 h-3 md:w-3.5 md:h-3.5 lg:w-3.5 lg:h-3.5 2xl:w-4 2xl:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                     </svg>
                     <span class="hidden xl:inline">Salir</span>
@@ -232,9 +240,9 @@
 
                 <!-- Botón Menu Mobile -->
                 <button type="button"
-                        class="lg:hidden bg-white/10 hover:bg-white/20 rounded-lg p-2 transition-colors duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                        class="lg:hidden bg-white/10 hover:bg-white/20 rounded-md p-1.5 md:p-1.5 lg:p-2 2xl:p-2 transition-colors duration-200 min-h-[40px] min-w-[40px] flex items-center justify-center"
                         id="mobile-menu-button">
-                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
@@ -255,6 +263,9 @@
                     <div>
                         <p class="font-medium text-white">{{ session.user_name or 'Usuario' }}</p>
                         <p class="text-sm text-blue-200 dark:text-slate-400">{{ session.user_role or 'Rol' }}</p>
+                        {% if session.user_establecimiento %}
+                        <p class="text-sm text-blue-200 dark:text-slate-400">{{ session.user_establecimiento }}</p>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -301,6 +312,13 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                         </svg>
                         Establecimientos
+                    </a>
+                    <a href="{{ url_for('inspeccion.crear_establecimiento_page') }}"
+                       class="flex items-center space-x-3 px-4 py-3 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px]">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                        </svg>
+                        Nuevo Establecimiento
                     </a>
                     <a href="{{ url_for('plantillas.listar_plantillas') }}"
                        class="flex items-center space-x-3 px-4 py-3 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint and request.endpoint.startswith('plantillas.') %}bg-white/20 text-white{% endif %}">

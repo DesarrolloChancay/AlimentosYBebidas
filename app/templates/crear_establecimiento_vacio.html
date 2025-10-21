@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-slate-900">
+    <!-- ===== HEADER ===== -->
+    <div class="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center space-x-4">
+                    <button onclick="window.history.back()"
+                            class="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                        Volver
+                    </button>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Crear Establecimiento</h1>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Crea un establecimiento vacío y luego agrega los items de evaluación</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CONTENIDO PRINCIPAL ===== -->
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
+            <!-- ===== FORMULARIO DE CREACIÓN ===== -->
+            <div class="p-6">
+                <div class="mb-6">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Información del Establecimiento</h2>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        Completa los datos básicos del establecimiento. Después podrás agregar los items de evaluación.
+                    </p>
+                </div>
+
+                <form id="form-crear-establecimiento" class="space-y-6">
+                    <!-- Nombre del Establecimiento -->
+                    <div>
+                        <label for="nombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Nombre del Establecimiento <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text"
+                               id="nombre"
+                               name="nombre"
+                               required
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                               placeholder="Ej: Restaurante El Buen Sabor">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Nombre único que identificará al establecimiento
+                        </p>
+                    </div>
+
+                    <!-- Tipo de Establecimiento -->
+                    <div>
+                        <label for="tipo_establecimiento_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Tipo de Establecimiento <span class="text-red-500">*</span>
+                        </label>
+                        <select id="tipo_establecimiento_id"
+                                name="tipo_establecimiento_id"
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white">
+                            <option value="">Seleccionar tipo...</option>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Categoría del establecimiento según su actividad
+                        </p>
+                    </div>
+
+                    <!-- Dirección -->
+                    <div>
+                        <label for="direccion" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Dirección
+                        </label>
+                        <input type="text"
+                               id="direccion"
+                               name="direccion"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                               placeholder="Ej: Av. Principal 123, Ciudad">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Dirección completa del establecimiento (opcional)
+                        </p>
+                    </div>
+
+                    <!-- Teléfono -->
+                    <div>
+                        <label for="telefono" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Teléfono
+                        </label>
+                        <input type="tel"
+                               id="telefono"
+                               name="telefono"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                               placeholder="Ej: +51 999 999 999">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Número de contacto del establecimiento (opcional)
+                        </p>
+                    </div>
+
+                    <!-- Correo -->
+                    <div>
+                        <label for="correo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Correo Electrónico
+                        </label>
+                        <input type="email"
+                               id="correo"
+                               name="correo"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                               placeholder="Ej: contacto@establecimiento.com">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Correo electrónico de contacto (opcional)
+                        </p>
+                    </div>
+
+                    <!-- Información del Proceso -->
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                    ¿Qué sucede después?
+                                </h3>
+                                <div class="mt-2 text-sm text-blue-700 dark:text-blue-300">
+                                    <p>Una vez creado el establecimiento, serás redirigido automáticamente a la página de gestión de items donde podrás:</p>
+                                    <ul class="mt-2 list-disc list-inside space-y-1">
+                                        <li>Agregar items individuales desde la base de datos</li>
+                                        <li>Crear items personalizados específicos</li>
+                                        <li>Agregar items completos desde plantillas existentes</li>
+                                    </ul>
+                                    <p class="mt-2 font-medium">El establecimiento no podrá ser usado para inspecciones hasta que tenga al menos un item de evaluación.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ===== BOTONES DE ACCIÓN ===== -->
+            <div class="px-6 py-4 bg-gray-50 dark:bg-slate-700 border-t border-gray-200 dark:border-slate-600 rounded-b-lg">
+                <div class="flex justify-end space-x-3">
+                    <button type="button"
+                            onclick="window.history.back()"
+                            class="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            form="form-crear-establecimiento"
+                            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            id="btn-crear">
+                        <span class="inline-flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                            </svg>
+                            Crear Establecimiento
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ===== FUNCIONES DE CARGA =====
+document.addEventListener('DOMContentLoaded', function() {
+    cargarTiposEstablecimiento();
+});
+
+// ===== CARGAR TIPOS DE ESTABLECIMIENTO =====
+async function cargarTiposEstablecimiento() {
+    try {
+        const response = await fetch('/api/tipos-establecimiento');
+        const data = await response.json();
+
+        if (data && Array.isArray(data)) {
+            const select = document.getElementById('tipo_establecimiento_id');
+            data.forEach(tipo => {
+                const option = document.createElement('option');
+                option.value = tipo.id;
+                option.textContent = tipo.nombre;
+                select.appendChild(option);
+            });
+        } else {
+            mostrarError('Error al cargar tipos de establecimiento');
+        }
+    } catch (error) {
+        console.error('Error al cargar tipos de establecimiento:', error);
+        mostrarError('Error de conexión al cargar tipos de establecimiento');
+    }
+}
+
+// ===== MANEJADOR DEL FORMULARIO =====
+document.getElementById('form-crear-establecimiento').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const btnCrear = document.getElementById('btn-crear');
+    const originalText = btnCrear.innerHTML;
+
+    // Deshabilitar botón y mostrar loading
+    btnCrear.disabled = true;
+    btnCrear.innerHTML = `
+        <span class="inline-flex items-center">
+            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Creando...
+        </span>
+    `;
+
+    try {
+        // Recopilar datos del formulario
+        const formData = {
+            nombre: document.getElementById('nombre').value.trim(),
+            tipo_establecimiento_id: parseInt(document.getElementById('tipo_establecimiento_id').value),
+            direccion: document.getElementById('direccion').value.trim(),
+            telefono: document.getElementById('telefono').value.trim(),
+            correo: document.getElementById('correo').value.trim()
+        };
+
+        // Validaciones básicas
+        if (!formData.nombre) {
+            mostrarError('El nombre del establecimiento es obligatorio');
+            return;
+        }
+
+        if (!formData.tipo_establecimiento_id) {
+            mostrarError('Debe seleccionar un tipo de establecimiento');
+            return;
+        }
+
+        // Enviar datos al servidor
+        const response = await fetch('/api/inspector/establecimientos', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (data.establecimiento_id) {
+            mostrarExito('Establecimiento creado exitosamente. Redirigiendo a gestión de items...');
+
+            // Redirigir a la página de gestión de items después de un breve delay
+            setTimeout(() => {
+                window.location.href = `/establecimientos/${data.establecimiento_id}/items/gestionar`;
+            }, 1500);
+        } else {
+            mostrarError(data.error || 'Error al crear el establecimiento');
+        }
+
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarError('Error de conexión. Por favor, inténtelo de nuevo.');
+    } finally {
+        // Restaurar botón
+        btnCrear.disabled = false;
+        btnCrear.innerHTML = originalText;
+    }
+});
+
+// ===== FUNCIONES DE UTILIDAD =====
+function mostrarExito(mensaje) {
+    // Crear notificación de éxito
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-md shadow-lg z-50';
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            ${mensaje}
+        </div>
+    `;
+
+    document.body.appendChild(notification);
+
+    // Auto-remover después de 3 segundos
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+function mostrarError(mensaje) {
+    // Crear notificación de error
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-md shadow-lg z-50';
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+            ${mensaje}
+        </div>
+    `;
+
+    document.body.appendChild(notification);
+
+    // Auto-remover después de 5 segundos
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}

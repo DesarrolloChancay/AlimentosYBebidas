@@ -797,7 +797,7 @@ function mostrarNotificacion(tipo, mensaje) {
     const alertClass = tipo === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800';
 
     const alert = document.createElement('div');
-    alert.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border ${alertClass} max-w-md`;
+    alert.className = `fixed top-4 right-4 z-[11000] p-4 rounded-lg shadow-lg border ${alertClass} max-w-md`;
     alert.innerHTML = `
         <div class="flex items-start">
             <div class="flex-shrink-0">

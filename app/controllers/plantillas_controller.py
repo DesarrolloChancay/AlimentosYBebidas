@@ -1546,25 +1546,26 @@ class PlantillasController:
         """
         Buscar items base disponibles para agregar a plantillas
 
-        Body Parameters (JSON):
+        Query Parameters:
             - query: Texto de búsqueda
-            - exclude: Lista de IDs de items a excluir
+            - exclude: Lista de IDs de items a excluir (separados por coma)
 
         Returns:
             JSON con lista de items base
         """
         try:
-            data = request.get_json()
-            if not data:
-                return jsonify({
-                    'success': False,
-                    'message': 'Datos JSON requeridos'
-                }), 400
+            query_param = request.args.get('query', '').strip()
+            exclude_param = request.args.get('exclude', '')
 
-            query = data.get('query', '').strip()
-            exclude_ids = data.get('exclude', [])
+            # Parsear exclude IDs desde string separado por comas
+            exclude_ids = []
+            if exclude_param:
+                try:
+                    exclude_ids = [int(id.strip()) for id in exclude_param.split(',') if id.strip()]
+                except ValueError:
+                    pass  # Si hay error en el parsing, usar lista vacía
 
-            if not query or len(query) < 2:
+            if not query_param or len(query_param) < 2:
                 return jsonify({
                     'success': False,
                     'message': 'La búsqueda debe tener al menos 2 caracteres'
@@ -1575,9 +1576,9 @@ class PlantillasController:
                 ItemEvaluacionBase.activo == True
             ).filter(
                 db.or_(
-                    ItemEvaluacionBase.descripcion.ilike(f'%{query}%'),
-                    ItemEvaluacionBase.codigo.ilike(f'%{query}%'),
-                    CategoriaEvaluacion.nombre.ilike(f'%{query}%')
+                    ItemEvaluacionBase.descripcion.ilike(f'%{query_param}%'),
+                    ItemEvaluacionBase.codigo.ilike(f'%{query_param}%'),
+                    CategoriaEvaluacion.nombre.ilike(f'%{query_param}%')
                 )
             )
 

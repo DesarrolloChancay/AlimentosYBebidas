@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, send_file
+from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, send_file, abort
 from functools import wraps
 from app.models.Usuario_models import Usuario, Rol
 from app.models.Inspecciones_models import Establecimiento, JefeEstablecimiento, EncargadoEstablecimiento, Inspeccion, FirmaEncargadoPorJefe
@@ -24,7 +24,20 @@ def jefe_required(f):
 
         user = Usuario.query.get(session['user_id'])
         if not user or user.rol_id != 4:  # 4 = Jefe de Establecimiento
-            return jsonify({'error': 'Acceso denegado. Requiere rol de Jefe de Establecimiento'}), 403
+            # Detectar peticiones AJAX de múltiples formas
+            is_ajax = (
+                request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
+                request.headers.get('Content-Type') == 'application/json' or
+                request.is_json or
+                'application/json' in request.headers.get('Accept', '') or
+                request.path.startswith('/jefe/api/')  # Rutas API específicas
+            )
+            
+            if is_ajax:
+                return jsonify({'error': 'Acceso denegado. Requiere rol de Jefe de Establecimiento'}), 403
+            
+            # Para requests normales, usar abort para activar error handler personalizado
+            abort(403)
 
         return f(*args, **kwargs)
     return decorated_function
