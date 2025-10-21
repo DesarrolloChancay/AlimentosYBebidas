@@ -35,9 +35,9 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Configuración de Socket.IO
-    # En producción (Render) usar gevent, en desarrollo usar threading
+    # En producción (Render) usar eventlet, en desarrollo usar threading
     if FLASK_ENV == 'production':
-        SOCKETIO_ASYNC_MODE = 'gevent'
+        SOCKETIO_ASYNC_MODE = 'eventlet'
     else:
         SOCKETIO_ASYNC_MODE = 'threading'
 
