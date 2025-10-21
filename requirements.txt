@@ -13,4 +13,4 @@ gunicorn==21.2.0
 gevent==24.2.1
 gevent-websocket==0.10.1
 pytz==2024.1
-Flask-Login==0.7.0
+Flask-Login==0.6.3
