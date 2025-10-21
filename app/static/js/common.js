@@ -272,13 +272,13 @@ const UI = {
      * Sanitiza texto de forma segura
      */
     sanitizeText(text) {
-        if (typeof sanitizeText === 'function') {
-            return sanitizeText(text);
+        // Validar entrada
+        if (!text || typeof text !== 'string') {
+            return '';
         }
         
-        // Fallback básico
-        if (!text || typeof text !== 'string') return '';
-        return text.replace(/[<>&"']/g, function(char) {
+        // Aplicar sanitización básica
+        const sanitized = text.replace(/[<>&"']/g, function(char) {
             const escapeMap = { 
                 '<': '&lt;', 
                 '>': '&gt;', 
@@ -288,6 +288,9 @@ const UI = {
             };
             return escapeMap[char] || char;
         });
+        
+        // Asegurar que el resultado sea un string
+        return String(sanitized);
     }
 };
 

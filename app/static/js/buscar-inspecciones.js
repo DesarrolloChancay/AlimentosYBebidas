@@ -17,6 +17,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Verificar dependencias
     if (typeof sanitizeText === 'undefined') {
+        console.error('Error: sanitizeText function not found');
+        return;
+    }
+    
+    // Verificar que sanitizeText funcione correctamente
+    const testSanitize = sanitizeText('test');
+    if (typeof testSanitize !== 'string') {
+        console.error('Error: sanitizeText does not return a string');
         return;
     }
     
@@ -233,7 +241,24 @@ function mostrarResultados() {
     if (sinResultados) sinResultados.classList.add('hidden');
     contadorResultados.textContent = `${inspecciones.length} inspección${inspecciones.length !== 1 ? 'es' : ''} encontrada${inspecciones.length !== 1 ? 's' : ''}`;
     
-    const html = inspecciones.map(inspeccion => crearCardInspeccion(inspeccion)).join('');
+    // Generar HTML asegurándose de que sea un string válido
+    const html = inspecciones.map(inspeccion => {
+        const cardHtml = crearCardInspeccion(inspeccion);
+        // Verificar que sea un string
+        if (typeof cardHtml !== 'string') {
+            console.error('Error: crearCardInspeccion no devolvió un string', cardHtml);
+            return '';
+        }
+        return cardHtml;
+    }).join('');
+    
+    // Verificar que el HTML final sea un string
+    if (typeof html !== 'string') {
+        console.error('Error: HTML generado no es un string', html);
+        listaInspecciones.innerHTML = '<p>Error al cargar los resultados</p>';
+        return;
+    }
+    
     listaInspecciones.innerHTML = html;
     
     if (tbodyResultados) {
@@ -268,59 +293,60 @@ function mostrarResultados() {
 function crearCardInspeccion(inspeccion) {
     const fecha = formatearFechaLocal(inspeccion.fecha);
     const estadoClass = `estado-${inspeccion.estado.toLowerCase().replace(' ', '-')}`;
-    
+
     // SEGURIDAD: Sanitizar todos los datos antes de mostrarlos
     const establecimientoNombre = sanitizeText(inspeccion.establecimiento_nombre || '');
     const inspectorNombre = sanitizeText(inspeccion.inspector_nombre || 'N/A');
     const estado = sanitizeText(inspeccion.estado || '');
     const observaciones = sanitizeText(inspeccion.observaciones || '');
-    
+
     // Sanitizar valores numéricos (convertir a número y validar)
     const puntajeTotal = parseInt(inspeccion.puntaje_total) || 0;
     const puntajeMaximo = parseInt(inspeccion.puntaje_maximo) || 0;
     const porcentajeCumplimiento = parseInt(inspeccion.porcentaje_cumplimiento) || 0;
     const itemsEvaluados = parseInt(inspeccion.items_evaluados) || 0;
     const inspeccionId = parseInt(inspeccion.id) || 0;
-    
-    return `
-        <div class="inspeccion-card bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg p-4 cursor-pointer hover:shadow-md hover:border-blue-300 transition-all duration-200 mb-4" 
-             data-inspeccion-id="${inspeccionId}">
-            <div class="flex justify-between items-start mb-3">
-                <div>
-                    <h4 class="font-semibold text-slate-900 dark:text-white">${establecimientoNombre}</h4>
-                    <p class="text-sm text-slate-600 dark:text-slate-400">${fecha}</p>
-                    <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">👆 Click para ver detalles completos</p>
-                </div>
-                <span class="estado-badge ${estadoClass}">${estado}</span>
-            </div>
-            
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                    <span class="font-medium text-slate-700 dark:text-slate-300">Inspector:</span>
-                    <p class="text-slate-600 dark:text-slate-400">${inspectorNombre}</p>
-                </div>
-                <div>
-                    <span class="font-medium text-slate-700 dark:text-slate-300">Puntaje:</span>
-                    <p class="text-slate-600 dark:text-slate-400">${puntajeTotal}/${puntajeMaximo}</p>
-                </div>
-                <div>
-                    <span class="font-medium text-slate-700 dark:text-slate-300">Cumplimiento:</span>
-                    <p class="text-slate-600 dark:text-slate-400">${porcentajeCumplimiento}%</p>
-                </div>
-                <div>
-                    <span class="font-medium text-slate-700 dark:text-slate-300">Items:</span>
-                    <p class="text-slate-600 dark:text-slate-400">${itemsEvaluados} evaluados</p>
-                </div>
-            </div>
-            
-            ${observaciones ? `
-                <div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600">
-                    <span class="font-medium text-slate-700 dark:text-slate-300">Observaciones:</span>
-                    <p class="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">${observaciones}</p>
-                </div>
-            ` : ''}
-        </div>
-    `;
+
+    // Construir HTML de manera explícita para evitar problemas de template literals
+    let html = '<div class="inspeccion-card bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg p-4 cursor-pointer hover:shadow-md hover:border-blue-300 transition-all duration-200 mb-4" data-inspeccion-id="' + inspeccionId + '">';
+    html += '<div class="flex justify-between items-start mb-3">';
+    html += '<div>';
+    html += '<h4 class="font-semibold text-slate-900 dark:text-white">' + establecimientoNombre + '</h4>';
+    html += '<p class="text-sm text-slate-600 dark:text-slate-400">' + fecha + '</p>';
+    html += '<p class="text-xs text-blue-600 dark:text-blue-400 mt-1">Click para ver detalles completos</p>';
+    html += '</div>';
+    html += '<span class="estado-badge ' + estadoClass + '">' + estado + '</span>';
+    html += '</div>';
+
+    html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">';
+    html += '<div>';
+    html += '<span class="font-medium text-slate-700 dark:text-slate-300">Inspector:</span>';
+    html += '<p class="text-slate-600 dark:text-slate-400">' + inspectorNombre + '</p>';
+    html += '</div>';
+    html += '<div>';
+    html += '<span class="font-medium text-slate-700 dark:text-slate-300">Puntaje:</span>';
+    html += '<p class="text-slate-600 dark:text-slate-400">' + puntajeTotal + '/' + puntajeMaximo + '</p>';
+    html += '</div>';
+    html += '<div>';
+    html += '<span class="font-medium text-slate-700 dark:text-slate-300">Cumplimiento:</span>';
+    html += '<p class="text-slate-600 dark:text-slate-400">' + porcentajeCumplimiento + '%</p>';
+    html += '</div>';
+    html += '<div>';
+    html += '<span class="font-medium text-slate-700 dark:text-slate-300">Items:</span>';
+    html += '<p class="text-slate-600 dark:text-slate-400">' + itemsEvaluados + ' evaluados</p>';
+    html += '</div>';
+    html += '</div>';
+
+    if (observaciones) {
+        html += '<div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600">';
+        html += '<span class="font-medium text-slate-700 dark:text-slate-300">Observaciones:</span>';
+        html += '<p class="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">' + observaciones + '</p>';
+        html += '</div>';
+    }
+
+    html += '</div>';
+
+    return html;
 }
 
 function crearFilaTabla(inspeccion) {
