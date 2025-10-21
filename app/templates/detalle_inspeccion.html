@@ -9,22 +9,122 @@
         size: A4;
     }
 
+    /* OCULTAR NAVEGACION COMPLETA - MAS AGRESIVO */
+    nav,
+    nav.bg-gradient-to-r,
+    nav.sticky,
+    nav.top-0 {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        width: 0 !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        position: absolute !important;
+        left: -9999px !important;
+        top: -9999px !important;
+    }
+
+    /* Menú mobile especificamente */
+    #mobile-menu,
+    #mobile-menu-button,
+    [id="mobile-menu"],
+    [id="mobile-menu-button"] {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        width: 0 !important;
+    }
+
     /* Ocultar TODOS los elementos no esenciales */
     .no-print,
     button,
     .sticky,
-    nav[aria-label="Breadcrumb"],
-    .flex.items-center.justify-between .inline-flex.items-center.justify-center,
+    header,
+    [aria-label="Breadcrumb"],
+    .bg-white\\/80,
+    .dark\\:bg-gray-900\\/80,
+    .backdrop-blur-xl,
     .bg-gradient-to-br,
     .shadow-lg,
     .hover\\:shadow-xl,
     .transition-all,
     .transform,
-    .hover\\:scale-105,
-    .backdrop-blur-xl,
-    .bg-white\\/80,
-    .dark\\:bg-gray-900\\/80 {
+    .hover\\:scale-105 {
         display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+    }
+
+    /* Breadcrumbs y navegación completamente */
+    nav.flex,
+    ol.inline-flex,
+    .flex.items-center.justify-between .inline-flex.items-center.justify-center {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    /* Botones de acción */
+    .inline-flex.items-center.justify-center,
+    .px-4.py-2.bg-gradient-to-r,
+    [role="navigation"],
+    .navbar,
+    .nav-header {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    /* Fuerza ocultar todos los div con aria-label breadcrumb o similar */
+    div[aria-label*="Breadcrumb"],
+    div[aria-label*="breadcrumb"],
+    div[role="navigation"],
+    header[role="banner"],
+    [role="menubar"] {
+        display: none !important;
+    }
+
+    /* Ocultar específicamente elemento del logo y branding */
+    nav img,
+    a img[src*="CASTILLO"],
+    img[alt="Castillo de Chancay"] {
+        display: none !important;
+    }
+
+    /* Ocultar el container del nav completamente */
+    body > nav,
+    body > div > nav {
+        display: none !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Ocultar main content navigation elementos */
+    nav.bg-gradient-to-r.from-blue-600 {
+        display: none !important;
+    }
+
+    /* Ocultar cualquier elemento con z-50 (modales y navs sticky) */
+    .z-50,
+    .z-\\[50\\] {
+        display: none !important;
+    }
+
+    /* Ocultar botón logout y otros botones del nav */
+    button[onclick*="cerrarSesion"],
+    button[onclick*="logout"] {
+        display: none !important;
+    }
+
+    /* Forzar que el main comience desde arriba */
+    main {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
     }
 
     /* Layout ULTRA compacto */

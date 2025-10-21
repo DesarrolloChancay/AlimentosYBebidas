@@ -98,7 +98,10 @@ async function buscarInspecciones() {
     
     // Mostrar loading
     AppCommon.UI.mostrarLoading('loading');
-    document.getElementById('resultados-container').innerHTML = '';
+    const contenedorResultados = document.getElementById('resultados-container');
+    if (contenedorResultados && !contenedorResultados.dataset.locked) {
+        contenedorResultados.dataset.locked = '1';
+    }
     document.getElementById('sin-resultados').classList.add('hidden');
     
     try {
@@ -125,29 +128,66 @@ async function buscarInspecciones() {
 function mostrarResultados(inspecciones) {
     const container = document.getElementById('resultados-container');
     const totalElement = document.getElementById('total-resultados');
-    
+    const sinResultados = document.getElementById('sin-resultados');
+
     if (!container || !totalElement) {
         return;
     }
-    
+
     totalElement.textContent = inspecciones.length;
-    
+
+    if (sinResultados) {
+        if (inspecciones.length === 0) {
+            sinResultados.classList.remove('hidden');
+        } else {
+            sinResultados.classList.add('hidden');
+        }
+    }
+
+    delete container.dataset.locked;
+
     if (inspecciones.length === 0) {
-        document.getElementById('sin-resultados').classList.remove('hidden');
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
         return;
     }
-    
-    container.innerHTML = '';
-    
-    inspecciones.forEach(inspeccion => {
-        const div = document.createElement('div');
-        div.className = 'p-6 hover:bg-gray-50 transition-colors';
-        
-        const estadoClass = obtenerClaseEstado(inspeccion.estado);
-        
-        div.innerHTML = crearHTMLInspeccion(inspeccion, estadoClass);
-        container.appendChild(div);
+
+    const fragment = document.createDocumentFragment();
+    const existingItems = new Map();
+
+    Array.from(container.children).forEach(item => {
+        const inspeccionId = Number(item.dataset ? item.dataset.id : NaN);
+        if (Number.isFinite(inspeccionId)) {
+            existingItems.set(inspeccionId, item);
+        }
     });
+
+    inspecciones.forEach(inspeccion => {
+        const inspeccionId = inspeccion.id;
+        const estadoClass = obtenerClaseEstado(inspeccion.estado);
+        const nuevoHTML = crearHTMLInspeccion(inspeccion, estadoClass);
+
+        if (existingItems.has(inspeccionId)) {
+            const existingItem = existingItems.get(inspeccionId);
+            if (existingItem.innerHTML !== nuevoHTML) {
+                existingItem.innerHTML = nuevoHTML;
+            }
+            existingItems.delete(inspeccionId);
+        } else {
+            const div = document.createElement('div');
+            div.className = 'p-6 hover:bg-gray-50 transition-colors';
+            div.dataset.id = inspeccionId;
+            div.innerHTML = nuevoHTML;
+            fragment.appendChild(div);
+        }
+    });
+
+    existingItems.forEach(item => {
+        container.removeChild(item);
+    });
+
+    container.appendChild(fragment);
 }
 
 // ===== UTILIDADES DE VISUALIZACIÓN =====

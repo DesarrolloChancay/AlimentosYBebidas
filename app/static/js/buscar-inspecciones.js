@@ -471,25 +471,16 @@ function formatearFechaLocal(fechaValor) {
     if (!fechaValor) return 'N/A';
 
     try {
-        const valorString = typeof fechaValor === 'string' ? fechaValor.trim() : String(fechaValor).trim();
-        if (!valorString) return 'N/A';
-
-        const parteFecha = valorString.split('T')[0].split(' ')[0];
-        const partes = parteFecha.split('-');
-
-        if (partes.length === 3) {
-            const [anio, mes, dia] = partes;
-            if (anio && mes && dia) {
-                return `${dia.padStart(2, '0')}/${mes.padStart(2, '0')}/${anio}`;
-            }
-        }
-    } catch (error) {
-    }
-
-    try {
         const fechaObjeto = new Date(fechaValor);
         if (!isNaN(fechaObjeto.getTime())) {
-            return fechaObjeto.toLocaleDateString('es-ES');
+            return new Intl.DateTimeFormat('es-PE', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            }).format(fechaObjeto);
         }
     } catch (error) {
     }

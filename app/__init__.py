@@ -15,10 +15,18 @@ def create_app():
 
     # Inicializar extensiones
     db.init_app(app)
-    socketio.init_app(app, cors_allowed_origins="*", async_mode='threading')
+    socketio.init_app(app,
+                      cors_allowed_origins="*",
+                      logger=app.config['FLASK_ENV'] == 'development',
+                      engineio_logger=app.config['FLASK_ENV'] == 'development',
+                      async_mode=app.config.get('SOCKETIO_ASYNC_MODE', 'threading'))
 
     # Importar eventos de socket después de inicializar
-    from app import socket_events
+    try:
+        from app import socket_events
+        print("✅ Eventos de Socket.IO cargados correctamente")
+    except Exception as e:
+        print(f"❌ Error al cargar eventos de Socket.IO: {e}")
 
     # Registrar blueprints
     app.register_blueprint(inspeccion_bp)
@@ -123,5 +131,20 @@ def create_app():
     def verificar_cambio_contrasena():
         from app.controllers.usuarios_controller import verificar_cambio_contrasena
         return verificar_cambio_contrasena()
+
+    @app.errorhandler(404)
+    def page_not_found(e):
+        """Manejador de error 404 - Página no encontrada"""
+        return render_template('404.html'), 404
+
+    @app.errorhandler(403)
+    def forbidden(e):
+        """Manejador de error 403 - Acceso denegado"""
+        return render_template('403.html'), 403
+
+    @app.errorhandler(500)
+    def internal_server_error(e):
+        """Manejador de error 500 - Error interno del servidor"""
+        return render_template('500.html'), 500
 
     return app

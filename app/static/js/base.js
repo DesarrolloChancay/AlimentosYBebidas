@@ -20,9 +20,13 @@ function changeTheme(theme) {
     const html = document.documentElement;
     const actualTheme = theme === THEMES.system ? getSystemTheme() : theme;
     
-    // Limpiar clases existentes y aplicar el nuevo tema
-    html.classList.remove(THEMES.light, THEMES.dark);
-    html.classList.add(actualTheme);
+    // Limpiar clase dark existente
+    html.classList.remove('dark');
+    
+    // Si el tema actual es oscuro, agregar la clase dark
+    if (actualTheme === THEMES.dark) {
+        html.classList.add('dark');
+    }
     
     // Guardar preferencia
     localStorage.setItem(THEME_KEY, theme);
@@ -131,14 +135,7 @@ function inicializarAlertas() {
 
 // ===== CONFIGURACIÓN TAILWIND =====
 function configurarTailwind() {
-    if (typeof tailwind !== 'undefined') {
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {}
-            }
-        };
-    }
+    // Ya no es necesario configurar Tailwind aquí, se hace en base.html
 }
 
 // ===== INICIALIZACIÓN PRINCIPAL =====
@@ -172,3 +169,6 @@ window.BaseSystem = {
     THEMES,
     THEME_KEY
 };
+
+// Hacer changeTheme disponible globalmente para los botones HTML
+window.changeTheme = changeTheme;

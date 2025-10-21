@@ -53,6 +53,30 @@ class AuthController:
                         }
                     }), 403
 
+            # Obtener establecimiento asignado
+            establecimiento_nombre = None
+            if usuario.rol_id in [2, 4]:  # Encargado o Jefe
+                if usuario.rol_id == 2:  # Encargado
+                    query = text("""
+                        SELECT e.nombre
+                        FROM encargados_establecimientos ee
+                        JOIN establecimientos e ON ee.establecimiento_id = e.id
+                        WHERE ee.usuario_id = :usuario_id AND ee.activo = 1
+                        ORDER BY ee.fecha_inicio DESC
+                        LIMIT 1
+                    """)
+                else:  # Jefe
+                    query = text("""
+                        SELECT e.nombre
+                        FROM jefes_establecimientos je
+                        JOIN establecimientos e ON je.establecimiento_id = e.id
+                        WHERE je.usuario_id = :usuario_id AND je.activo = 1
+                        LIMIT 1
+                    """)
+                result = db.session.execute(query, {'usuario_id': usuario.id}).fetchone()
+                if result:
+                    establecimiento_nombre = result[0]
+
             # Verificar si el usuario ya está en línea
             if usuario.en_linea:
                 return (
@@ -82,6 +106,7 @@ class AuthController:
                 session["login_time"] = datetime.utcnow().isoformat()
                 session["last_activity"] = datetime.utcnow().isoformat()
                 session["cambiar_contrasena_obligatorio"] = True  # Marcar que está en modo cambio obligatorio
+                session["user_establecimiento"] = establecimiento_nombre
 
                 return jsonify({
                     "success": True,
@@ -104,6 +129,7 @@ class AuthController:
             )
             session["login_time"] = datetime.utcnow().isoformat()
             session["last_activity"] = datetime.utcnow().isoformat()
+            session["user_establecimiento"] = establecimiento_nombre
 
             return jsonify(
                 {
@@ -148,7 +174,7 @@ class AuthController:
                 )
 
             # Verificar si es un encargado y si está deshabilitado
-            if usuario.rol_id == 3:  # Rol de encargado
+            if usuario.rol_id == 2:  # Rol de encargado
                 encargado_activo = db.session.execute(text("""
                     SELECT ee.activo, e.nombre as establecimiento_nombre,
                            je.nombre as jefe_nombre, je.apellido as jefe_apellido, je.telefono as jefe_telefono
@@ -173,6 +199,30 @@ class AuthController:
                         }
                     }), 403
 
+            # Obtener establecimiento asignado
+            establecimiento_nombre = None
+            if usuario.rol_id in [2, 4]:  # Encargado o Jefe
+                if usuario.rol_id == 2:  # Encargado
+                    query = text("""
+                        SELECT e.nombre
+                        FROM encargados_establecimientos ee
+                        JOIN establecimientos e ON ee.establecimiento_id = e.id
+                        WHERE ee.usuario_id = :usuario_id AND ee.activo = 1
+                        ORDER BY ee.fecha_inicio DESC
+                        LIMIT 1
+                    """)
+                else:  # Jefe
+                    query = text("""
+                        SELECT e.nombre
+                        FROM jefes_establecimientos je
+                        JOIN establecimientos e ON je.establecimiento_id = e.id
+                        WHERE je.usuario_id = :usuario_id AND je.activo = 1
+                        LIMIT 1
+                    """)
+                result = db.session.execute(query, {'usuario_id': usuario.id}).fetchone()
+                if result:
+                    establecimiento_nombre = result[0]
+
             # Forzar cierre de sesión anterior (marcar como desconectado)
             usuario.en_linea = True
             usuario.ultimo_acceso = datetime.utcnow()
@@ -189,6 +239,7 @@ class AuthController:
                 session["login_time"] = datetime.utcnow().isoformat()
                 session["last_activity"] = datetime.utcnow().isoformat()
                 session["cambiar_contrasena_obligatorio"] = True  # Marcar que está en modo cambio obligatorio
+                session["user_establecimiento"] = establecimiento_nombre
 
                 return jsonify({
                     "success": True,
@@ -211,6 +262,7 @@ class AuthController:
             )
             session["login_time"] = datetime.utcnow().isoformat()
             session["last_activity"] = datetime.utcnow().isoformat()
+            session["user_establecimiento"] = establecimiento_nombre
 
             return jsonify(
                 {

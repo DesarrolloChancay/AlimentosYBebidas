@@ -212,16 +212,16 @@ def obtener_items_plantilla(plantilla_id):
 
 
 # API para buscar items base disponibles
-@plantillas_bp.route('/api/items-base', methods=['POST'])
+@plantillas_bp.route('/api/items-base', methods=['GET'])
 @login_required
 @role_required('Inspector', 'Administrador')
 def buscar_items_base():
     """
     Buscar items base disponibles para agregar a plantillas
 
-    Body Parameters (JSON):
+    Query Parameters:
         - query: Texto de búsqueda
-        - exclude: Lista de IDs de items a excluir
+        - exclude: Lista de IDs de items a excluir (separados por coma)
 
     Returns:
         JSON con lista de items base

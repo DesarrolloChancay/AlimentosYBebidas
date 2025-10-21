@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1e293b">
+
+    <title>Acceso Denegado - Sistema de Inspecciones</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="{{ url_for('static', filename='img/cropped-CASTILLO-DE-CHANCAY-32x32.png') }}" sizes="32x32">
+
+    <!-- FontAwesome -->
+    <link defer="" media="all" onload="this.media='all'" rel="stylesheet" href="https://site-assets.fontawesome.com/releases/v7.1.0/css/all.css">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgb(241 245 249);
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: rgb(30 41 59);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgb(203 213 225);
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: rgb(71 85 105);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgb(148 163 184);
+        }
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: rgb(100 116 139);
+        }
+
+        /* Animaciones */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        @keyframes warning-pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.6); }
+        }
+
+        .animate-shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .animate-warning-pulse {
+            animation: warning-pulse 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+
+<body class="h-full bg-gradient-to-br from-slate-50 via-amber-50 to-orange-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <!-- Selector de tema -->
+    <div class="fixed top-4 right-4 z-50">
+        <button type="button" id="theme-toggle" class="p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-full shadow-lg hover:bg-white dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:focus:ring-amber-600 transition-all duration-200">
+            <!-- Icono del sol (modo claro) -->
+            <svg class="w-5 h-5 hidden dark:block" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
+            </svg>
+            <!-- Icono de la luna (modo oscuro) -->
+            <svg class="w-5 h-5 block dark:hidden" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Contenido principal -->
+    <div class="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8 text-center">
+            <!-- Ilustración animada -->
+            <div class="relative">
+                <div class="animate-shake">
+                    <div class="mx-auto h-32 w-32 bg-gradient-to-br from-amber-400 to-orange-600 rounded-full flex items-center justify-center animate-warning-pulse">
+                        <svg class="h-16 w-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Partículas decorativas -->
+                <div class="absolute -top-4 -left-4 w-8 h-8 bg-amber-200 dark:bg-amber-800 rounded-full opacity-60 animate-pulse"></div>
+                <div class="absolute -bottom-4 -right-4 w-6 h-6 bg-orange-200 dark:bg-orange-800 rounded-full opacity-40 animate-pulse" style="animation-delay: 1s;"></div>
+                <div class="absolute top-8 right-8 w-4 h-4 bg-red-200 dark:bg-red-800 rounded-full opacity-50 animate-pulse" style="animation-delay: 2s;"></div>
+            </div>
+
+            <!-- Contenido -->
+            <div class="space-y-6">
+                <div>
+                    <h1 class="text-6xl sm:text-8xl font-bold text-amber-600 dark:text-amber-400">403</h1>
+                    <h2 class="mt-4 text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">
+                        Acceso Denegado
+                    </h2>
+                    <p class="mt-4 text-lg text-slate-600 dark:text-slate-400 max-w-sm mx-auto">
+                        No tienes permisos suficientes para acceder a esta página.
+                        Contacta a tu administrador si crees que esto es un error.
+                    </p>
+                </div>
+
+                <!-- Información de permisos -->
+                <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div class="ml-3 flex-1">
+                            <h3 class="text-sm font-medium text-amber-800 dark:text-amber-200">
+                                ¿Por qué veo este mensaje?
+                            </h3>
+                            <div class="mt-2 text-sm text-amber-700 dark:text-amber-300">
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li>No tienes el rol necesario para esta acción</li>
+                                    <li>La página requiere permisos especiales</li>
+                                    <li>Tu cuenta puede estar restringida temporalmente</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="space-y-4">
+                    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                        <button onclick="window.history.back()"
+                                class="inline-flex items-center justify-center px-6 py-3 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all duration-200">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                            </svg>
+                            Volver Atrás
+                        </button>
+
+                        <a href="/dashboard"
+                           class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-lg text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all duration-200">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                            </svg>
+                            Ir al Dashboard
+                        </a>
+                    </div>
+
+                    <!-- Información de contacto -->
+                    <div class="pt-6 border-t border-slate-200 dark:border-slate-700">
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                            ¿Necesitas acceso a esta funcionalidad?
+                        </p>
+                        <div class="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                            <div class="flex items-center justify-center space-x-4">
+                                <div class="text-center">
+                                    <svg class="mx-auto h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                        Contacta a tu<br/>administrador
+                                    </p>
+                                </div>
+                                <div class="border-l border-slate-200 dark:border-slate-600 h-12"></div>
+                                <div class="text-center">
+                                    <svg class="mx-auto h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                    </svg>
+                                    <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                        Envía un<br/>correo electrónico
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información adicional -->
+            <div class="pt-8 border-t border-slate-200 dark:border-slate-700">
+                <div class="text-xs text-slate-400 dark:text-slate-500 space-y-1">
+                    <p>Error 403 - Acceso denegado</p>
+                    <p>Sistema de Control Sanitario - Castillo de Chancay</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script para el cambio de tema -->
+    <script>
+        // Función para cambiar tema
+        function changeTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            } else if (theme === 'light') {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                // Sistema
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+                localStorage.setItem('theme', 'system');
+            }
+        }
+
+        // Aplicar tema guardado
+        const savedTheme = localStorage.getItem('theme') || 'system';
+        changeTheme(savedTheme);
+
+        // Escuchar cambios en el sistema
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            if (localStorage.getItem('theme') === 'system') {
+                changeTheme('system');
+            }
+        });
+
+        // Toggle del botón
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            const isDark = document.documentElement.classList.contains('dark');
+            changeTheme(isDark ? 'light' : 'dark');
+        });
+    </script>
+</body>
+</html>

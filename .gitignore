@@ -2,4 +2,26 @@
 usuarios.txt
 desktop.ini
 pedido.txt
+debug.txt
 .github/
+
+# Logs
+*.log
+logs/
+
+# Archivos de sistema operativo
+Thumbs.db
+.DS_Store
+
+# Carpetas de IDEs comunes
+.vscode/
+.idea/
+
+# Dependencias (ej. para proyectos Node.js o Python)
+node_modules/
+__pycache__/
+*.pyc
+
+# Archivos temporales
+*.tmp
+*.swp

@@ -464,6 +464,42 @@ class InspeccionesController:
                     import logging
                     logging.error(f"Error obteniendo tipo de establecimiento: {str(tipo_error)}")
 
+                # FILTRADO POR META SEMANAL: Solo para inspectores
+                if user_role == "Inspector":
+                    try:
+                        # Calcular semana actual (LUNES A DOMINGO)
+                        import pytz
+                        lima_tz = pytz.timezone("America/Lima")
+                        fecha_obj = datetime.now(lima_tz)
+                        semana_actual = fecha_obj.isocalendar()[1]
+                        ano_actual = fecha_obj.year
+
+                        # Obtener plan semanal del establecimiento
+                        plan_semanal = InspeccionesController.obtener_o_crear_plan_semanal(
+                            e.id, semana_actual, ano_actual
+                        )
+
+                        # Contar inspecciones completadas en la semana actual
+                        from sqlalchemy import func
+                        inicio_semana = fecha_obj.date() - timedelta(days=fecha_obj.weekday())  # Lunes de esta semana
+                        fin_semana = inicio_semana + timedelta(days=6)  # Domingo de esta semana
+
+                        inspecciones_completadas = Inspeccion.query.filter(
+                            func.date(Inspeccion.fecha) >= inicio_semana,
+                            func.date(Inspeccion.fecha) <= fin_semana,
+                            Inspeccion.establecimiento_id == e.id,
+                            Inspeccion.estado == 'completada'
+                        ).count()
+
+                        # Si ya alcanzó la meta semanal, saltar este establecimiento
+                        if inspecciones_completadas >= plan_semanal.evaluaciones_meta:
+                            continue
+
+                    except Exception as meta_error:
+                        import logging
+                        logging.warning(f"Error verificando meta semanal para establecimiento {e.id}: {str(meta_error)}")
+                        # En caso de error, incluir el establecimiento para no bloquear funcionalidad
+
                 # Obtener el encargado actual del establecimiento
                 try:
                     encargado = (
@@ -530,9 +566,9 @@ class InspeccionesController:
                 }
                 for c in categorias
             ]
-            return jsonify(data)
+            return jsonify({"success": True, "categorias": data})
         except Exception as e:
-            return jsonify({"error": str(e)}), 500
+            return jsonify({"success": False, "error": str(e)}), 500
 
     @staticmethod
     def obtener_items_establecimiento(establecimiento_id):
@@ -692,8 +728,16 @@ class InspeccionesController:
             if not data:
                 return jsonify({"error": "No hay datos para guardar"}), 400
 
-            # Crear clave única para el usuario
-            clave_temporal = f"user_{user_id}"
+            # Crear clave única para el establecimiento (cambio para permitir colaboración cross-inspector)
+            establecimiento_id = data.get("establecimiento_id")
+            if not establecimiento_id:
+                return jsonify({"error": "ID de establecimiento requerido"}), 400
+
+            # Agregar el inspector_id a los datos si no existe (para rastrear quién está trabajando)
+            if 'inspector_id' not in data:
+                data['inspector_id'] = user_id
+
+            clave_temporal = f"establecimiento_{establecimiento_id}"
 
             # Guardar en memoria del servidor
             inspecciones_temporales[clave_temporal] = {
@@ -726,6 +770,17 @@ class InspeccionesController:
                 if hay_cambios:
                     if clave_tiempo_real not in datos_tiempo_real:
                         datos_tiempo_real[clave_tiempo_real] = {}
+
+                    estado_actual_tiempo_real = datos_tiempo_real[clave_tiempo_real]
+
+                    # Reiniciar confirmacion del encargado cuando el inspector realiza cambios
+                    if estado_actual_tiempo_real.get("confirmada_por_encargado"):
+                        estado_actual_tiempo_real["confirmada_por_encargado"] = False
+                        estado_actual_tiempo_real["confirmador_id"] = None
+                        estado_actual_tiempo_real["confirmador_nombre"] = None
+                        estado_actual_tiempo_real["confirmador_rol"] = None
+                        estado_actual_tiempo_real["fecha_confirmacion"] = None
+                        estado_actual_tiempo_real["firma_encargado_id"] = None
 
                     # Calcular resumen automáticamente basado en los items
                     resumen_calculado = {}
@@ -821,7 +876,7 @@ class InspeccionesController:
                         except Exception as e:
                             resumen_calculado = {}
 
-                    datos_tiempo_real[clave_tiempo_real].update(
+                    estado_actual_tiempo_real.update(
                         {
                             "establecimiento_id": establecimiento_id,
                             "inspector_id": user_id,
@@ -843,6 +898,9 @@ class InspeccionesController:
                                 "items": items_actuales,
                                 "observaciones": observaciones_actuales,
                                 "resumen": resumen_calculado,
+                                "confirmada_por_encargado": estado_actual_tiempo_real.get("confirmada_por_encargado", False),
+                                "confirmador_nombre": estado_actual_tiempo_real.get("confirmador_nombre"),
+                                "confirmador_rol": estado_actual_tiempo_real.get("confirmador_rol"),
                                 "timestamp": safe_timestamp(),
                             },
                             to=room,
@@ -873,46 +931,33 @@ class InspeccionesController:
             if not user_id:
                 return jsonify({"error": "Sesión no válida"}), 401
 
-            # Buscar por usuario actual primero
-            clave_temporal = f"user_{user_id}"
-            datos_guardados = inspecciones_temporales.get(clave_temporal)
+            # Obtener establecimientos del usuario según su rol
+            establecimiento_ids = []
+            user = Usuario.query.get(user_id)
+            if user and user.rol:
+                if user.rol.nombre == "Encargado":
+                    encargado_ests = EncargadoEstablecimiento.query.filter_by(
+                        usuario_id=user_id
+                    ).all()
+                    establecimiento_ids = [
+                        enc.establecimiento_id for enc in encargado_ests
+                    ]
+                elif user.rol.nombre == "Inspector":
+                    inspector_ests = InspectorEstablecimiento.query.filter_by(
+                        inspector_id=user_id
+                    ).all()
+                    establecimiento_ids = [
+                        ins.establecimiento_id for ins in inspector_ests
+                    ]
 
-            # Si no hay datos para este usuario, buscar en datos de tiempo real
-            # por el establecimiento (para casos donde Inspector y Encargado trabajan juntos)
-            if not datos_guardados:
-                # Buscar cualquier dato temporal que coincida con establecimientos del usuario
-                from app.models.Inspecciones_models import (
-                    EncargadoEstablecimiento,
-                    InspectorEstablecimiento,
-                )
-
-                # Obtener establecimientos del usuario según su rol
-                establecimiento_ids = []
-                user = Usuario.query.get(user_id)
-                if user and user.rol:
-                    if user.rol.nombre == "Encargado":
-                        encargado_ests = EncargadoEstablecimiento.query.filter_by(
-                            usuario_id=user_id
-                        ).all()
-                        establecimiento_ids = [
-                            enc.establecimiento_id for enc in encargado_ests
-                        ]
-                    elif user.rol.nombre == "Inspector":
-                        inspector_ests = InspectorEstablecimiento.query.filter_by(
-                            inspector_id=user_id
-                        ).all()
-                        establecimiento_ids = [
-                            ins.establecimiento_id for ins in inspector_ests
-                        ]
-
-                # Buscar datos temporales por establecimiento
-                for clave, datos in inspecciones_temporales.items():
-                    if (
-                        datos.get("data", {}).get("establecimiento_id")
-                        in establecimiento_ids
-                    ):
-                        datos_guardados = datos
-                        break
+            # Buscar datos temporales por establecimiento (cambio para permitir colaboración cross-inspector)
+            datos_guardados = None
+            for establecimiento_id in establecimiento_ids:
+                clave_temporal = f"establecimiento_{establecimiento_id}"
+                datos_establecimiento = inspecciones_temporales.get(clave_temporal)
+                if datos_establecimiento:
+                    datos_guardados = datos_establecimiento
+                    break
 
             if datos_guardados:
                 return jsonify(datos_guardados["data"])
@@ -966,17 +1011,47 @@ class InspeccionesController:
         """Borrar datos temporales al guardar la inspección"""
         try:
             user_id = session.get("user_id")
+            establecimiento_id = request.args.get("establecimiento_id") or request.get_json().get("establecimiento_id")
 
             if not user_id:
                 return jsonify({"error": "Sesión no válida"}), 401
 
-            clave_temporal = f"user_{user_id}"
-
-            # Limpiar datos temporales del usuario
-            if clave_temporal in inspecciones_temporales:
-                del inspecciones_temporales[clave_temporal]
+            # Limpiar datos temporales del establecimiento (cambio para permitir colaboración cross-inspector)
+            if establecimiento_id:
+                clave_temporal = f"establecimiento_{establecimiento_id}"
+                if clave_temporal in inspecciones_temporales:
+                    del inspecciones_temporales[clave_temporal]
 
             return jsonify({"mensaje": "Datos temporales eliminados"})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @staticmethod
+    def obtener_datos_temporales_establecimiento(establecimiento_id):
+        """
+        Obtener datos temporales de inspección para un establecimiento específico
+        PERMISOS: Inspector y Administrador
+        """
+        try:
+            user_id = session.get("user_id")
+            user_role = session.get("user_role")
+
+            if not user_id:
+                return jsonify({"error": "Sesión no válida"}), 401
+
+            # Verificar permisos
+            if user_role not in ["Inspector", "Administrador"]:
+                return jsonify({"error": "No autorizado"}), 403
+
+            # Buscar datos temporales para este establecimiento
+            clave_temporal = f"establecimiento_{establecimiento_id}"
+            datos_temporales = inspecciones_temporales.get(clave_temporal)
+
+            if datos_temporales:
+                return jsonify(datos_temporales["data"])
+            else:
+                return jsonify({})
+
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
@@ -1008,7 +1083,60 @@ class InspeccionesController:
             clave_tiempo_real = f"establecimiento_{establecimiento_id}"
             datos = datos_tiempo_real.get(clave_tiempo_real, {})
 
-            if datos:
+            # Si no hay datos en tiempo real, intentar obtener el estado actual desde la base de datos
+            if not datos or len(datos) == 0:
+                try:
+                    # Buscar inspección temporal más reciente para este establecimiento
+                    from app.models.Inspecciones_models import Inspeccion, InspeccionDetalle, ItemEvaluacionEstablecimiento, ItemEvaluacionBase
+
+                    # Buscar la inspección más reciente en proceso para este establecimiento
+                    inspeccion_temporal = Inspeccion.query.filter_by(
+                        establecimiento_id=establecimiento_id,
+                        estado='en_proceso'
+                    ).order_by(Inspeccion.updated_at.desc()).first()
+
+                    if inspeccion_temporal:
+                        # Obtener detalles de la inspección temporal
+                        detalles = InspeccionDetalle.query.filter_by(
+                            inspeccion_id=inspeccion_temporal.id
+                        ).all()
+
+                        # Construir datos de items
+                        items_data = {}
+                        for detalle in detalles:
+                            if detalle.rating is not None:
+                                items_data[str(detalle.item_establecimiento_id)] = {
+                                    'rating': detalle.rating,
+                                    'observacion': detalle.observacion_item or '',
+                                    'puntaje_maximo': detalle.item_establecimiento.item_base.puntaje_maximo,
+                                    'riesgo': detalle.item_establecimiento.item_base.riesgo
+                                }
+
+                        # Calcular resumen
+                        resumen = InspeccionesController.calcular_puntajes_inspeccion(inspeccion_temporal.id) or {}
+
+                        # Construir respuesta con datos de la BD
+                        datos = {
+                            'establecimiento_id': establecimiento_id,
+                            'actualizado_por': 'Inspector',
+                            'resumen': {
+                                'puntaje_total': resumen.get('puntaje_total', 0),
+                                'puntaje_maximo_posible': resumen.get('puntaje_maximo_posible', 0),
+                                'porcentaje_cumplimiento': resumen.get('porcentaje_cumplimiento', 0),
+                                'puntos_criticos_perdidos': resumen.get('puntos_criticos_perdidos', 0),
+                                'total_items': resumen.get('total_items', 0),
+                                'items_calificados': resumen.get('items_calificados', 0)
+                            },
+                            'items': items_data,
+                            'observaciones': inspeccion_temporal.observaciones or '',
+                            'timestamp': inspeccion_temporal.updated_at.isoformat() if inspeccion_temporal.updated_at else None
+                        }
+
+                except Exception as db_error:
+                    # Si hay error consultando BD, continuar con datos vacíos
+                    pass
+
+            if datos and len(datos) > 0:
                 return jsonify(datos)
             else:
                 return jsonify({})  # Retornar objeto vacío si no hay datos
@@ -1320,31 +1448,12 @@ class InspeccionesController:
                 inspeccion.hora_fin = datetime.now().time()
                 logging.info("DEBUG - Estado establecido a 'completada'")
             else:
-                # Para guardar borrador, solo cambiar a "en_proceso" y manejar firmas individuales
+                # Para guardar borrador (accion != "completar"):
+                # - SOLO procesar firma del inspector (quien está trabajando)
+                # - NO procesar firma del encargado (solo se procesa al completar)
+                # - Estado: "en_proceso" (borrador)
 
-                # Procesar firma del encargado si viene
-                if not inspeccion.firma_encargado:
-                    if firma_encargado_base64:
-                        # Guardar firma del encargado desde base64
-                        ruta_firma_encargado = guardar_firma_como_archivo(
-                            firma_encargado_base64,
-                            "encargado",
-                            inspeccion.id,
-                            (encargado.usuario_id if encargado else inspeccion.encargado_id)
-                            or inspector_id,
-                        )
-                        if ruta_firma_encargado:
-                            inspeccion.firma_encargado = ruta_firma_encargado
-                            inspeccion.fecha_firma_encargado = datetime.now()
-                    elif firma_encargado_ruta:
-                        # Usar ruta directamente
-                        if firma_encargado_ruta.startswith("/static/"):
-                            inspeccion.firma_encargado = firma_encargado_ruta
-                        else:
-                            inspeccion.firma_encargado = f"/static/{firma_encargado_ruta}"
-                        inspeccion.fecha_firma_encargado = datetime.now()
-
-                # Procesar firma del inspector si viene
+                # Procesar SOLO firma del inspector (no del encargado en borradores)
                 if not inspeccion.firma_inspector:
                     if firma_inspector_base64:
                         # Guardar firma del inspector desde base64
@@ -1357,18 +1466,37 @@ class InspeccionesController:
                         if ruta_firma_inspector:
                             inspeccion.firma_inspector = ruta_firma_inspector
                             inspeccion.fecha_firma_inspector = datetime.now()
+                            logging.info(f"Firma del inspector guardada (borrador): {ruta_firma_inspector}")
                     elif firma_inspector_ruta:
                         # Usar ruta directamente
                         if firma_inspector_ruta.startswith("/static/"):
                             inspeccion.firma_inspector = firma_inspector_ruta
                         else:
                             inspeccion.firma_inspector = f"/static/{firma_inspector_ruta}"
-                        inspeccion.fecha_firma_inspector = datetime.now()
+                        if not inspeccion.fecha_firma_inspector:
+                            inspeccion.fecha_firma_inspector = datetime.now()
+                        logging.info(f"Firma del inspector desde ruta (borrador): {inspeccion.firma_inspector}")
+                    elif firma_inspector_dict:
+                        # Firma precargada desde diccionario
+                        ruta_firma = firma_inspector_dict.get('ruta')
+                        if ruta_firma:
+                            # Normalizar la ruta
+                            if ruta_firma.startswith("/static/"):
+                                inspeccion.firma_inspector = ruta_firma
+                            else:
+                                inspeccion.firma_inspector = f"/static/{ruta_firma}"
+                            if not inspeccion.fecha_firma_inspector:
+                                inspeccion.fecha_firma_inspector = datetime.now()
+                            logging.info(f"Firma del inspector desde diccionario (borrador): {inspeccion.firma_inspector}")
+
+                # NO procesar firma del encargado en borradores
+                # La firma del encargado solo se procesa al completar (accion == "completar")
+                logging.info("Guardando borrador - firma del encargado NO se procesa (solo al completar)")
 
                 inspeccion.estado = "en_proceso"
                 if not inspeccion.hora_inicio:
                     inspeccion.hora_inicio = datetime.now().time()
-                logging.info("DEBUG - Estado establecido a 'en_proceso'")
+                logging.info("DEBUG - Estado establecido a 'en_proceso' (borrador)")
 
             items_procesados = 0
 
@@ -2062,7 +2190,7 @@ class InspeccionesController:
                 if establecimientos_creados >= 5:  # Máximo 5 por día
                     return jsonify({"error": "Ha alcanzado el límite diario de establecimientos creados"}), 429
 
-            # Crear establecimiento
+            # Crear establecimiento vacío (sin items automáticos)
             establecimiento = Establecimiento(
                 nombre=nombre.strip(),
                 direccion=direccion.strip(),
@@ -2075,30 +2203,8 @@ class InspeccionesController:
             db.session.add(establecimiento)
             db.session.commit()
 
-            # Crear automáticamente items de evaluación para el nuevo establecimiento
-            # (Esto asegura que el establecimiento tenga checklist disponible)
+            # Crear plan semanal por defecto (sin items automáticos)
             try:
-                from app.models.Inspecciones_models import (
-                    ItemEvaluacionBase,
-                    ItemEvaluacionEstablecimiento,
-                    CategoriaEvaluacion
-                )
-
-                # Obtener todos los items base activos
-                items_base = ItemEvaluacionBase.query.filter_by(activo=True).all()
-
-                # Crear items específicos para este establecimiento
-                for item_base in items_base:
-                    item_establecimiento = ItemEvaluacionEstablecimiento(
-                        establecimiento_id=establecimiento.id,
-                        item_base_id=item_base.id,
-                        descripcion_personalizada=None,  # Usar descripción base
-                        factor_ajuste=1.00,  # Sin ajuste por defecto
-                        activo=True
-                    )
-                    db.session.add(item_establecimiento)
-
-                # Crear plan semanal por defecto
                 import pytz
                 lima_tz = pytz.timezone("America/Lima")
                 utc_now = datetime.utcnow().replace(tzinfo=pytz.utc)
@@ -2111,7 +2217,6 @@ class InspeccionesController:
                 )
 
                 db.session.commit()
-
 
             except Exception as e:
                 # No fallar la creación del establecimiento por esto
@@ -2135,6 +2240,45 @@ class InspeccionesController:
         except Exception as e:
             db.session.rollback()
             return jsonify({"error": f"Error al crear establecimiento: {str(e)}"}), 500
+
+    @staticmethod
+    def completar_establecimiento(establecimiento_id):
+        """
+        Completar la creación de un establecimiento después de agregar items
+        """
+        try:
+            # Verificar que el establecimiento existe
+            establecimiento = Establecimiento.query.get(establecimiento_id)
+            if not establecimiento:
+                return jsonify({"error": "Establecimiento no encontrado"}), 404
+
+            # Verificar permisos
+            user_role = session.get("user_role")
+            if user_role not in ["Administrador", "Inspector"]:
+                return jsonify({"error": "No autorizado"}), 403
+
+            # Verificar que tenga al menos un item activo
+            items_count = ItemEvaluacionEstablecimiento.query.filter_by(
+                establecimiento_id=establecimiento_id,
+                activo=True
+            ).count()
+
+            if items_count == 0:
+                return jsonify({"error": "El establecimiento debe tener al menos un item antes de completarse"}), 400
+
+            # El establecimiento ya está activo por defecto, solo confirmamos que está completo
+            # Podríamos agregar un campo 'completado' si fuera necesario en el futuro
+
+            return jsonify({
+                "success": True,
+                "message": f"Establecimiento '{establecimiento.nombre}' completado exitosamente",
+                "establecimiento_id": establecimiento.id,
+                "items_count": items_count
+            })
+
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": f"Error al completar establecimiento: {str(e)}"}), 500
 
     @staticmethod
     def actualizar_rol_usuario():
@@ -2274,9 +2418,24 @@ class InspeccionesController:
                 .all()
             )
 
-            # Organizar items por categoría
+            # Organizar items por categoría, evitando duplicados
             categorias_dict = {}
+            items_procesados_por_base = {}  # Track de items por item_base_id y categoría
+            duplicados_encontrados = 0  # Contador de duplicados para debugging
+            
             for detalle, item_est, item_base, categoria in detalles_query:
+                # Crear clave única basada en categoria + item_base_id (no en detalle.id)
+                # Esto evita que se muestren duplicados cuando hay múltiples item_establecimiento
+                # para el mismo item_base
+                item_key = f"{categoria.id}_{item_base.id}"
+                
+                # Si ya procesamos este item_base en esta categoría, saltar
+                if item_key in items_procesados_por_base:
+                    duplicados_encontrados += 1
+                    continue
+                
+                items_procesados_por_base[item_key] = detalle.id
+                
                 if categoria.id not in categorias_dict:
                     categorias_dict[categoria.id] = {
                         "id": categoria.id,
@@ -2303,6 +2462,10 @@ class InspeccionesController:
                     ),
                 }
                 categorias_dict[categoria.id]["evaluaciones"].append(item_data)
+            
+            # Log para debugging
+            if duplicados_encontrados > 0:
+                print(f"⚠️  Se omitieron {duplicados_encontrados} items duplicados en inspeccion_id {inspeccion_id}")
 
             categorias = list(categorias_dict.values())
 
@@ -2425,6 +2588,7 @@ class InspeccionesController:
                 db.session.query(
                     Inspeccion.id,
                     Inspeccion.fecha,
+                    Inspeccion.hora_fin,  # Agregar hora_fin
                     Inspeccion.estado,
                     Inspeccion.puntaje_total,
                     Inspeccion.puntaje_maximo_posible,
@@ -2530,10 +2694,19 @@ class InspeccionesController:
                     .count()
                 )
 
+                # Combinar fecha y hora_fin para mostrar fecha completa
+                fecha_completa = None
+                if insp.fecha and insp.hora_fin:
+                    # Crear datetime combinando fecha y hora_fin
+                    fecha_completa = datetime.combine(insp.fecha, insp.hora_fin)
+                elif insp.fecha:
+                    # Si no hay hora_fin, usar solo la fecha
+                    fecha_completa = datetime.combine(insp.fecha, datetime.min.time())
+
                 resultado.append(
                     {
                         "id": insp.id,
-                        "fecha": insp.fecha.isoformat() if insp.fecha else None,
+                        "fecha": fecha_completa.isoformat() if fecha_completa else None,
                         "estado": insp.estado,
                         "puntaje_total": insp.puntaje_total,
                         "puntaje_maximo": insp.puntaje_maximo_posible,
@@ -2703,15 +2876,24 @@ class InspeccionesController:
                 else None
             )
 
-            # Obtener detalles de items
+            # Obtener detalles de items con información de categorías
             detalles = (
                 db.session.query(
                     InspeccionDetalle.rating,
                     InspeccionDetalle.score,
+                    InspeccionDetalle.observacion_item,
+                    ItemEvaluacionEstablecimiento.id.label('item_establecimiento_id'),
                     ItemEvaluacionEstablecimiento.factor_ajuste,
+                    ItemEvaluacionBase.id.label('item_base_id'),
                     ItemEvaluacionBase.descripcion,
                     ItemEvaluacionBase.riesgo,
                     ItemEvaluacionBase.puntaje_maximo,
+                    ItemEvaluacionBase.puntaje_minimo,
+                    ItemEvaluacionBase.orden.label('orden_item'),
+                    ItemEvaluacionBase.codigo.label('codigo_item'),
+                    CategoriaEvaluacion.id.label('categoria_id'),
+                    CategoriaEvaluacion.nombre.label('categoria_nombre'),
+                    CategoriaEvaluacion.orden.label('orden_categoria'),
                 )
                 .join(
                     ItemEvaluacionEstablecimiento,
@@ -2722,9 +2904,64 @@ class InspeccionesController:
                     ItemEvaluacionBase,
                     ItemEvaluacionEstablecimiento.item_base_id == ItemEvaluacionBase.id,
                 )
+                .join(
+                    CategoriaEvaluacion,
+                    ItemEvaluacionBase.categoria_id == CategoriaEvaluacion.id,
+                )
                 .filter(InspeccionDetalle.inspeccion_id == inspeccion_id)
+                .order_by(CategoriaEvaluacion.orden, ItemEvaluacionBase.orden)
                 .all()
             )
+
+            # Agrupar detalles por categorías, evitando duplicados por item_base_id
+            categorias_dict = {}
+            items_procesados = {}  # Track por categoria + item_base_id
+            duplicados_omitidos = 0
+            
+            for detalle in detalles:
+                # Crear clave única para evitar duplicados del mismo item_base en la misma categoría
+                item_key = f"{detalle.categoria_id}_{detalle.item_base_id}"
+                
+                # Si ya procesamos este item_base en esta categoría, saltar
+                if item_key in items_procesados:
+                    duplicados_omitidos += 1
+                    continue
+                
+                items_procesados[item_key] = True
+                
+                categoria_nombre = detalle.categoria_nombre
+                if categoria_nombre not in categorias_dict:
+                    categorias_dict[categoria_nombre] = {
+                        "nombre": categoria_nombre,
+                        "orden": detalle.orden_categoria,
+                        "evaluaciones": []
+                    }
+
+                categorias_dict[categoria_nombre]["evaluaciones"].append({
+                    "codigo": detalle.codigo_item,
+                    "descripcion": detalle.descripcion,
+                    "riesgo": detalle.riesgo,
+                    "puntaje_maximo": int(detalle.puntaje_maximo * float(detalle.factor_ajuste)),
+                    "puntaje_minimo": detalle.puntaje_minimo,
+                    "orden": detalle.orden_item,
+                    "detalle": {
+                        "rating": detalle.rating,
+                        "score": float(detalle.score) if detalle.score else 0,
+                        "observacion_item": detalle.observacion_item
+                    } if detalle.rating is not None else None,
+                })
+            
+            # Log para debugging
+            if duplicados_omitidos > 0:
+                print(f"⚠️  Se omitieron {duplicados_omitidos} items duplicados en obtener_detalle_inspeccion para inspeccion_id {inspeccion_id}")
+
+            # Convertir a lista ordenada por orden de categoría
+            categorias = []
+            for categoria_data in sorted(categorias_dict.values(), key=lambda x: x["orden"]):
+                categorias.append({
+                    "nombre": categoria_data["nombre"],
+                    "evaluaciones": categoria_data["evaluaciones"]
+                })
 
             # Obtener evidencias
             evidencias = EvidenciaInspeccion.query.filter_by(
@@ -2754,17 +2991,7 @@ class InspeccionesController:
                 "fecha_firma_encargado": inspeccion.fecha_firma_encargado.isoformat() if inspeccion.fecha_firma_encargado else None,
                 "items_evaluados": len(detalles),
                 "total_items": total_items_disponibles,
-                "detalles_items": [
-                    {
-                        "descripcion": detalle.descripcion,
-                        "riesgo": detalle.riesgo,
-                        "puntaje_maximo": detalle.puntaje_maximo,
-                        "factor_ajuste": float(detalle.factor_ajuste),
-                        "rating": detalle.rating,
-                        "score": float(detalle.score) if detalle.score else 0,
-                    }
-                    for detalle in detalles
-                ],
+                "categorias": categorias,
                 "evidencias": [
                     {
                         "nombre_archivo": evidencia.filename,
@@ -3024,25 +3251,18 @@ class InspeccionesController:
                 ]
 
                 # ✅ ORM: Obtener o crear plan semanal para el establecimiento
-                # Usar la semana basada en zona horaria de Lima
-                semana_actual = lima_now.isocalendar()[1]
-                ano_actual = lima_now.year
+                # Usar la semana consultada (no siempre la actual)
+                semana_consultada = inicio_semana.isocalendar()[1]
+                ano_consultado = inicio_semana.year
                 
                 plan_semanal = InspeccionesController.obtener_o_crear_plan_semanal(
-                    establecimiento.id, semana_actual, ano_actual
+                    establecimiento.id, semana_consultada, ano_consultado
                 )
                 
-                # ✅ CONFIGURACIÓN GLOBAL: Usar meta semanal desde configuración global
-                # Obtener meta semanal por defecto de la configuración del sistema
-                config_meta = ConfiguracionEvaluacion.query.filter_by(
-                    clave="meta_semanal_default"
-                ).first()
-                meta_semanal = int(config_meta.valor) if config_meta else 3
-                
-                # Actualizar el plan semanal con la meta global si es diferente
-                if plan_semanal.evaluaciones_meta != meta_semanal:
-                    plan_semanal.evaluaciones_meta = meta_semanal
-                    db.session.commit()
+                # ✅ CONFIGURACIÓN POR PLAN: Cada plan semanal mantiene su meta original
+                # NO actualizar planes existentes para preservar historial
+                # Solo usar la meta actual para nuevos planes semanales
+                meta_semanal = plan_semanal.evaluaciones_meta
 
                 # ✅ ORM: Actualizar evaluaciones realizadas en el plan
                 total_inspecciones = len(inspecciones_establecimiento)
@@ -3280,22 +3500,33 @@ class InspeccionesController:
 
                 db.session.commit()
                 
-                # ✅ ACTUALIZACIÓN GLOBAL: Si se cambió meta_semanal_default, actualizar todos los planes semanales
+                # ✅ NUEVA POLÍTICA: Los cambios de meta afectan a la semana actual y futuras
+                # - Semana actual: se actualiza con la nueva meta
+                # - Semanas pasadas: mantienen su meta original (historial protegido)
+                # - Semanas futuras: usarán la nueva meta por defecto
+                
+                # Si se cambió meta_semanal_default, actualizar planes de la semana actual
                 if "meta_semanal_default" in data:
-                    nueva_meta_global = int(data["meta_semanal_default"])
-                    try:
-                        # Actualizar todos los planes semanales existentes con la nueva meta global
-                        planes_afectados = PlanSemanal.query.filter(
-                            PlanSemanal.evaluaciones_meta != nueva_meta_global
-                        ).update({"evaluaciones_meta": nueva_meta_global})
-                        
-                        if planes_afectados > 0:
-                            db.session.commit()
-                            print(f"✅ Actualizados {planes_afectados} planes semanales con nueva meta global: {nueva_meta_global}")
-                        
-                    except Exception as update_error:
-                        # No fallar la actualización de configuración por esto
-                        print(f"⚠️ Error actualizando planes semanales: {str(update_error)}")
+                    nueva_meta = int(data["meta_semanal_default"])
+                    
+                    # Obtener semana y año actual usando zona horaria de Lima
+                    from pytz import timezone
+                    lima_tz = timezone('America/Lima')
+                    lima_now = datetime.now(lima_tz)
+                    semana_actual = lima_now.isocalendar()[1]
+                    ano_actual = lima_now.year
+                    
+                    # Actualizar todos los planes semanales de la semana actual
+                    planes_actuales = PlanSemanal.query.filter_by(
+                        semana=semana_actual,
+                        ano=ano_actual
+                    ).all()
+                    
+                    for plan in planes_actuales:
+                        plan.evaluaciones_meta = nueva_meta
+                    
+                    if planes_actuales:
+                        db.session.commit()
                 
                 return jsonify({"success": True, "message": "Configuración actualizada correctamente"})
                 
@@ -3315,6 +3546,10 @@ class InspeccionesController:
     def obtener_o_crear_plan_semanal(establecimiento_id, semana, ano):
         """
         ✅ ORM: Obtener o crear plan semanal para un establecimiento
+        IMPORTANTE: 
+        - Semanas pasadas: mantienen su meta original (historial protegido)
+        - Semana actual: puede ser actualizada cuando cambia la configuración global
+        - Semanas futuras: usan la meta actual por defecto
         """
         plan = PlanSemanal.query.filter_by(
             establecimiento_id=establecimiento_id,
@@ -3323,7 +3558,7 @@ class InspeccionesController:
         ).first()
         
         if not plan:
-            # Obtener meta por defecto
+            # Obtener meta por defecto ACTUAL (solo para nuevos planes)
             config_meta = ConfiguracionEvaluacion.query.filter_by(
                 clave="meta_semanal_default"
             ).first()
@@ -3333,7 +3568,7 @@ class InspeccionesController:
                 establecimiento_id=establecimiento_id,
                 semana=semana,
                 ano=ano,
-                evaluaciones_meta=meta_default,
+                evaluaciones_meta=meta_default,  # Meta congelada para este plan
                 evaluaciones_realizadas=0
             )
             db.session.add(plan)
@@ -3343,6 +3578,45 @@ class InspeccionesController:
 
     @staticmethod
     def actualizar_meta_semanal():
+        """
+        ✅ ORM: Actualizar meta semanal específica (Inspector/Admin)
+        """
+        try:
+            user_role = session.get("user_role")
+            
+            if user_role not in ["Administrador", "Inspector"]:
+                return jsonify({"error": "No autorizado"}), 403
+
+            data = request.get_json()
+            establecimiento_id = data.get("establecimiento_id")
+            nueva_meta = data.get("nueva_meta")
+            semana = data.get("semana")
+            ano = data.get("ano")
+
+            if not all([establecimiento_id, nueva_meta, semana, ano]):
+                return jsonify({"error": "Datos incompletos"}), 400
+
+            # Validar meta
+            if not isinstance(nueva_meta, int) or nueva_meta < 1 or nueva_meta > 10:
+                return jsonify({"error": "Meta debe ser entre 1 y 10"}), 400
+
+            # Obtener o crear plan semanal
+            plan = InspeccionesController.obtener_o_crear_plan_semanal(
+                establecimiento_id, semana, ano
+            )
+            
+            plan.evaluaciones_meta = nueva_meta
+            db.session.commit()
+
+            return jsonify({
+                "success": True,
+                "message": f"Meta actualizada a {nueva_meta}",
+                "nueva_meta": nueva_meta
+            })
+
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": "Error actualizando meta"}), 500
         """
         ✅ ORM: Actualizar meta semanal específica (Inspector/Admin)
         """
@@ -3473,17 +3747,18 @@ class InspeccionesController:
     def obtener_inspecciones_pendientes():
         """
         ✅ ORM: Obtener inspecciones en estado 'en_process' que pueden ser continuadas por cualquier inspector
+        Incluye también datos temporales de inspecciones no guardadas para colaboración cross-inspector
         """
         try:
             user_role = session.get("user_role")
             current_user_id = session.get("user_id")
-            
+
             if user_role not in ["Inspector", "Administrador"]:
                 return jsonify({"error": "No autorizado"}), 403
 
             # Obtener inspecciones en_proceso de los últimos 7 días
             fecha_limite = datetime.now().date() - timedelta(days=7)
-            
+
             inspecciones = db.session.query(Inspeccion)\
                 .join(Establecimiento, Inspeccion.establecimiento_id == Establecimiento.id)\
                 .join(Usuario, Inspeccion.inspector_id == Usuario.id)\
@@ -3493,11 +3768,13 @@ class InspeccionesController:
                 ).order_by(Inspeccion.fecha.desc(), Inspeccion.created_at.desc()).all()
 
             inspecciones_data = []
+
+            # Agregar inspecciones de base de datos
             for inspeccion in inspecciones:
                 # Calcular progreso (items completados vs total)
                 items_completados = 0
                 total_items = 0
-                
+
                 if inspeccion.detalles:
                     for detalle in inspeccion.detalles:
                         total_items += 1
@@ -3505,12 +3782,13 @@ class InspeccionesController:
                             items_completados += 1
 
                 progreso_porcentaje = int((items_completados / total_items) * 100) if total_items > 0 else 0
-                
+
                 # Verificar si es del inspector actual
                 es_propia = inspeccion.inspector_id == current_user_id
-                
+
                 inspecciones_data.append({
                     'id': inspeccion.id,
+                    'tipo': 'base_datos',  # Indicar que viene de BD
                     'establecimiento': {
                         'id': inspeccion.establecimiento.id,
                         'nombre': inspeccion.establecimiento.nombre,
@@ -3531,6 +3809,76 @@ class InspeccionesController:
                     'tiene_firmas': bool(inspeccion.firma_inspector or inspeccion.firma_encargado)
                 })
 
+            # Agregar inspecciones temporales (datos no guardados)
+            # Buscar en inspecciones_temporales para todos los establecimientos
+            for clave_temporal, datos_temp in inspecciones_temporales.items():
+                if clave_temporal.startswith('establecimiento_'):
+                    try:
+                        establecimiento_id = int(clave_temporal.replace('establecimiento_', ''))
+                        datos = datos_temp.get('data', {})
+
+                        # Solo incluir si hay datos significativos
+                        if not datos or not datos.get('items'):
+                            continue
+
+                        # Calcular progreso de datos temporales
+                        items_temp = datos.get('items', {})
+                        items_completados_temp = len([r for r in items_temp.values() if r and r.get('rating') is not None and r['rating'] > 0])
+                        total_items_temp = len(items_temp)
+
+                        # Solo incluir si hay progreso significativo (>10% completado)
+                        if total_items_temp == 0 or (items_completados_temp / total_items_temp) < 0.1:
+                            continue
+
+                        progreso_porcentaje_temp = int((items_completados_temp / total_items_temp) * 100) if total_items_temp > 0 else 0
+
+                        # Obtener información del establecimiento
+                        establecimiento = Establecimiento.query.get(establecimiento_id)
+                        if not establecimiento:
+                            continue
+
+                        # Obtener inspector que está trabajando actualmente (último que guardó)
+                        inspector_actual = None
+                        clave_tiempo_real = f"establecimiento_{establecimiento_id}"
+                        datos_tiempo_real_est = datos_tiempo_real.get(clave_tiempo_real)
+                        if datos_tiempo_real_est and datos_tiempo_real_est.get('inspector_id'):
+                            inspector_actual = Usuario.query.get(datos_tiempo_real_est['inspector_id'])
+                        elif datos_temp.get('user_id'):
+                            inspector_actual = Usuario.query.get(datos_temp['user_id'])
+
+                        # Determinar si es del inspector actual
+                        es_propia_temp = datos_temp.get('user_id') == current_user_id
+
+                        inspecciones_data.append({
+                            'id': f"temp_{establecimiento_id}",  # ID virtual para inspección temporal
+                            'tipo': 'temporal',  # Indicar que es temporal
+                            'establecimiento': {
+                                'id': establecimiento.id,
+                                'nombre': establecimiento.nombre,
+                                'direccion': establecimiento.direccion
+                            },
+                            'inspector_original': {
+                                'nombre': f"{inspector_actual.nombre} {inspector_actual.apellido}" if inspector_actual else "Inspector desconocido",
+                                'es_actual': es_propia_temp
+                            },
+                            'fecha': datetime.now().strftime('%Y-%m-%d'),  # Fecha actual
+                            'created_at': datos_temp.get('timestamp', datetime.now()).strftime('%Y-%m-%d %H:%M') if isinstance(datos_temp.get('timestamp'), datetime) else datetime.now().strftime('%Y-%m-%d %H:%M'),
+                            'progreso': {
+                                'completados': items_completados_temp,
+                                'total': total_items_temp,
+                                'porcentaje': progreso_porcentaje_temp
+                            },
+                            'observaciones': datos.get('observaciones', ''),
+                            'tiene_firmas': bool(datos.get('firma_inspector') or datos.get('firma_encargado'))
+                        })
+
+                    except (ValueError, KeyError) as e:
+                        # Saltar entradas malformadas
+                        continue
+
+            # Ordenar por fecha de creación descendente (más recientes primero)
+            inspecciones_data.sort(key=lambda x: x['created_at'], reverse=True)
+
             return jsonify({
                 'success': True,
                 'inspecciones': inspecciones_data,
@@ -3546,6 +3894,7 @@ class InspeccionesController:
     def retomar_inspeccion(inspeccion_id):
         """
         ✅ ORM: Permite a un inspector retomar una inspección pendiente
+        Ahora también maneja inspecciones temporales (no guardadas en BD)
         """
         try:
             user_role = session.get("user_role")
@@ -3554,8 +3903,56 @@ class InspeccionesController:
             if user_role not in ["Inspector", "Administrador"]:
                 return jsonify({"error": "No autorizado"}), 403
 
+            # Convertir inspeccion_id a string de manera segura (maneja tanto str como int)
+            if isinstance(inspeccion_id, int):
+                inspeccion_id_str = str(inspeccion_id)
+            elif isinstance(inspeccion_id, str):
+                inspeccion_id_str = inspeccion_id
+            else:
+                return jsonify({"error": "ID de inspección inválido"}), 400
+
+            # Verificar si es una inspección temporal (no guardada en BD)
+            if inspeccion_id_str.startswith('temp_'):
+                # Extraer establecimiento_id del ID temporal
+                try:
+                    establecimiento_id = int(inspeccion_id_str.replace('temp_', ''))
+                except ValueError:
+                    return jsonify({"error": "ID de inspección temporal inválido"}), 400
+
+                # Buscar datos temporales para este establecimiento
+                clave_temporal = f"establecimiento_{establecimiento_id}"
+                datos_temporales = inspecciones_temporales.get(clave_temporal)
+
+                if not datos_temporales or not datos_temporales.get('data'):
+                    return jsonify({"error": "No se encontraron datos temporales para esta inspección"}), 404
+
+                # Retornar datos temporales en el formato esperado
+                datos = datos_temporales['data']
+                inspeccion_data = {
+                    'success': True,
+                    'inspeccion': {
+                        'id': inspeccion_id_str,  # Mantener el ID temporal como string
+                        'establecimiento_id': establecimiento_id,
+                        'fecha': datetime.now().strftime('%Y-%m-%d'),  # Fecha actual
+                        'observaciones': datos.get('observaciones', ''),
+                        'estado': 'temporal',  # Indicar que es temporal
+                        'items': datos.get('items', {}),
+                        'firma_inspector': datos.get('firma_inspector'),
+                        'firma_encargado': datos.get('firma_encargado'),
+                        'evidencias': []  # Los datos temporales no incluyen evidencias
+                    }
+                }
+
+                return jsonify(inspeccion_data)
+
+            # Para inspecciones normales de BD, convertir a int para la consulta
+            try:
+                inspeccion_id_int = int(inspeccion_id_str)
+            except ValueError:
+                return jsonify({"error": "ID de inspección inválido"}), 400
+
             # Buscar la inspección
-            inspeccion = Inspeccion.query.get(inspeccion_id)
+            inspeccion = Inspeccion.query.get(inspeccion_id_int)
             if not inspeccion:
                 return jsonify({"error": "Inspección no encontrada"}), 404
 
@@ -3592,7 +3989,7 @@ class InspeccionesController:
             db.session.commit()
 
             # Retornar datos completos de la inspección para cargar en la interfaz
-            return InspeccionesController.obtener_inspeccion_detalle(inspeccion_id)
+            return InspeccionesController.obtener_inspeccion_detalle(inspeccion_id_int)
 
         except Exception as e:
             db.session.rollback()
@@ -3905,9 +4302,9 @@ class InspeccionesController:
             # Aplicar búsqueda por texto
             if query and len(query) >= 2:
                 items_query = items_query.filter(
-                    db.or_(
-                        ItemPlantillaChecklist.item_base.has(db.func.lower(ItemEvaluacionBase.descripcion).like(f'%{query.lower()}%')),
-                        ItemPlantillaChecklist.item_base.has(db.func.lower(ItemEvaluacionBase.codigo).like(f'%{query.lower()}%'))
+                    or_(
+                        ItemPlantillaChecklist.item_base.has(func.lower(ItemEvaluacionBase.descripcion).like(f'%{query.lower()}%')),
+                        ItemPlantillaChecklist.item_base.has(func.lower(ItemEvaluacionBase.codigo).like(f'%{query.lower()}%'))
                     )
                 )
 
@@ -3938,3 +4335,211 @@ class InspeccionesController:
 
         except Exception as e:
             raise Exception(f"Error obteniendo items disponibles: {str(e)}")
+
+    @staticmethod
+    def agregar_item_individual_a_establecimiento(establecimiento_id, item_base_id, descripcion_personalizada=None, factor_ajuste=1.00):
+        """
+        Agregar un item individual de la base de datos a un establecimiento
+        """
+        try:
+            # Verificar que el establecimiento existe
+            establecimiento = Establecimiento.query.get(establecimiento_id)
+            if not establecimiento:
+                raise Exception("Establecimiento no encontrado")
+
+            # Verificar que el item base existe y está activo
+            item_base = ItemEvaluacionBase.query.filter_by(
+                id=item_base_id,
+                activo=True
+            ).first()
+            if not item_base:
+                raise Exception("Item base no encontrado o inactivo")
+
+            # Verificar que no esté duplicado
+            existing_item = ItemEvaluacionEstablecimiento.query.filter_by(
+                establecimiento_id=establecimiento_id,
+                item_base_id=item_base_id,
+                activo=True
+            ).first()
+
+            if existing_item:
+                raise Exception("Este item ya existe en el establecimiento")
+
+            # Crear nuevo item
+            nuevo_item = ItemEvaluacionEstablecimiento(
+                establecimiento_id=establecimiento_id,
+                item_base_id=item_base_id,
+                descripcion_personalizada=descripcion_personalizada,
+                factor_ajuste=factor_ajuste,
+                activo=True
+            )
+
+            db.session.add(nuevo_item)
+            db.session.commit()
+
+            return nuevo_item
+
+        except Exception as e:
+            db.session.rollback()
+            raise Exception(f"Error agregando item individual al establecimiento: {str(e)}")
+
+    @staticmethod
+    def crear_item_personalizado_para_establecimiento(establecimiento_id, categoria_id, descripcion, riesgo, puntaje_minimo, puntaje_maximo, factor_ajuste=1.00):
+        """
+        Crear un nuevo item personalizado para un establecimiento
+        """
+        try:
+            # Verificar que el establecimiento existe
+            establecimiento = Establecimiento.query.get(establecimiento_id)
+            if not establecimiento:
+                raise Exception("Establecimiento no encontrado")
+
+            # Verificar que la categoría existe
+            categoria = CategoriaEvaluacion.query.filter_by(
+                id=categoria_id,
+                activo=True
+            ).first()
+            if not categoria:
+                raise Exception("Categoría no encontrada o inactiva")
+
+            # Validar datos
+            if not descripcion or not descripcion.strip():
+                raise Exception("La descripción es obligatoria")
+
+            if riesgo not in ["Crítico", "Mayor", "Menor"]:
+                raise Exception("El riesgo debe ser: Crítico, Mayor o Menor")
+
+            if puntaje_minimo < 0 or puntaje_maximo < 0:
+                raise Exception("Los puntajes no pueden ser negativos")
+
+            if puntaje_minimo >= puntaje_maximo:
+                raise Exception("El puntaje mínimo debe ser menor al máximo")
+
+            # Generar código único para el item personalizado
+            # Formato: X.Y donde X es el ID de la categoría e Y es el siguiente número disponible
+            categoria_id_str = str(categoria_id)
+            
+            # Buscar todos los códigos de esta categoría para encontrar el último número usado
+            codigos_categoria = db.session.query(ItemEvaluacionBase).filter(
+                ItemEvaluacionBase.categoria_id == categoria_id,
+                ItemEvaluacionBase.activo == True
+            ).with_entities(ItemEvaluacionBase.codigo).all()
+            
+            # Extraer los números Y de los códigos X.Y
+            numeros_usados = []
+            for (codigo,) in codigos_categoria:
+                try:
+                    partes = codigo.split('.')
+                    if len(partes) == 2 and partes[0] == categoria_id_str:
+                        numero = int(partes[1])
+                        numeros_usados.append(numero)
+                except (ValueError, IndexError):
+                    continue
+            
+            # Encontrar el siguiente número disponible
+            if numeros_usados:
+                nuevo_numero = max(numeros_usados) + 1
+            else:
+                nuevo_numero = 1
+            
+            codigo = f"{categoria_id}.{nuevo_numero}"
+
+            # Crear nuevo item base personalizado
+            nuevo_item_base = ItemEvaluacionBase(
+                categoria_id=categoria_id,
+                codigo=codigo,
+                descripcion=descripcion.strip(),
+                riesgo=riesgo,
+                puntaje_minimo=puntaje_minimo,
+                puntaje_maximo=puntaje_maximo,
+                orden=999,  # Orden alto para items personalizados
+                activo=True
+            )
+
+            db.session.add(nuevo_item_base)
+            db.session.flush()  # Para obtener el ID
+
+            # Crear item específico para el establecimiento
+            item_establecimiento = ItemEvaluacionEstablecimiento(
+                establecimiento_id=establecimiento_id,
+                item_base_id=nuevo_item_base.id,
+                descripcion_personalizada=None,  # Usar descripción base
+                factor_ajuste=factor_ajuste,
+                activo=True
+            )
+
+            db.session.add(item_establecimiento)
+            db.session.commit()
+
+            return jsonify({
+                "success": True,
+                "message": f"Item personalizado '{descripcion}' creado exitosamente",
+                "item_id": item_establecimiento.id,
+                "item_base_id": nuevo_item_base.id
+            })
+
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"success": False, "error": f"Error creando item personalizado: {str(e)}"}), 500
+
+    @staticmethod
+    def obtener_items_base_disponibles(establecimiento_id, categoria_id=None, query=None):
+        """
+        Obtener items base disponibles para agregar a un establecimiento
+        """
+        try:
+            # Obtener IDs de items que ya están en el establecimiento
+            items_existentes = ItemEvaluacionEstablecimiento.query.filter_by(
+                establecimiento_id=establecimiento_id,
+                activo=True
+            ).with_entities(ItemEvaluacionEstablecimiento.item_base_id).all()
+
+            items_existentes_ids = [item.item_base_id for item in items_existentes]
+
+            # Construir query para items base disponibles
+            items_query = ItemEvaluacionBase.query.filter_by(activo=True)
+
+            # Excluir items que ya están en el establecimiento
+            if items_existentes_ids:
+                items_query = items_query.filter(
+                    ~ItemEvaluacionBase.id.in_(items_existentes_ids)
+                )
+
+            # Filtrar por categoría si se especifica
+            if categoria_id:
+                items_query = items_query.filter_by(categoria_id=categoria_id)
+
+            # Aplicar búsqueda por texto
+            if query and len(query) >= 2:
+                items_query = items_query.filter(
+                    db.or_(
+                        db.func.lower(ItemEvaluacionBase.descripcion).like(f'%{query.lower()}%'),
+                        db.func.lower(ItemEvaluacionBase.codigo).like(f'%{query.lower()}%')
+                    )
+                )
+
+            # Unir con categorías y ordenar
+            items = items_query.join(CategoriaEvaluacion)\
+                .order_by(CategoriaEvaluacion.orden, ItemEvaluacionBase.orden)\
+                .limit(100)\
+                .all()
+
+            # Preparar resultado
+            resultado = []
+            for item in items:
+                resultado.append({
+                    'id': item.id,
+                    'codigo': item.codigo,
+                    'descripcion': item.descripcion,
+                    'categoria': item.categoria.nombre,
+                    'categoria_id': item.categoria.id,
+                    'riesgo': item.riesgo,
+                    'puntaje_minimo': item.puntaje_minimo,
+                    'puntaje_maximo': item.puntaje_maximo,
+                    'orden': item.orden
+                })
+
+            return jsonify({"success": True, "data": resultado})
+
+        except Exception as e:
+            return jsonify({"success": False, "error": f"Error obteniendo items base disponibles: {str(e)}"}), 500

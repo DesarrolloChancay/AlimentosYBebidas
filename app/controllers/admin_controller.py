@@ -9,7 +9,7 @@ Funcionalidades:
 - Configuración global del sistema
 """
 
-from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, flash, current_app, abort
 from flask_login import current_user
 from datetime import datetime, date, timedelta
 from functools import wraps
@@ -47,9 +47,8 @@ def admin_required(f):
             if is_ajax:
                 return jsonify({'error': 'Acceso denegado. Se requieren permisos de administrador.'}), 403
             
-            # Para requests normales, redirigir
-            flash('Acceso denegado. Se requieren permisos de administrador.', 'error')
-            return redirect(url_for('login_page'))
+            # Para requests normales, usar abort para activar error handler personalizado
+            abort(403)
         return f(*args, **kwargs)
     return decorated_function
 
