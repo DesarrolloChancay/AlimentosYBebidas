@@ -1,10 +1,5 @@
 import os
 
-# Aplicar monkey-patch de gevent ANTES de cualquier otra importación
-if os.getenv('FLASK_ENV') == 'production':
-    import gevent.monkey
-    gevent.monkey.patch_all()
-
 from app import create_app
 from app.extensions import socketio
 
