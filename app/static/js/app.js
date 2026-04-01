@@ -1185,6 +1185,7 @@ function actualizarDatosTiempoRealCompletos(data) {
     }
 
     let huboCambios = false;
+    let requiereReaplicacion = false;
 
     if (data.items) {
         Object.keys(data.items).forEach(itemId => {
@@ -1210,6 +1211,8 @@ function actualizarDatosTiempoRealCompletos(data) {
                             itemContainer.classList.remove('bg-blue-50');
                         }, 1000);
                     }
+                } else {
+                    requiereReaplicacion = true;
                 }
 
                 if (!window.inspeccionEstado.items[itemId]) {
@@ -1232,6 +1235,12 @@ function actualizarDatosTiempoRealCompletos(data) {
                 }
             }
         });
+    }
+
+    if (requiereReaplicacion && data.items && Object.keys(data.items).length > 0) {
+        setTimeout(() => {
+            aplicarCalificacionesConReintentos(data.items, 6, 150);
+        }, 100);
     }
 
     if (data.observaciones !== undefined) {
@@ -2220,33 +2229,39 @@ async function cargarEstablecimientoEncargado() {
             // Seleccionar automáticamente el primer establecimiento del encargado
             const select = document.getElementById('establecimiento');
             if (select && establecimientos[0]) {
+                const establecimientoId = Number(establecimientos[0].id);
 
                 // Limpiar y agregar solo el establecimiento del encargado
                 select.innerHTML = '';
                 const option = document.createElement('option');
-                option.value = establecimientos[0].id;
+                option.value = establecimientoId;
                 option.textContent = establecimientos[0].nombre;
                 option.selected = true;
                 select.appendChild(option);
 
+                window.inspeccionEstado = {
+                    ...window.inspeccionEstado,
+                    establecimiento_id: establecimientoId
+                };
+
                 // Cargar items del establecimiento
-                await cargarItemsEstablecimiento(establecimientos[0].id);
+                await cargarItemsEstablecimiento(establecimientoId);
 
                 // Cargar firma del encargado para este establecimiento
                 if (typeof cargarFirmasEstablecimiento === 'function') {
-                    await cargarFirmasEstablecimiento(establecimientos[0].id);
+                    await cargarFirmasEstablecimiento(establecimientoId);
                 }
 
                 // Unirse automáticamente para tiempo real
                 if (socket) {
                     socket.emit('join_establecimiento', {
-                        establecimiento_id: establecimientos[0].id,
+                        establecimiento_id: establecimientoId,
                         usuario_id: obtenerUsuarioActualId(),
                         role: userRole
                     });
 
                     // Solicitar datos actuales del establecimiento para tiempo real
-                    cargarDatosTiempoRealEstablecimiento(establecimientos[0].id);
+                    cargarDatosTiempoRealEstablecimiento(establecimientoId);
                 }
 
             }
@@ -2723,20 +2738,39 @@ async function sincronizarEstablecimientoInmediatamente(establecimientoId) {
             }
         }
 
-        // Si no hay datos sincronizados, intentar recuperar datos temporales del establecimiento
-        try {
-            const tempResponse = await fetch('/api/inspecciones/temporal/establecimiento/' + establecimientoId);
-            if (tempResponse.ok) {
-                const estadoTemporal = await tempResponse.json();
-                if (estadoTemporal && Object.keys(estadoTemporal).length > 0) {
-                    // Aplicar el estado temporal
-                    await aplicarEstadoSincronizado(estadoTemporal);
-                    mostrarNotificacion('Datos temporales cargados desde otro inspector', 'info');
-                    return true;
-                }
+        if (!syncResponse.ok) {
+            let detalleError = `HTTP ${syncResponse.status}`;
+            try {
+                const errorData = await syncResponse.json();
+                detalleError = errorData?.error || detalleError;
+            } catch (parseError) {
+                // Mantener el detalle por defecto si la respuesta no vino en JSON
             }
-        } catch (tempError) {
-            console.error('Error cargando datos temporales:', tempError);
+
+            console.warn('Sincronización completa rechazada:', detalleError);
+
+            if (userRole === 'Encargado' || userRole === 'Jefe de Establecimiento') {
+                mostrarNotificacion(`No se pudo sincronizar el establecimiento: ${detalleError}`, 'warning');
+                return false;
+            }
+        }
+
+        // Solo inspectores y administradores pueden consultar este fallback
+        if (esRolEditorChecklist()) {
+            try {
+                const tempResponse = await fetch('/api/inspecciones/temporal/establecimiento/' + establecimientoId);
+                if (tempResponse.ok) {
+                    const estadoTemporal = await tempResponse.json();
+                    if (estadoTemporal && Object.keys(estadoTemporal).length > 0) {
+                        // Aplicar el estado temporal
+                        await aplicarEstadoSincronizado(estadoTemporal);
+                        mostrarNotificacion('Datos temporales cargados desde otro inspector', 'info');
+                        return true;
+                    }
+                }
+            } catch (tempError) {
+                console.error('Error cargando datos temporales:', tempError);
+            }
         }
 
         return false;

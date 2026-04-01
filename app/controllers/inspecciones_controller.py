@@ -356,27 +356,10 @@ class InspeccionesController:
             ]
 
         if user_role == "Inspector":
-            asignaciones = (
-                InspectorEstablecimiento.query.filter_by(
-                    inspector_id=user_id,
-                    activo=True,
-                )
-                .filter(InspectorEstablecimiento.fecha_asignacion <= hoy)
-                .filter(
-                    or_(
-                        InspectorEstablecimiento.fecha_fin_asignacion.is_(None),
-                        InspectorEstablecimiento.fecha_fin_asignacion >= hoy,
-                    )
-                )
-                .all()
-            )
-            return list(
-                {
-                    asignacion.establecimiento_id
-                    for asignacion in asignaciones
-                    if asignacion.establecimiento_id
-                }
-            )
+            return [
+                establecimiento.id
+                for establecimiento in Establecimiento.query.filter_by(activo=True).all()
+            ]
 
         if user_role == "Encargado":
             asignaciones = (
@@ -406,13 +389,6 @@ class InspeccionesController:
                 JefeEstablecimiento.query.filter_by(
                     usuario_id=user_id,
                     activo=True,
-                )
-                .filter(JefeEstablecimiento.fecha_inicio <= hoy)
-                .filter(
-                    or_(
-                        JefeEstablecimiento.fecha_fin.is_(None),
-                        JefeEstablecimiento.fecha_fin >= hoy,
-                    )
                 )
                 .all()
             )
@@ -735,24 +711,19 @@ class InspeccionesController:
 
             # Jefe de Establecimiento solo ve su establecimiento asignado
             elif user_role == "Jefe de Establecimiento":
-                # Obtener el establecimiento asignado al jefe desde la tabla jefes_establecimientos
-                jefe_query = db.session.execute(text("""
-                    SELECT e.id, e.nombre, e.direccion, e.activo, e.tipo_establecimiento_id
-                    FROM establecimientos e
-                    INNER JOIN jefes_establecimientos je ON e.id = je.establecimiento_id
-                    WHERE je.usuario_id = :user_id AND je.activo = 1 AND e.activo = 1
-                """), {'user_id': user_id})
-                
-                jefe_result = jefe_query.fetchall()
-                
-                # Para mantener compatibilidad, usar objetos reales del ORM
-                establecimientos = []
-                for row in jefe_result:
-                    # Obtener el objeto completo del establecimiento
-                    establecimiento = Establecimiento.query.get(row[0])
-                    if establecimiento:
-                        establecimientos.append(establecimiento)
-                
+                establecimiento_ids = (
+                    InspeccionesController._obtener_establecimientos_autorizados(
+                        user_id, user_role
+                    )
+                )
+                establecimientos = (
+                    Establecimiento.query.filter(
+                        Establecimiento.id.in_(establecimiento_ids),
+                        Establecimiento.activo == True,
+                    ).all()
+                    if establecimiento_ids
+                    else []
+                )
 
             else:
                 return jsonify({"error": "Rol no autorizado"}), 403
