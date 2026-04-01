@@ -1,7 +1,27 @@
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask import session
 from app.extensions import socketio
-from app.controllers.inspecciones_controller import datos_tiempo_real
+from app.controllers.inspecciones_controller import datos_tiempo_real, InspeccionesController
+from app.models.Inspecciones_models import Inspeccion
+
+
+def _usuario_tiene_acceso_establecimiento(establecimiento_id):
+    user_id = session.get("user_id")
+    user_role = session.get("user_role")
+    return InspeccionesController._usuario_tiene_acceso_establecimiento(
+        user_id, user_role, establecimiento_id
+    )
+
+
+def _usuario_tiene_acceso_inspeccion(inspeccion_id):
+    if not inspeccion_id:
+        return False
+
+    inspeccion = Inspeccion.query.get(inspeccion_id)
+    if not inspeccion:
+        return False
+
+    return _usuario_tiene_acceso_establecimiento(inspeccion.establecimiento_id)
 
 @socketio.on('connect')
 def handle_connect():
@@ -16,6 +36,10 @@ def on_join_inspeccion(data):
     
     if not inspeccion_id:
         emit('error', {'msg': 'ID de inspección requerido'})
+        return
+
+    if not _usuario_tiene_acceso_inspeccion(inspeccion_id):
+        emit('error', {'msg': 'No autorizado para esta inspección'})
         return
     
     room = f"inspeccion_{inspeccion_id}"
@@ -33,10 +57,11 @@ def on_join_inspeccion(data):
 def handle_join_establecimiento(data):
     """Unirse a una sala de establecimiento para tiempo real sin inspección activa"""
     establecimiento_id = data.get('establecimiento_id')
-    usuario_id = data.get('usuario_id')
-    role = data.get('role')
     
     if establecimiento_id:
+        if not _usuario_tiene_acceso_establecimiento(establecimiento_id):
+            emit('error', {'msg': 'No autorizado para este establecimiento'})
+            return
         room = f"establecimiento_{establecimiento_id}"
         join_room(room)
         
@@ -46,6 +71,7 @@ def handle_item_rating_tiempo_real(data):
     """Manejar calificaciones en tiempo real para que el encargado las vea"""
     establecimiento_id = data.get('establecimiento_id')
     actualizado_por = data.get('actualizado_por')
+    user_role = session.get('user_role')
     resumen = data.get('resumen', {})
     items = data.get('items', {})
     observaciones = data.get('observaciones', '')
@@ -56,6 +82,14 @@ def handle_item_rating_tiempo_real(data):
 
     
     if establecimiento_id:
+        if user_role not in ['Inspector', 'Administrador']:
+            emit('error', {'msg': 'No autorizado para emitir cambios del checklist'})
+            return
+
+        if not _usuario_tiene_acceso_establecimiento(establecimiento_id):
+            emit('error', {'msg': 'No autorizado para este establecimiento'})
+            return
+
         room = f"establecimiento_{establecimiento_id}"
             
         clave_tiempo_real = f"establecimiento_{establecimiento_id}"
@@ -128,6 +162,10 @@ def handle_item_update(data):
     if not all([inspeccion_id, item_id, rating is not None]):
         emit('error', {'msg': 'Datos incompletos para actualizar item'})
         return
+
+    if not _usuario_tiene_acceso_inspeccion(inspeccion_id):
+        emit('error', {'msg': 'No autorizado para esta inspección'})
+        return
     
     room = f"inspeccion_{inspeccion_id}"
     
@@ -147,6 +185,10 @@ def handle_observaciones_update(data):
     inspeccion_id = data.get('inspeccion_id')
     observaciones = data.get('observaciones', '')
     user_role = session.get('user_role')
+
+    if not _usuario_tiene_acceso_inspeccion(inspeccion_id):
+        emit('error', {'msg': 'No autorizado para esta inspección'})
+        return
     
     room = f"inspeccion_{inspeccion_id}"
     
@@ -163,6 +205,10 @@ def handle_estado_change(data):
     inspeccion_id = data.get('inspeccion_id')
     nuevo_estado = data.get('estado')
     user_role = session.get('user_role')
+
+    if not _usuario_tiene_acceso_inspeccion(inspeccion_id):
+        emit('error', {'msg': 'No autorizado para esta inspección'})
+        return
     
     room = f"inspeccion_{inspeccion_id}"
     
@@ -179,6 +225,10 @@ def handle_solicitud_firma(data):
     inspeccion_id = data.get('inspeccion_id')
     tipo_firma = data.get('tipo')  # 'encargado' o 'inspector'
     user_role = session.get('user_role')
+
+    if not _usuario_tiene_acceso_inspeccion(inspeccion_id):
+        emit('error', {'msg': 'No autorizado para esta inspección'})
+        return
     
     room = f"inspeccion_{inspeccion_id}"
     
@@ -196,19 +246,44 @@ def handle_encargado_aprobo(data):
     establecimiento_id = data.get('establecimiento_id')
     mensaje = data.get('mensaje', 'El encargado ha aprobado la inspección')
     firma_data = data.get('firma_data')
+    user_role = session.get('user_role')
+
+    if user_role not in ['Encargado', 'Jefe de Establecimiento']:
+        emit('error', {'msg': 'No autorizado para confirmar inspecciones'})
+        return
+
+    if not _usuario_tiene_acceso_establecimiento(establecimiento_id):
+        emit('error', {'msg': 'No autorizado para este establecimiento'})
+        return
     
-    # Emitir a todos los usuarios conectados (broadcast general)
+    room = f"establecimiento_{establecimiento_id}"
     emit('encargado_aprobo', {
         'mensaje': mensaje,
         'encargado_id': encargado_id,
         'establecimiento_id': establecimiento_id,
         'firma_data': firma_data,
         'timestamp': data.get('timestamp')
-    }, broadcast=True, include_self=False)
+    }, to=room, include_self=False)
 
 @socketio.on('notificacion_general')
 def handle_notificacion_general(data):
     """Maneja notificaciones generales entre usuarios"""
+    if data.get('tipo') == 'encargado_aprobo':
+        establecimiento_id = data.get('establecimiento_id')
+        user_role = session.get('user_role')
+
+        if user_role not in ['Encargado', 'Jefe de Establecimiento']:
+            emit('error', {'msg': 'No autorizado para emitir esta notificación'})
+            return
+
+        if not _usuario_tiene_acceso_establecimiento(establecimiento_id):
+            emit('error', {'msg': 'No autorizado para este establecimiento'})
+            return
+
+        room = f"establecimiento_{establecimiento_id}"
+        emit('notificacion_general', data, to=room, include_self=False)
+        return
+
     # Reenviar la notificación a todos los usuarios
     emit('notificacion_general', data, broadcast=True, include_self=False)
 
@@ -228,6 +303,9 @@ def handle_estado_completo_reconexion(data):
     establecimiento_id = data.get('establecimiento_id')
 
     if inspeccion_id:
+        if not _usuario_tiene_acceso_inspeccion(inspeccion_id):
+            emit('error', {'msg': 'No autorizado para esta inspección'})
+            return
         room = f"inspeccion_{inspeccion_id}"
         # Reenviar estado a todos en la sala para sincronizar
         emit('estado_sincronizado', {

@@ -1,0 +1,526 @@
+{% extends "base.html" %}
+
+{% block title %}Reglamento Restaurante - Semana {{ reunion.semana }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Encabezado -->
+    <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800 dark:text-white">
+                    REGLAMENTO RESTAURANTE
+                </h1>
+                <p class="text-gray-600 dark:text-gray-300 mt-2">
+                    Establecimiento: <span class="font-semibold">{{ reunion.establecimiento.nombre }}</span>
+                </p>
+                <p class="text-gray-600 dark:text-gray-300">
+                    Semana: <span class="font-semibold">{{ reunion.semana }}</span> - 
+                    Año: <span class="font-semibold">{{ reunion.ano }}</span>
+                </p>
+                {% if reunion.fecha_reunion %}
+                <p class="text-gray-600 dark:text-gray-300">
+                    Fecha de Reunión: <span class="font-semibold">{{ reunion.fecha_reunion.strftime('%d/%m/%Y') }}</span>
+                </p>
+                {% endif %}
+            </div>
+            
+            <div class="text-right">
+                {% if reunion.estado == 'pendiente' %}
+                    <span class="px-4 py-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-full text-sm font-semibold">
+                        PENDIENTE
+                    </span>
+                {% else %}
+                    <span class="px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full text-sm font-semibold">
+                        COMPLETADA
+                    </span>
+                {% endif %}
+                        <th class="px-4 py-3 text-left" style="width: 5%">Nro</th>
+                        <th class="px-4 py-3 text-left" style="width: 45%">Descripción</th>
+                        <th class="px-4 py-3 text-center" style="width: 15%">Puntaje</th>
+                        <th class="px-4 py-3 text-center" style="width: 10%">Estado</th>
+                        <th class="px-4 py-3 text-center" style="width: 10%">Infracciones</th>
+                        <th class="px-4 py-3 text-left" style="width: 15%">Observaciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for tipo_sancion, items in items_por_tipo.items() %}
+                        <!-- Fila de encabezado de categoría -->
+                        <tr class="bg-gray-100 dark:bg-gray-700/50">
+                            <td colspan="6" class="px-4 py-2 font-semibold text-gray-700 dark:text-gray-200">
+                                {{ tipo_sancion }}
+                            </td>
+                        </tr>
+                        
+                        {% for item in items %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                            <td class="px-4 py-3 text-center text-gray-900 dark:text-gray-100">
+                                {{ item.codigo }}
+                            </td>
+                            <td class="px-4 py-3 text-gray-900 dark:text-gray-100">
+                                <div class="flex items-center gap-2">
+                                    <span>{{ item.descripcion }}</span>
+                                    {% if item.logica_inversa and item.tipo_validacion == 'si_no' %}
+                                        <span class="px-2 py-0.5 text-xs font-bold bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 rounded border border-amber-400 dark:border-amber-600">
+                                            SI=MALO
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                {% if item.puntaje %}
+                                    <span class="text-red-600 dark:text-red-400 font-semibold">{{ item.puntaje }} puntos</span>
+                                {% else %}
+                                    <span class="text-gray-400 dark:text-gray-500">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                {% if item.tipo_validacion in ['numerico', 'porcentaje'] %}
+                                    <!-- Input numérico para validación -->
+                                    <div class="flex flex-col items-center space-y-1">
+                                        <input type="number" 
+                                               step="0.01"
+                                               class="input-valor-medido w-24 px-2 py-1 border border-blue-400 dark:border-blue-600 dark:bg-gray-700 dark:text-white rounded text-center font-semibold"
+                                               data-item-id="{{ item.id }}"
+                                               data-puntaje="{{ item.puntaje }}"
+                                                                                              data-tipo="{{ item.tipo_validacion }}"
+                                               data-logica-inversa="{{ item.logica_inversa }}"
+                                               data-umbral="{{ item.valor_umbral }}"
+                                               data-operador="{{ item.operador_comparacion }}"
+                                               placeholder="{% if item.tipo_validacion == 'porcentaje' %}%{% else %}Cant{% endif %}"
+                                               value="{{ evaluaciones.get(item.id).valor_medido if evaluaciones.get(item.id) else '' }}">
+                                        <small class="text-xs text-gray-500 dark:text-gray-400">
+                                            {{ item.operador_comparacion }}{{ item.valor_umbral }}{% if item.tipo_validacion == 'porcentaje' %}%{% endif %}
+                                        </small>
+                                    </div>
+                                {% else %}
+                                    <!-- Toggle Cumple/No Cumple -->
+                                    <div class="flex justify-center space-x-2">
+                                        <button type="button" 
+                                                class="btn-estado px-3 py-1 rounded text-sm font-semibold transition-colors"
+                                                data-item-id="{{ item.id }}"
+                                                data-puntaje="{{ item.puntaje }}"
+                                                data-logica-inversa="{{ item.logica_inversa }}"
+                                                data-estado="cumple"
+                                                data-activo="{% if evaluaciones.get(item.id) and evaluaciones[item.id].cumple %}true{% else %}false{% endif %}"
+                                                {% if evaluaciones.get(item.id) and evaluaciones[item.id].cumple %}
+                                                    {% if item.logica_inversa %}
+                                                        style="background-color: #ef4444; color: white;"
+                                                    {% else %}
+                                                        style="background-color: #10b981; color: white;"
+                                                    {% endif %}
+                                                {% else %}
+                                                    style="background-color: #e5e7eb; color: #6b7280;"
+                                                {% endif %}>
+                                            SI
+                                        </button>
+                                        <button type="button" 
+                                                class="btn-estado px-3 py-1 rounded text-sm font-semibold transition-colors"
+                                                data-item-id="{{ item.id }}"
+                                                data-puntaje="{{ item.puntaje }}"
+                                                data-logica-inversa="{{ item.logica_inversa }}"
+                                                data-estado="no_cumple"
+                                                data-activo="{% if evaluaciones.get(item.id) and not evaluaciones[item.id].cumple %}true{% else %}false{% endif %}"
+                                                {% if evaluaciones.get(item.id) and not evaluaciones[item.id].cumple %}
+                                                    {% if item.logica_inversa %}
+                                                        style="background-color: #10b981; color: white;"
+                                                    {% else %}
+                                                        style="background-color: #ef4444; color: white;"
+                                                    {% endif %}
+                                                {% else %}
+                                                    style="background-color: #e5e7eb; color: #6b7280;"
+                                                {% endif %}>
+                                            NO
+                                        </button>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <input type="number" 
+                                       class="input-infracciones w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded text-center"
+                                       data-item-id="{{ item.id }}"
+                                       data-puntaje="{{ item.puntaje }}"
+                                       min="0"
+                                       value="{{ evaluaciones.get(item.id).numero_infracciones if evaluaciones.get(item.id) else 0 }}">
+                            </td>
+                            <td class="px-4 py-3">
+                                <input type="text" 
+                                       class="input-observacion w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded text-sm"
+                                       data-item-id="{{ item.id }}"
+                                       placeholder="Observación..."
+                                       value="{{ evaluaciones.get(item.id).observacion if evaluaciones.get(item.id) else '' }}">
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </form>
+    </div>
+
+    <!-- Resumen de Sanciones -->
+    <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mt-6 border border-gray-200 dark:border-gray-700">
+        <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-4">Resumen de Sanciones</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded">
+                <p class="text-gray-700 dark:text-gray-300 font-semibold">Total Infracciones</p>
+                <p id="totalInfracciones" class="text-3xl font-bold text-red-600 dark:text-red-400">0</p>
+            </div>
+            
+            <div class="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4 rounded">
+                <p class="text-gray-700 dark:text-gray-300 font-semibold">Puntos Acumulados</p>
+                <p id="totalPuntos" class="text-3xl font-bold text-orange-600 dark:text-orange-400">0</p>
+            </div>
+            
+            <div class="bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500 p-4 rounded">
+                <p class="text-gray-700 dark:text-gray-300 font-semibold">Sanción Aplicada</p>
+                <p id="sancionTexto" class="text-3xl font-bold text-purple-600 dark:text-purple-400">0 platos</p>
+            </div>
+        </div>
+        
+        <!-- Tabla de Escala de Sanciones -->
+        <div class="mt-6 bg-gray-50 dark:bg-gray-700/50 p-4 rounded">
+            <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3">Escala de Sanciones:</h3>
+            <div class="grid grid-cols-2 md:grid-cols-6 gap-2 text-sm">
+                <div class="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
+                    <p class="font-semibold text-gray-700 dark:text-gray-200">1-2 puntos</p>
+                    <p class="text-yellow-600 dark:text-yellow-400">Llamado de atencion</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
+                    <p class="font-semibold text-gray-700 dark:text-gray-200">3-4 puntos</p>
+                    <p class="text-orange-600 dark:text-orange-400">5 platos</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
+                    <p class="font-semibold text-gray-700 dark:text-gray-200">5-6 puntos</p>
+                    <p class="text-orange-600 dark:text-orange-400">10 platos</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
+                    <p class="font-semibold text-gray-700 dark:text-gray-200">7-8 puntos</p>
+                    <p class="text-red-500 dark:text-red-400">15 platos</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
+                    <p class="font-semibold text-gray-700 dark:text-gray-200">9-10 puntos</p>
+                    <p class="text-red-600 dark:text-red-400">20 platos</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
+                    <p class="font-semibold text-gray-700 dark:text-gray-200">11+ puntos</p>
+                    <p class="text-red-700 dark:text-red-400 font-bold">25 platos</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botones de Acción -->
+    <div class="flex justify-between items-center mt-6">
+        <a href="{{ url_for('reglamento.dashboard', establecimiento_id=reunion.establecimiento_id) }}" 
+           class="px-6 py-3 bg-gray-500 hover:bg-gray-600 dark:bg-gray-600 dark:hover:bg-gray-700 text-white rounded transition-colors">
+            Volver
+        </a>
+        
+        {% if reunion.estado == 'pendiente' %}
+        <button type="button" 
+                id="btnGuardar"
+                class="px-8 py-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded transition-colors font-semibold">
+            Guardar Evaluación
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Descripcion: JavaScript para manejo del checklist interactivo
+// Logica: Maneja toggle de botones SI/NO y calculo automatico de sanciones
+
+document.addEventListener('DOMContentLoaded', function() {
+    const reunionId = {{ reunion.id }};
+
+    function evaluarCondicion(valor, operador, umbral) {
+        switch (operador) {
+            case '<': return valor < umbral;
+            case '<=': return valor <= umbral;
+            case '>': return valor > umbral;
+            case '>=': return valor >= umbral;
+            case '=': return valor === umbral;
+            default: return false;
+        }
+    }
+
+    function obtenerNumeroInfracciones(itemId) {
+        const input = document.querySelector(`.input-infracciones[data-item-id="${itemId}"]`);
+        const valor = parseInt(input?.value, 10);
+        if (!input || Number.isNaN(valor) || valor <= 0) {
+            return 1;
+        }
+        return valor;
+    }
+
+    function obtenerPuntajeItem(itemId) {
+        const el = document.querySelector(`[data-item-id="${itemId}"][data-puntaje]`);
+        const puntaje = parseInt(el?.dataset?.puntaje, 10);
+        return Number.isNaN(puntaje) ? 0 : puntaje;
+    }
+
+    // Manejo de botones de estado SI/NO
+    const botonesEstado = document.querySelectorAll('.btn-estado');
+
+    botonesEstado.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const itemId = this.dataset.itemId;
+            const nuevoEstado = this.dataset.estado;
+            const logicaInversa = this.dataset.logicaInversa === 'True';
+
+            // Obtener ambos botones del mismo item
+            const botonesMismoItem = document.querySelectorAll(`.btn-estado[data-item-id="${itemId}"]`);
+
+            // Resetear todos los botones del item
+            botonesMismoItem.forEach(b => {
+                b.style.backgroundColor = '#e5e7eb';
+                b.style.color = '#6b7280';
+                b.dataset.activo = 'false';
+            });
+
+            // Determinar color segun logica
+            let colorBoton;
+            if (logicaInversa) {
+                // Logica inversa: SI=malo(rojo), NO=bueno(verde)
+                colorBoton = nuevoEstado === 'cumple' ? '#ef4444' : '#10b981';
+            } else {
+                // Logica normal: SI=bueno(verde), NO=malo(rojo)
+                colorBoton = nuevoEstado === 'cumple' ? '#10b981' : '#ef4444';
+            }
+
+            this.style.backgroundColor = colorBoton;
+            this.style.color = 'white';
+            this.dataset.activo = 'true';
+
+            // Recalcular sanciones
+            calcularSanciones();
+        });
+    });
+
+    // Manejo de inputs numericos (porcentaje/numerico)
+    const inputsValorMedido = document.querySelectorAll('.input-valor-medido');
+    inputsValorMedido.forEach(input => {
+        input.addEventListener('input', function() {
+            const valor = parseFloat(this.value) || 0;
+            const umbral = parseFloat(this.dataset.umbral);
+            const operador = this.dataset.operador;
+            const logicaInversa = this.dataset.logicaInversa === 'True';
+
+            const condicion = evaluarCondicion(valor, operador, umbral);
+            const incumplimiento = logicaInversa ? !condicion : condicion;
+
+            // Cambiar color del input segun cumplimiento
+            if (this.value !== '') {
+                this.style.borderColor = incumplimiento ? '#ef4444' : '#10b981';
+                this.style.borderWidth = '2px';
+            } else {
+                this.style.borderColor = '#94a3b8';
+                this.style.borderWidth = '1px';
+            }
+
+            calcularSanciones();
+        });
+    });
+
+    // Actualizar sanciones al cambiar numero de infracciones
+    const inputsInfracciones = document.querySelectorAll('.input-infracciones');
+    inputsInfracciones.forEach(input => {
+        input.addEventListener('input', calcularSanciones);
+    });
+
+    /**
+     * Descripcion: Calcula el total de infracciones y puntos acumulados
+     * Logica: Recorre items SI/NO y numericos para determinar incumplimientos
+     */
+    function calcularSanciones() {
+        let totalInfracciones = 0;
+        let totalPuntos = 0;
+
+        // 1. Revisar botones SI/NO
+        const botonesEstado = document.querySelectorAll('.btn-estado');
+        const itemsRevisados = new Set();
+
+        botonesEstado.forEach(btn => {
+            const itemId = btn.dataset.itemId;
+            if (itemsRevisados.has(itemId)) return;
+
+            const logicaInversa = btn.dataset.logicaInversa === 'True';
+            const btnCumple = document.querySelector(`.btn-estado[data-item-id="${itemId}"][data-estado="cumple"]`);
+            const btnNoCumple = document.querySelector(`.btn-estado[data-item-id="${itemId}"][data-estado="no_cumple"]`);
+
+            const seleccionadoCumple = btnCumple?.dataset?.activo === 'true';
+            const seleccionadoNoCumple = btnNoCumple?.dataset?.activo === 'true';
+            const haySeleccion = seleccionadoCumple || seleccionadoNoCumple;
+
+            const hayIncumplimiento = haySeleccion
+                ? (logicaInversa ? seleccionadoCumple : seleccionadoNoCumple)
+                : false;
+
+            if (hayIncumplimiento) {
+                const numInfracciones = obtenerNumeroInfracciones(itemId);
+                const puntaje = obtenerPuntajeItem(itemId);
+                totalInfracciones += numInfracciones;
+                totalPuntos += (puntaje * numInfracciones);
+            }
+
+            itemsRevisados.add(itemId);
+        });
+
+        // 2. Revisar inputs numericos
+        const inputsValorMedido = document.querySelectorAll('.input-valor-medido');
+        inputsValorMedido.forEach(input => {
+            if (input.value === '') return;
+
+            const valor = parseFloat(input.value);
+            const umbral = parseFloat(input.dataset.umbral);
+            const operador = input.dataset.operador;
+            const logicaInversa = input.dataset.logicaInversa === 'True';
+            const itemId = input.dataset.itemId;
+
+            const condicion = evaluarCondicion(valor, operador, umbral);
+            const incumplimiento = logicaInversa ? !condicion : condicion;
+
+            if (incumplimiento) {
+                const numInfracciones = obtenerNumeroInfracciones(itemId);
+                const puntaje = obtenerPuntajeItem(itemId);
+                totalInfracciones += numInfracciones;
+                totalPuntos += (puntaje * numInfracciones);
+            }
+        });
+
+        // Calcular sancion
+        let sancion = '';
+        if (totalPuntos <= 2) {
+            sancion = 'Llamado de atencion';
+        } else if (totalPuntos <= 4) {
+            sancion = '5 platos';
+        } else if (totalPuntos <= 6) {
+            sancion = '10 platos';
+        } else if (totalPuntos <= 8) {
+            sancion = '15 platos';
+        } else if (totalPuntos <= 10) {
+            sancion = '20 platos';
+        } else {
+            sancion = '25 platos';
+        }
+
+        // Actualizar UI
+        document.getElementById('totalInfracciones').textContent = totalInfracciones;
+        document.getElementById('totalPuntos').textContent = totalPuntos;
+        document.getElementById('sancionTexto').textContent = sancion;
+    }
+
+    /**
+     * Descripcion: Guarda la evaluacion del reglamento
+     * Logica: Recopila SI/NO y valores numericos para enviar al servidor
+     */
+    const btnGuardar = document.getElementById('btnGuardar');
+    if (btnGuardar) {
+        btnGuardar.addEventListener('click', async function() {
+            const evaluaciones = [];
+
+            // 1. Recopilar evaluaciones SI/NO
+            const botonesEstado = document.querySelectorAll('.btn-estado');
+            const itemsEvaluados = new Set();
+
+            botonesEstado.forEach(btn => {
+                const itemId = btn.dataset.itemId;
+
+                if (!itemsEvaluados.has(itemId)) {
+                    itemsEvaluados.add(itemId);
+
+                    const btnCumple = document.querySelector(`.btn-estado[data-item-id="${itemId}"][data-estado="cumple"]`);
+                    const btnNoCumple = document.querySelector(`.btn-estado[data-item-id="${itemId}"][data-estado="no_cumple"]`);
+                    const logicaInversa = btn.dataset.logicaInversa === 'True';
+
+                    const seleccionadoCumple = btnCumple?.dataset?.activo === 'true';
+                    const seleccionadoNoCumple = btnNoCumple?.dataset?.activo === 'true';
+
+                    let cumple = true;
+                    if (seleccionadoCumple || seleccionadoNoCumple) {
+                        cumple = logicaInversa ? seleccionadoNoCumple : seleccionadoCumple;
+                    }
+
+                    const numInfracciones = cumple ? 0 : obtenerNumeroInfracciones(itemId);
+                    const inputObs = document.querySelector(`.input-observacion[data-item-id="${itemId}"]`);
+
+                    evaluaciones.push({
+                        item_id: parseInt(itemId),
+                        cumple: cumple,
+                        numero_infracciones: numInfracciones,
+                        observacion: inputObs.value || ''
+                    });
+                }
+            });
+
+            // 2. Recopilar evaluaciones numericas
+            const inputsValorMedido = document.querySelectorAll('.input-valor-medido');
+            inputsValorMedido.forEach(input => {
+                const itemId = input.dataset.itemId;
+                const valor = parseFloat(input.value);
+                const umbral = parseFloat(input.dataset.umbral);
+                const operador = input.dataset.operador;
+                const logicaInversa = input.dataset.logicaInversa === 'True';
+
+                const tieneValor = input.value !== '';
+                let incumplimiento = false;
+                if (tieneValor) {
+                    const condicion = evaluarCondicion(valor, operador, umbral);
+                    incumplimiento = logicaInversa ? !condicion : condicion;
+                }
+
+                const cumple = !incumplimiento;
+                const numInfracciones = cumple ? 0 : obtenerNumeroInfracciones(itemId);
+                const inputObs = document.querySelector(`.input-observacion[data-item-id="${itemId}"]`);
+
+                evaluaciones.push({
+                    item_id: parseInt(itemId),
+                    cumple: cumple,
+                    numero_infracciones: numInfracciones,
+                    valor_medido: input.value !== '' ? valor : null,
+                    observacion: inputObs.value || ''
+                });
+            });
+
+            // Enviar al servidor
+            try {
+                btnGuardar.disabled = true;
+                btnGuardar.textContent = 'Guardando...';
+
+                const response = await fetch('/reglamento/guardar-evaluacion', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        reunion_id: reunionId,
+                        evaluaciones: evaluaciones
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('Evaluacion guardada exitosamente');
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                    btnGuardar.disabled = false;
+                    btnGuardar.textContent = 'Guardar Evaluacion';
+                }
+            } catch (error) {
+                console.error('Error al guardar:', error);
+                alert('Error de conexion');
+                btnGuardar.disabled = false;
+                btnGuardar.textContent = 'Guardar Evaluacion';
+            }
+        });
+    }
+
+    // Calcular sanciones al cargar la pagina
+    calcularSanciones();
+});
+</script>
+{% endblock %}

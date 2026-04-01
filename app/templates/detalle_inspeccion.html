@@ -536,25 +536,25 @@
                                 {{ (inspeccion.puntaje_total or 0) | sin_decimales }}
                             </div>
                             <div class="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide print:text-xs">
-                                Puntos
+                                Riesgo acumulado
                             </div>
                         </div>
 
                         <div class="bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 text-center print:p-1 print:rounded print:bg-white print:border print:border-gray-300">
                             <div class="text-2xl font-bold text-gray-900 dark:text-white mb-1 print:text-sm print:mb-0 print:font-bold">
-                                {{ (inspeccion.puntaje_maximo_posible or 0) | sin_decimales }}
+                                {{ (inspeccion.puntaje_promedio_item or 0) | round(2) }}
                             </div>
                             <div class="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide print:text-xs">
-                                Máximo
+                                Riesgo promedio
                             </div>
                         </div>
 
                         <div class="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 text-center print:p-1 print:rounded print:bg-white print:border print:border-gray-300">
-                            <div class="text-2xl font-bold {% if inspeccion.porcentaje_cumplimiento >= 90 %}text-green-600 dark:text-green-400{% elif inspeccion.porcentaje_cumplimiento >= 70 %}text-yellow-600 dark:text-yellow-400{% else %}text-red-600 dark:text-red-400{% endif %} mb-1 print:text-sm print:mb-0 print:font-bold">
+                            <div class="text-2xl font-bold {% if inspeccion.porcentaje_cumplimiento >= 85 %}text-green-600 dark:text-green-400{% elif inspeccion.porcentaje_cumplimiento >= 70 %}text-yellow-600 dark:text-yellow-400{% else %}text-red-600 dark:text-red-400{% endif %} mb-1 print:text-sm print:mb-0 print:font-bold">
                                 {{ (inspeccion.porcentaje_cumplimiento or 0) | sin_decimales }}%
                             </div>
                             <div class="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide print:text-xs">
-                                Cumplimiento
+                                Índice sanitario
                             </div>
                         </div>
 
@@ -563,7 +563,7 @@
                                 {{ (inspeccion.puntos_criticos_perdidos or 0) | sin_decimales }}
                             </div>
                             <div class="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide print:text-xs">
-                                Críticos
+                                Críticos no conformes
                             </div>
                         </div>
                     </div>
@@ -575,7 +575,7 @@
                             <span class="text-sm font-bold text-gray-900 dark:text-white print:text-xs print:font-bold">{{ (inspeccion.porcentaje_cumplimiento or 0) | sin_decimales }}%</span>
                         </div>
                         <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3 print:h-2">
-                            <div class="h-3 print:h-2 rounded-full transition-all duration-500 {% if inspeccion.porcentaje_cumplimiento >= 90 %}bg-green-500 dark:bg-green-600{% elif inspeccion.porcentaje_cumplimiento >= 70 %}bg-yellow-500 dark:bg-yellow-600{% else %}bg-red-500 dark:bg-red-600{% endif %}"
+                            <div class="h-3 print:h-2 rounded-full transition-all duration-500 {% if inspeccion.porcentaje_cumplimiento >= 85 %}bg-green-500 dark:bg-green-600{% elif inspeccion.porcentaje_cumplimiento >= 70 %}bg-yellow-500 dark:bg-yellow-600{% else %}bg-red-500 dark:bg-red-600{% endif %}"
                                  style="width: {{ inspeccion.porcentaje_cumplimiento or 0 }}%"></div>
                         </div>
                     </div>
@@ -729,7 +729,11 @@
                             <span class="text-xs font-medium text-gray-900 dark:text-white print:text-xs print:flex-1 print:truncate">
                                 {{ evaluacion_item.descripcion }}
                                 <span class="text-xs text-gray-600 dark:text-gray-300 print:text-xs print:font-bold print:ml-1">
-                                    ({{ evaluacion_item.puntaje_maximo }})
+                                    {% if evaluacion_item.riesgo == 'Crítico' %}
+                                    (1 cumple · 8 no cumple)
+                                    {% else %}
+                                    (1 excelente · 2 bueno · 3 regular)
+                                    {% endif %}
                                 </span>
                             </span>
                         </div>
@@ -749,14 +753,14 @@
 
                             <!-- Opciones de calificación OCULTAS en impresión -->
                             <div class="flex space-x-0.5 print:hidden">
-                                {% for rating in range(evaluacion_item.puntaje_minimo, evaluacion_item.puntaje_maximo + 1) %}
+                                {% for rating in evaluacion_item.opciones_calificacion %}
                                 <div class="flex items-center print:hidden">
                                     <input type="radio" name="item_{{ evaluacion_item.id }}"
                                            value="{{ rating }}"
                                            {% if evaluacion_item.detalle and evaluacion_item.detalle.rating==rating %}checked{% endif %}
                                            disabled
                                            class="w-2 h-2 text-blue-600 dark:text-blue-400 appearance-none rounded-full border border-gray-400 checked:bg-blue-500 checked:border-blue-500 disabled:checked:bg-blue-300 disabled:checked:border-blue-300 disabled:cursor-not-allowed print:hidden">
-                                    <label class="ml-0.5 text-xs text-gray-700 dark:text-gray-300 print:hidden">{{ rating }}</label>
+                                    <label class="ml-0.5 text-xs text-gray-700 dark:text-gray-300 print:hidden" title="{{ evaluacion_item.etiquetas_calificacion[rating] }}">{{ rating }}</label>
                                 </div>
                                 {% endfor %}
                             </div>
@@ -814,6 +818,23 @@
                             {{ inspeccion.fecha_firma_encargado.strftime('%d/%m/%Y %H:%M') }}
                         </p>
                         {% endif %}
+                    </div>
+                    {% elif inspeccion.motivo_sin_firma_encargado %}
+                    <div class="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 print:p-1 print:rounded print:bg-white print:border print:border-gray-300">
+                        <div class="flex items-center space-x-3 mb-3 print:space-x-1 print:mb-0">
+                            <svg class="w-5 h-5 text-amber-600 dark:text-amber-300 print:w-3 print:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"></path>
+                            </svg>
+                            <h4 class="text-sm font-semibold text-amber-800 dark:text-amber-200 print:text-xs print:font-bold">SIN FIRMA DEL ENCARGADO</h4>
+                        </div>
+                        <div class="border border-amber-200 dark:border-amber-800 rounded-lg p-3 bg-white dark:bg-gray-800 mb-3 print:p-1 print:rounded print:border print:border-gray-300 print:mb-0">
+                            <p class="text-sm text-amber-900 dark:text-amber-100 leading-relaxed print:text-xs">
+                                {{ inspeccion.motivo_sin_firma_encargado }}
+                            </p>
+                        </div>
+                        <p class="text-xs text-amber-700 dark:text-amber-300 print:text-xs print:font-bold">
+                            La inspección fue finalizada sin la firma del encargado y con motivo registrado.
+                        </p>
                     </div>
                     {% endif %}
 

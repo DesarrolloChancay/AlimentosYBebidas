@@ -101,6 +101,68 @@ class FirmaEncargadoPorJefe(db.Model):
     establecimiento = db.relationship("Establecimiento", backref="firmas_encargados", lazy=True)
 
 
+class ItemReglamentoRestaurante(db.Model):
+    """Descripción: Items del checklist del reglamento de restaurante
+    Lógica: Cada item representa una infracción que se evalúa semanalmente
+    """
+    __tablename__ = "items_reglamento_restaurante"
+    id = db.Column(db.Integer, primary_key=True)
+    codigo = db.Column(db.String(10), nullable=False, unique=True)  # A-01, A-02, etc.
+    descripcion = db.Column(db.Text, nullable=False)
+    categoria = db.Column(db.String(100), nullable=False)  # Checklist, Satisfacción, etc.
+    riesgo = db.Column(db.String(20), nullable=False)  # Mayor, Crítico, Menor
+    puntaje = db.Column(db.Integer, nullable=False)  # 1, 3, 5
+    tipo_validacion = db.Column(db.String(20), default='si_no')  # 'si_no', 'numerico', 'porcentaje'
+    logica_inversa = db.Column(db.Boolean, default=False)  # True = SI es malo, NO es bueno
+    valor_umbral = db.Column(db.Numeric(10, 2))  # Valor de referencia para validación numérica
+    operador_comparacion = db.Column(db.String(10))  # '<', '>', '<=', '>=', '='
+    orden = db.Column(db.Integer, default=0)
+    activo = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
+
+
+class ReunionReglamento(db.Model):
+    """Descripción: Reunión semanal para revisar infracciones
+    Lógica: Se crea cada lunes para revisar la semana anterior
+    """
+    __tablename__ = "reuniones_reglamento"
+    id = db.Column(db.Integer, primary_key=True)
+    establecimiento_id = db.Column(db.Integer, db.ForeignKey("establecimientos.id"), nullable=False)
+    semana = db.Column(db.Integer, nullable=False)  # Número de semana ISO
+    ano = db.Column(db.Integer, nullable=False)
+    fecha_reunion = db.Column(db.Date, nullable=False)  # Lunes de la semana
+    fecha_inicio_semana = db.Column(db.Date, nullable=False)  # Lunes de semana evaluada
+    fecha_fin_semana = db.Column(db.Date, nullable=False)  # Domingo de semana evaluada
+    total_inspecciones = db.Column(db.Integer, default=0)
+    total_infracciones = db.Column(db.Integer, default=0)
+    total_platos_sancion = db.Column(db.Integer, default=0)
+    observaciones = db.Column(db.Text)
+    estado = db.Column(db.String(20), default='pendiente')  # pendiente, completada
+    created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
+    
+    # Relaciones
+    establecimiento = db.relationship("Establecimiento", backref="reuniones_reglamento", lazy=True)
+    evaluaciones = db.relationship("EvaluacionReglamento", backref="reunion", lazy=True, cascade="all, delete-orphan")
+
+
+class EvaluacionReglamento(db.Model):
+    """Descripción: Evaluación de cada item del reglamento en la reunión
+    Lógica: Registra si cumple o no cumple cada item del checklist
+    """
+    __tablename__ = "evaluaciones_reglamento"
+    id = db.Column(db.Integer, primary_key=True)
+    reunion_id = db.Column(db.Integer, db.ForeignKey("reuniones_reglamento.id"), nullable=False)
+    item_id = db.Column(db.Integer, db.ForeignKey("items_reglamento_restaurante.id"), nullable=False)
+    cumple = db.Column(db.Boolean, nullable=False)  # True = Cumple, False = No Cumple
+    numero_infracciones = db.Column(db.Integer, default=0)  # Cuántas veces se detectó en la semana
+    valor_medido = db.Column(db.Numeric(10, 2))  # Valor medido para validaciones numéricas
+    observacion = db.Column(db.Text)
+    created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
+    
+    # Relaciones
+    item = db.relationship("ItemReglamentoRestaurante", backref="evaluaciones", lazy=True)
+
+
 class PlanSemanal(db.Model):
     __tablename__ = "plan_semanal"
     id = db.Column(db.Integer, primary_key=True)
@@ -253,3 +315,8 @@ class EvidenciaInspeccion(db.Model):
     mime_type = db.Column(db.String(100))
     tamano_bytes = db.Column(db.Integer)
     uploaded_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
+
+
+# Alias para compatibilidad con nuevos controladores
+ItemReglamento = ItemReglamentoRestaurante
+ReglamentoRestaurante = ReunionReglamento

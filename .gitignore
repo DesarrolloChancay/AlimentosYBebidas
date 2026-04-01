@@ -25,3 +25,6 @@ __pycache__/
 # Archivos temporales
 *.tmp
 *.swp
+
+venv/
+venv.bak/

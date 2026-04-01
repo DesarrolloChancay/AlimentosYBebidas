@@ -1,7 +1,9 @@
 from flask import json, jsonify, request, session, current_app
 from datetime import datetime, date, timedelta
+import logging
 import os
 import base64
+import re
 import uuid
 from werkzeug.utils import secure_filename
 import pytz
@@ -103,7 +105,209 @@ datos_tiempo_real = {}  # Para almacenar datos temporales entre inspector y enca
 class InspeccionesController:
     EVIDENCIAS_FOLDER = "app/static/evidencias"
     FIRMAS_FOLDER = "app/static/firmas"
-    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+    MOTIVO_SIN_FIRMA_INICIO = "[[MOTIVO_SIN_FIRMA_ENCARGADO]]"
+    MOTIVO_SIN_FIRMA_FIN = "[[/MOTIVO_SIN_FIRMA_ENCARGADO]]"
+
+    @staticmethod
+    def _normalizar_motivo_sin_firma(motivo):
+        if motivo is None:
+            return None
+
+        motivo_normalizado = str(motivo).strip()
+        return motivo_normalizado or None
+
+    @staticmethod
+    def _patron_motivo_sin_firma():
+        return re.compile(
+            rf"{re.escape(InspeccionesController.MOTIVO_SIN_FIRMA_INICIO)}\s*(.*?)\s*{re.escape(InspeccionesController.MOTIVO_SIN_FIRMA_FIN)}",
+            re.DOTALL,
+        )
+
+    @staticmethod
+    def _extraer_motivo_sin_firma_desde_observaciones(observaciones):
+        if not observaciones:
+            return None
+
+        match = InspeccionesController._patron_motivo_sin_firma().search(
+            str(observaciones)
+        )
+        if not match:
+            return None
+
+        return InspeccionesController._normalizar_motivo_sin_firma(match.group(1))
+
+    @staticmethod
+    def _limpiar_metadatos_observaciones(observaciones):
+        if not observaciones:
+            return ""
+
+        observaciones_limpias = InspeccionesController._patron_motivo_sin_firma().sub(
+            "", str(observaciones)
+        )
+        observaciones_limpias = re.sub(r"\n{3,}", "\n\n", observaciones_limpias)
+        return observaciones_limpias.strip()
+
+    @staticmethod
+    def _combinar_observaciones_con_motivo(observaciones, motivo):
+        observaciones_limpias = InspeccionesController._limpiar_metadatos_observaciones(
+            observaciones
+        )
+        motivo_normalizado = InspeccionesController._normalizar_motivo_sin_firma(
+            motivo
+        )
+
+        if not motivo_normalizado:
+            return observaciones_limpias
+
+        bloque_motivo = (
+            f"{InspeccionesController.MOTIVO_SIN_FIRMA_INICIO}\n"
+            f"{motivo_normalizado}\n"
+            f"{InspeccionesController.MOTIVO_SIN_FIRMA_FIN}"
+        )
+
+        if not observaciones_limpias:
+            return bloque_motivo
+
+        return f"{observaciones_limpias}\n\n{bloque_motivo}"
+
+    @staticmethod
+    def _obtener_observaciones_y_motivo(inspeccion):
+        observaciones = getattr(inspeccion, "observaciones", "") or ""
+        return (
+            InspeccionesController._limpiar_metadatos_observaciones(observaciones),
+            InspeccionesController._extraer_motivo_sin_firma_desde_observaciones(
+                observaciones
+            ),
+        )
+
+    @staticmethod
+    def _obtener_configuracion_calificacion(riesgo):
+        riesgo_normalizado = (riesgo or "").strip()
+        if riesgo_normalizado == "Crítico":
+            return {
+                "puntaje_minimo": 1,
+                "puntaje_maximo": 8,
+                "opciones_validas": {1, 8},
+                "etiquetas_calificacion": {1: "Cumple", 8: "No cumple"},
+                "porcentaje_por_rating": {1: 100, 8: 0},
+            }
+
+        return {
+            "puntaje_minimo": 1,
+            "puntaje_maximo": 3,
+            "opciones_validas": {1, 2, 3},
+            "etiquetas_calificacion": {
+                1: "Excelente",
+                2: "Bueno",
+                3: "Regular",
+            },
+            "porcentaje_por_rating": {1: 100, 2: 75, 3: 50},
+        }
+
+    @staticmethod
+    def _normalizar_rating_por_riesgo(riesgo, rating):
+        config = InspeccionesController._obtener_configuracion_calificacion(riesgo)
+
+        try:
+            rating_normalizado = int(rating)
+        except (TypeError, ValueError):
+            return False, None, config
+
+        return rating_normalizado in config["opciones_validas"], rating_normalizado, config
+
+    @staticmethod
+    def _calcular_metricas_rating(riesgo, rating):
+        es_valido, rating_normalizado, config = (
+            InspeccionesController._normalizar_rating_por_riesgo(riesgo, rating)
+        )
+        if not es_valido:
+            return None
+
+        return {
+            "rating": rating_normalizado,
+            "puntaje": float(rating_normalizado),
+            "puntaje_maximo": float(config["puntaje_maximo"]),
+            "porcentaje_cumplimiento": float(
+                config["porcentaje_por_rating"][rating_normalizado]
+            ),
+            "criticos_no_conformes": 1
+            if (riesgo or "").strip() == "Crítico" and rating_normalizado == 8
+            else 0,
+        }
+
+    @staticmethod
+    def _calcular_resumen_desde_evaluaciones(evaluaciones, total_items=None):
+        puntaje_total = 0.0
+        suma_porcentaje_cumplimiento = 0.0
+        puntos_criticos_perdidos = 0
+        items_calificados = 0
+        puntaje_maximo_posible = 0.0
+
+        for evaluacion in evaluaciones:
+            riesgo = evaluacion.get("riesgo")
+            puntaje_maximo_posible += float(
+                InspeccionesController._obtener_configuracion_calificacion(riesgo)[
+                    "puntaje_maximo"
+                ]
+            )
+
+            detalle = evaluacion.get("detalle") or {}
+            rating = detalle.get("rating")
+            if rating is None:
+                continue
+
+            metricas = InspeccionesController._calcular_metricas_rating(riesgo, rating)
+            if not metricas:
+                continue
+
+            puntaje_total += metricas["puntaje"]
+            suma_porcentaje_cumplimiento += metricas["porcentaje_cumplimiento"]
+            puntos_criticos_perdidos += metricas["criticos_no_conformes"]
+            items_calificados += 1
+
+        if total_items is None:
+            total_items = len(evaluaciones)
+
+        porcentaje_cumplimiento = (
+            round(suma_porcentaje_cumplimiento / items_calificados, 2)
+            if items_calificados > 0
+            else 0
+        )
+        puntaje_promedio_item = (
+            round(puntaje_total / items_calificados, 2)
+            if items_calificados > 0
+            else 0
+        )
+
+        return {
+            "puntaje_total": round(puntaje_total, 2),
+            "puntaje_maximo_posible": round(puntaje_maximo_posible, 2),
+            "puntaje_promedio_item": puntaje_promedio_item,
+            "porcentaje_cumplimiento": porcentaje_cumplimiento,
+            "puntos_criticos_perdidos": puntos_criticos_perdidos,
+            "items_calificados": items_calificados,
+            "total_items": total_items,
+        }
+
+    @staticmethod
+    def _obtener_items_activos_establecimiento(establecimiento_id):
+        if not establecimiento_id:
+            return []
+
+        return (
+            db.session.query(ItemEvaluacionEstablecimiento, ItemEvaluacionBase)
+            .join(
+                ItemEvaluacionBase,
+                ItemEvaluacionEstablecimiento.item_base_id == ItemEvaluacionBase.id,
+            )
+            .filter(
+                ItemEvaluacionEstablecimiento.establecimiento_id == establecimiento_id,
+                ItemEvaluacionEstablecimiento.activo == True,
+                ItemEvaluacionBase.activo == True,
+            )
+            .all()
+        )
 
     @staticmethod
     def allowed_file(filename):
@@ -136,6 +340,109 @@ class InspeccionesController:
             relative_path = f"static/{relative_path.lstrip('/')}"
 
         return relative_path
+
+    @staticmethod
+    def _obtener_establecimientos_autorizados(user_id, user_role):
+        """Devuelve los establecimientos que el usuario puede consultar o editar."""
+        if not user_id or not user_role:
+            return []
+
+        hoy = date.today()
+
+        if user_role == "Administrador":
+            return [
+                establecimiento.id
+                for establecimiento in Establecimiento.query.filter_by(activo=True).all()
+            ]
+
+        if user_role == "Inspector":
+            asignaciones = (
+                InspectorEstablecimiento.query.filter_by(
+                    inspector_id=user_id,
+                    activo=True,
+                )
+                .filter(InspectorEstablecimiento.fecha_asignacion <= hoy)
+                .filter(
+                    or_(
+                        InspectorEstablecimiento.fecha_fin_asignacion.is_(None),
+                        InspectorEstablecimiento.fecha_fin_asignacion >= hoy,
+                    )
+                )
+                .all()
+            )
+            return list(
+                {
+                    asignacion.establecimiento_id
+                    for asignacion in asignaciones
+                    if asignacion.establecimiento_id
+                }
+            )
+
+        if user_role == "Encargado":
+            asignaciones = (
+                EncargadoEstablecimiento.query.filter_by(
+                    usuario_id=user_id,
+                    activo=True,
+                )
+                .filter(EncargadoEstablecimiento.fecha_inicio <= hoy)
+                .filter(
+                    or_(
+                        EncargadoEstablecimiento.fecha_fin.is_(None),
+                        EncargadoEstablecimiento.fecha_fin >= hoy,
+                    )
+                )
+                .all()
+            )
+            return list(
+                {
+                    asignacion.establecimiento_id
+                    for asignacion in asignaciones
+                    if asignacion.establecimiento_id
+                }
+            )
+
+        if user_role == "Jefe de Establecimiento":
+            asignaciones = (
+                JefeEstablecimiento.query.filter_by(
+                    usuario_id=user_id,
+                    activo=True,
+                )
+                .filter(JefeEstablecimiento.fecha_inicio <= hoy)
+                .filter(
+                    or_(
+                        JefeEstablecimiento.fecha_fin.is_(None),
+                        JefeEstablecimiento.fecha_fin >= hoy,
+                    )
+                )
+                .all()
+            )
+            return list(
+                {
+                    asignacion.establecimiento_id
+                    for asignacion in asignaciones
+                    if asignacion.establecimiento_id
+                }
+            )
+
+        return []
+
+    @staticmethod
+    def _usuario_tiene_acceso_establecimiento(user_id, user_role, establecimiento_id):
+        """Valida que el usuario tenga acceso al establecimiento solicitado."""
+        if not establecimiento_id:
+            return False
+
+        try:
+            establecimiento_id = int(establecimiento_id)
+        except (TypeError, ValueError):
+            return False
+
+        establecimientos_autorizados = (
+            InspeccionesController._obtener_establecimientos_autorizados(
+                user_id, user_role
+            )
+        )
+        return establecimiento_id in establecimientos_autorizados
 
     @staticmethod
     def _normalize_evidence_url(ruta):
@@ -616,10 +923,12 @@ class InspeccionesController:
                         "id": item.id,
                         "item_base_id": item_base.id,
                         "codigo": item_base.codigo,
-                        "puntaje_minimo": item_base.puntaje_minimo,
-                        "puntaje_maximo": int(
-                            item_base.puntaje_maximo * float(item.factor_ajuste)
-                        ),  # Aplicar factor
+                        "puntaje_minimo": InspeccionesController._obtener_configuracion_calificacion(
+                            item_base.riesgo
+                        )["puntaje_minimo"],
+                        "puntaje_maximo": InspeccionesController._obtener_configuracion_calificacion(
+                            item_base.riesgo
+                        )["puntaje_maximo"],
                         "descripcion": item.descripcion_personalizada
                         or item_base.descripcion,
                         "riesgo": item_base.riesgo,
@@ -640,6 +949,23 @@ class InspeccionesController:
     def calcular_puntajes_inspeccion(inspeccion_id):
         """Calcula automáticamente los puntajes de una inspección"""
         try:
+            inspeccion = Inspeccion.query.get(inspeccion_id)
+            if not inspeccion:
+                raise Exception("Inspección no encontrada")
+
+            items_configurados = (
+                InspeccionesController._obtener_items_activos_establecimiento(
+                    inspeccion.establecimiento_id
+                )
+            )
+            puntaje_maximo_posible = sum(
+                InspeccionesController._obtener_configuracion_calificacion(
+                    item_base.riesgo
+                )["puntaje_maximo"]
+                for _, item_base in items_configurados
+            )
+            total_items = len(items_configurados)
+
             # Obtener todos los detalles de la inspección
             detalles = (
                 db.session.query(
@@ -659,48 +985,50 @@ class InspeccionesController:
             )
 
             puntaje_total = 0
-            puntaje_maximo_posible = 0
+            suma_porcentaje_cumplimiento = 0
             puntos_criticos_perdidos = 0
+            items_calificados = 0
 
             for detalle, item_est, item_base in detalles:
-                # Calcular puntaje máximo con factor de ajuste
-                puntaje_max = int(
-                    item_base.puntaje_maximo * float(item_est.factor_ajuste)
+                metricas_rating = InspeccionesController._calcular_metricas_rating(
+                    item_base.riesgo,
+                    detalle.rating if detalle.rating is not None else detalle.score,
                 )
-                puntaje_maximo_posible += puntaje_max
+                if not metricas_rating:
+                    continue
 
-                # Sumar puntaje obtenido
-                if detalle.score is not None:
-                    puntaje_total += float(detalle.score)
+                puntaje_total += metricas_rating["puntaje"]
+                suma_porcentaje_cumplimiento += metricas_rating[
+                    "porcentaje_cumplimiento"
+                ]
+                puntos_criticos_perdidos += metricas_rating["criticos_no_conformes"]
+                items_calificados += 1
 
-                    # Contar puntos críticos perdidos
-                    if (
-                        item_base.riesgo == "Crítico"
-                        and float(detalle.score) < puntaje_max
-                    ):
-                        puntos_criticos_perdidos += puntaje_max - float(detalle.score)
-
-            # Calcular porcentaje
             porcentaje = (
-                (puntaje_total / puntaje_maximo_posible * 100)
-                if puntaje_maximo_posible > 0
+                (suma_porcentaje_cumplimiento / items_calificados)
+                if items_calificados > 0
+                else 0
+            )
+            puntaje_promedio_item = (
+                round(puntaje_total / items_calificados, 2)
+                if items_calificados > 0
                 else 0
             )
 
-            # Actualizar la inspección
-            inspeccion = Inspeccion.query.get(inspeccion_id)
-            if inspeccion:
-                inspeccion.puntaje_total = puntaje_total
-                inspeccion.puntaje_maximo_posible = puntaje_maximo_posible
-                inspeccion.porcentaje_cumplimiento = round(porcentaje, 2)
-                inspeccion.puntos_criticos_perdidos = puntos_criticos_perdidos
-                db.session.commit()
+            inspeccion.puntaje_total = puntaje_total
+            inspeccion.puntaje_maximo_posible = puntaje_maximo_posible
+            inspeccion.porcentaje_cumplimiento = round(porcentaje, 2)
+            inspeccion.puntos_criticos_perdidos = puntos_criticos_perdidos
+            db.session.commit()
 
             return {
                 "puntaje_total": puntaje_total,
                 "puntaje_maximo_posible": puntaje_maximo_posible,
+                "puntaje_promedio_item": puntaje_promedio_item,
                 "porcentaje_cumplimiento": round(porcentaje, 2),
                 "puntos_criticos_perdidos": puntos_criticos_perdidos,
+                "items_calificados": items_calificados,
+                "total_items": total_items,
             }
 
         except Exception as e:
@@ -712,8 +1040,8 @@ class InspeccionesController:
         """Guardar datos temporales del formulario en memoria del servidor"""
         try:
             # Manejar tanto JSON como texto plano (sendBeacon)
-            if request.content_type == "application/json":
-                data = request.json
+            if request.is_json:
+                data = request.get_json(silent=True) or {}
             else:
                 # Para sendBeacon que envía como texto plano
                 import json
@@ -721,6 +1049,7 @@ class InspeccionesController:
                 data = json.loads(request.data.decode("utf-8"))
 
             user_id = session.get("user_id")
+            user_role = session.get("user_role")
 
             if not user_id:
                 return jsonify({"error": "Sesión no válida"}), 401
@@ -728,10 +1057,21 @@ class InspeccionesController:
             if not data:
                 return jsonify({"error": "No hay datos para guardar"}), 400
 
+            if user_role not in ["Inspector", "Administrador"]:
+                return jsonify({"error": "No autorizado para editar inspecciones"}), 403
+
             # Crear clave única para el establecimiento (cambio para permitir colaboración cross-inspector)
             establecimiento_id = data.get("establecimiento_id")
             if not establecimiento_id:
                 return jsonify({"error": "ID de establecimiento requerido"}), 400
+
+            if not InspeccionesController._usuario_tiene_acceso_establecimiento(
+                user_id, user_role, establecimiento_id
+            ):
+                return jsonify({"error": "Sin acceso a este establecimiento"}), 403
+
+            establecimiento_id = int(establecimiento_id)
+            data["establecimiento_id"] = establecimiento_id
 
             # Agregar el inspector_id a los datos si no existe (para rastrear quién está trabajando)
             if 'inspector_id' not in data:
@@ -786,24 +1126,26 @@ class InspeccionesController:
                     resumen_calculado = {}
                     if items_actuales:
                         try:
-                            # Obtener información de items para cálculo correcto
-                            from app.models.Inspecciones_models import (
-                                ItemEvaluacionEstablecimiento,
-                            )
-
                             puntaje_total = 0
-                            puntaje_maximo_posible = 0
+                            suma_porcentaje_cumplimiento = 0
                             puntos_criticos_perdidos = 0
                             items_evaluados = 0
-                            total_items = 0
-
-                            # Obtener total de items disponibles para este establecimiento
-                            total_items_query = (
-                                ItemEvaluacionEstablecimiento.query.filter_by(
-                                    establecimiento_id=establecimiento_id
-                                ).count()
+                            items_configurados = (
+                                InspeccionesController._obtener_items_activos_establecimiento(
+                                    establecimiento_id
+                                )
                             )
-                            total_items = total_items_query
+                            items_por_id = {
+                                item_est.id: item_base
+                                for item_est, item_base in items_configurados
+                            }
+                            total_items = len(items_configurados)
+                            puntaje_maximo_posible = sum(
+                                InspeccionesController._obtener_configuracion_calificacion(
+                                    item_base.riesgo
+                                )["puntaje_maximo"]
+                                for item_base in items_por_id.values()
+                            )
 
                             for item_id_str, item_data in items_actuales.items():
                                 try:
@@ -815,49 +1157,43 @@ class InspeccionesController:
                                         continue
 
                                     item_id = int(item_id_str)
-                                    # Buscar el item del establecimiento que contiene el factor de ajuste
-                                    item_est = (
-                                        ItemEvaluacionEstablecimiento.query.filter_by(
-                                            establecimiento_id=establecimiento_id,
-                                            id=item_id,
-                                        ).first()
-                                    )
+                                    item_base = items_por_id.get(item_id)
+                                    if not item_base:
+                                        continue
 
                                     if (
-                                        item_est
-                                        and item_est.item_base
-                                        and "rating" in item_data
-                                        and item_data["rating"] is not None
+                                        "rating" not in item_data
+                                        or item_data["rating"] is None
                                     ):
-                                        item_base = item_est.item_base
-                                        # Aplicar factor de ajuste al puntaje máximo
-                                        puntaje_max_ajustado = int(
-                                            item_base.puntaje_maximo
-                                            * float(item_est.factor_ajuste)
+                                        continue
+
+                                    metricas_rating = (
+                                        InspeccionesController._calcular_metricas_rating(
+                                            item_base.riesgo, item_data["rating"]
                                         )
-                                        puntaje_maximo_posible += puntaje_max_ajustado
+                                    )
+                                    if not metricas_rating:
+                                        continue
 
-                                        rating = int(item_data["rating"])
-                                        # Incrementar items evaluados para cualquier rating válido (incluso 0)
-                                        items_evaluados += 1
-                                        # El puntaje obtenido es directamente el rating seleccionado
-                                        puntaje_obtenido = float(rating)
-                                        puntaje_total += puntaje_obtenido
-
-                                        # Calcular puntos críticos perdidos
-                                        if (
-                                            item_base.riesgo == "Crítico"
-                                            and rating < puntaje_max_ajustado
-                                        ):
-                                            puntos_criticos_perdidos += (
-                                                puntaje_max_ajustado - rating
-                                            )
-                                except (ValueError, TypeError) as ve:
+                                    items_evaluados += 1
+                                    puntaje_total += metricas_rating["puntaje"]
+                                    suma_porcentaje_cumplimiento += metricas_rating[
+                                        "porcentaje_cumplimiento"
+                                    ]
+                                    puntos_criticos_perdidos += metricas_rating[
+                                        "criticos_no_conformes"
+                                    ]
+                                except (ValueError, TypeError):
                                     continue
 
                             porcentaje = (
-                                (puntaje_total / puntaje_maximo_posible * 100)
-                                if puntaje_maximo_posible > 0
+                                (suma_porcentaje_cumplimiento / items_evaluados)
+                                if items_evaluados > 0
+                                else 0
+                            )
+                            puntaje_promedio_item = (
+                                round(puntaje_total / items_evaluados, 2)
+                                if items_evaluados > 0
                                 else 0
                             )
 
@@ -866,10 +1202,12 @@ class InspeccionesController:
                                 "puntaje_maximo_posible": round(
                                     puntaje_maximo_posible, 2
                                 ),
+                                "puntaje_promedio_item": puntaje_promedio_item,
                                 "porcentaje_cumplimiento": round(porcentaje, 2),
                                 "puntos_criticos_perdidos": round(
                                     puntos_criticos_perdidos, 2
                                 ),
+                                "items_calificados": items_evaluados,
                                 "items_evaluados": items_evaluados,
                                 "total_items": total_items,
                             }
@@ -927,28 +1265,26 @@ class InspeccionesController:
         """Recuperar datos temporales del formulario desde memoria del servidor"""
         try:
             user_id = session.get("user_id")
+            user_role = session.get("user_role")
 
             if not user_id:
                 return jsonify({"error": "Sesión no válida"}), 401
 
-            # Obtener establecimientos del usuario según su rol
-            establecimiento_ids = []
-            user = Usuario.query.get(user_id)
-            if user and user.rol:
-                if user.rol.nombre == "Encargado":
-                    encargado_ests = EncargadoEstablecimiento.query.filter_by(
-                        usuario_id=user_id
-                    ).all()
-                    establecimiento_ids = [
-                        enc.establecimiento_id for enc in encargado_ests
-                    ]
-                elif user.rol.nombre == "Inspector":
-                    inspector_ests = InspectorEstablecimiento.query.filter_by(
-                        inspector_id=user_id
-                    ).all()
-                    establecimiento_ids = [
-                        ins.establecimiento_id for ins in inspector_ests
-                    ]
+            establecimiento_ids = (
+                InspeccionesController._obtener_establecimientos_autorizados(
+                    user_id, user_role
+                )
+            )
+            establecimiento_solicitado = request.args.get(
+                "establecimiento_id", type=int
+            )
+
+            if establecimiento_solicitado is not None:
+                if not InspeccionesController._usuario_tiene_acceso_establecimiento(
+                    user_id, user_role, establecimiento_solicitado
+                ):
+                    return jsonify({"error": "Sin acceso a este establecimiento"}), 403
+                establecimiento_ids = [establecimiento_solicitado]
 
             # Buscar datos temporales por establecimiento (cambio para permitir colaboración cross-inspector)
             datos_guardados = None
@@ -975,6 +1311,11 @@ class InspeccionesController:
 
             if not user_id:
                 return jsonify({"error": "Sesión no válida"}), 401
+
+            if not InspeccionesController._usuario_tiene_acceso_establecimiento(
+                user_id, user_role, establecimiento_id
+            ):
+                return jsonify({"error": "Sin acceso a este establecimiento"}), 403
 
             # Buscar datos temporales de cualquier usuario en este establecimiento
             datos_establecimiento = None
@@ -1011,13 +1352,24 @@ class InspeccionesController:
         """Borrar datos temporales al guardar la inspección"""
         try:
             user_id = session.get("user_id")
-            establecimiento_id = request.args.get("establecimiento_id") or request.get_json().get("establecimiento_id")
+            user_role = session.get("user_role")
+            payload = request.get_json(silent=True) or {}
+            establecimiento_id = request.args.get("establecimiento_id") or payload.get(
+                "establecimiento_id"
+            )
 
             if not user_id:
                 return jsonify({"error": "Sesión no válida"}), 401
 
             # Limpiar datos temporales del establecimiento (cambio para permitir colaboración cross-inspector)
             if establecimiento_id:
+                if not InspeccionesController._usuario_tiene_acceso_establecimiento(
+                    user_id, user_role, establecimiento_id
+                ):
+                    return (
+                        jsonify({"error": "Sin acceso a este establecimiento"}),
+                        403,
+                    )
                 clave_temporal = f"establecimiento_{establecimiento_id}"
                 if clave_temporal in inspecciones_temporales:
                     del inspecciones_temporales[clave_temporal]
@@ -1043,6 +1395,11 @@ class InspeccionesController:
             if user_role not in ["Inspector", "Administrador"]:
                 return jsonify({"error": "No autorizado"}), 403
 
+            if not InspeccionesController._usuario_tiene_acceso_establecimiento(
+                user_id, user_role, establecimiento_id
+            ):
+                return jsonify({"error": "Sin acceso a este establecimiento"}), 403
+
             # Buscar datos temporales para este establecimiento
             clave_temporal = f"establecimiento_{establecimiento_id}"
             datos_temporales = inspecciones_temporales.get(clave_temporal)
@@ -1059,6 +1416,17 @@ class InspeccionesController:
     def obtener_datos_tiempo_real_encargado(establecimiento_id):
         """Obtener datos en tiempo real para que el encargado vea lo que califica el inspector"""
         try:
+            user_id = session.get("user_id")
+            user_role = session.get("user_role")
+
+            if not user_id:
+                return jsonify({"error": "Sesión no válida"}), 401
+
+            if not InspeccionesController._usuario_tiene_acceso_establecimiento(
+                user_id, user_role, establecimiento_id
+            ):
+                return jsonify({"error": "Sin acceso a este establecimiento"}), 403
+
             clave_tiempo_real = f"establecimiento_{establecimiento_id}"
             datos = datos_tiempo_real.get(clave_tiempo_real, {})
 
@@ -1074,11 +1442,16 @@ class InspeccionesController:
             user_role = session.get("user_role")
 
             # Verificar permisos
-            if user_role not in ["Encargado", "Administrador"]:
+            if user_role not in ["Encargado", "Administrador", "Jefe de Establecimiento"]:
                 return (
                     jsonify({"error": "Sin permisos para ver datos en tiempo real"}),
                     403,
                 )
+
+            if not InspeccionesController._usuario_tiene_acceso_establecimiento(
+                user_id, user_role, establecimiento_id
+            ):
+                return jsonify({"error": "Sin acceso a este establecimiento"}), 403
 
             clave_tiempo_real = f"establecimiento_{establecimiento_id}"
             datos = datos_tiempo_real.get(clave_tiempo_real, {})
@@ -1108,7 +1481,9 @@ class InspeccionesController:
                                 items_data[str(detalle.item_establecimiento_id)] = {
                                     'rating': detalle.rating,
                                     'observacion': detalle.observacion_item or '',
-                                    'puntaje_maximo': detalle.item_establecimiento.item_base.puntaje_maximo,
+                                    'puntaje_maximo': InspeccionesController._obtener_configuracion_calificacion(
+                                        detalle.item_establecimiento.item_base.riesgo
+                                    )['puntaje_maximo'],
                                     'riesgo': detalle.item_establecimiento.item_base.riesgo
                                 }
 
@@ -1173,11 +1548,22 @@ class InspeccionesController:
             inspector_id = session.get("user_id")
             fecha = data.get("fecha")
             observaciones = data.get("observaciones", "")
+            observaciones_limpias = (
+                InspeccionesController._limpiar_metadatos_observaciones(observaciones)
+            )
             items_data = data.get("items", {})
             accion = data.get("accion")  # guardar o completar
             print("La accion es:", accion)
             firma_inspector = data.get("firma_inspector")  # Firma del inspector
             firma_encargado = data.get("firma_encargado")  # Firma del encargado
+            motivo_sin_firma_encargado = (
+                InspeccionesController._normalizar_motivo_sin_firma(
+                    data.get("motivo_sin_firma_encargado")
+                )
+            )
+            completar_sin_firma_encargado = str(
+                data.get("completar_sin_firma_encargado", "")
+            ).strip().lower() in {"1", "true", "t", "yes", "si", "sí"}
             evidencias_data = data.get(
                 "evidencias", []
             )  # Lista de evidencias en base64
@@ -1186,6 +1572,19 @@ class InspeccionesController:
             logging.info(f"inspector_id: {inspector_id}")
             logging.info(f"fecha: {fecha}")
             logging.info(f"accion: {accion}")
+
+            clave_tiempo_real = f"establecimiento_{establecimiento_id}"
+            estado_tiempo_real_actual = datos_tiempo_real.get(clave_tiempo_real)
+            confirmada_por_encargado_tiempo_real = bool(
+                estado_tiempo_real_actual.get("confirmada_por_encargado")
+            ) if estado_tiempo_real_actual else False
+
+            if (
+                accion == "completar"
+                and estado_tiempo_real_actual is not None
+                and not confirmada_por_encargado_tiempo_real
+            ):
+                completar_sin_firma_encargado = True
 
             if not all([establecimiento_id, inspector_id, fecha]):
                 logging.error("Faltan datos requeridos")
@@ -1254,7 +1653,17 @@ class InspeccionesController:
                 logging.info("No se encontró encargado")
 
             # Crear o actualizar la inspección
-            inspeccion_id = data.get("inspeccion_id")
+            inspeccion_id_raw = data.get("inspeccion_id")
+            inspeccion_id = None
+            if inspeccion_id_raw not in (None, "", False):
+                try:
+                    inspeccion_id = int(inspeccion_id_raw)
+                except (TypeError, ValueError):
+                    logging.warning(
+                        "inspeccion_id invalido recibido en guardar_inspeccion: %s",
+                        inspeccion_id_raw,
+                    )
+                    inspeccion_id = None
 
             # ✅ VALIDACIÓN PLAN SEMANAL: Verificar que no se exceda la meta semanal antes de crear inspección
             if not inspeccion_id:  # Solo validar para nuevas inspecciones
@@ -1307,12 +1716,35 @@ class InspeccionesController:
                     import logging
                     logging.warning(f"Error en validación de plan semanal: {str(e)}")
 
+            inspeccion = None
             if inspeccion_id:
-                # Actualizar inspección existente
+                # Actualizar inspección existente si sigue siendo válida para este flujo.
                 inspeccion = Inspeccion.query.get(inspeccion_id)
+
                 if not inspeccion:
-                    return jsonify({"error": "Inspección no encontrada"}), 404
-            else:
+                    logging.warning(
+                        "Inspeccion %s no encontrada al guardar. Se creara una nueva.",
+                        inspeccion_id,
+                    )
+                    inspeccion_id = None
+                elif int(inspeccion.establecimiento_id) != int(establecimiento_id):
+                    logging.warning(
+                        "Inspeccion %s pertenece al establecimiento %s y se intento guardar para %s. Se creara una nueva.",
+                        inspeccion_id,
+                        inspeccion.establecimiento_id,
+                        establecimiento_id,
+                    )
+                    inspeccion = None
+                    inspeccion_id = None
+                elif inspeccion.estado == "completada":
+                    logging.warning(
+                        "Inspeccion %s ya estaba completada. Se creara una nueva.",
+                        inspeccion_id,
+                    )
+                    inspeccion = None
+                    inspeccion_id = None
+
+            if not inspeccion:
                 # Crear nueva inspección
                 inspeccion = Inspeccion(
                     establecimiento_id=establecimiento_id,
@@ -1324,7 +1756,7 @@ class InspeccionesController:
                 db.session.flush()  # Para obtener el ID
 
             # Actualizar datos básicos
-            inspeccion.observaciones = observaciones
+            inspeccion.observaciones = observaciones_limpias
 
             firma_encargado_existente = inspeccion.firma_encargado
             firma_inspector_existente = inspeccion.firma_inspector
@@ -1344,51 +1776,56 @@ class InspeccionesController:
                 # Para completar, procesar las firmas según el formato recibido
                 firmas_procesadas = True
 
-                # Procesar firma del encargado
-                if firma_encargado_base64:
-                    # Firma en base64 - guardar como archivo
-                    firmante_encargado_id = (
-                        encargado.usuario_id if encargado else inspeccion.encargado_id
-                    )
-                    ruta_firma_encargado = guardar_firma_como_archivo(
-                        firma_encargado_base64,
-                        "encargado",
-                        inspeccion.id,
-                        firmante_encargado_id or encargado_id or inspector_id,
-                    )
-                    logging.info(f"Procesando firma_encargado_base64, ruta resultante: {ruta_firma_encargado}")
-                    if ruta_firma_encargado:
-                        inspeccion.firma_encargado = ruta_firma_encargado
-                        inspeccion.fecha_firma_encargado = datetime.now()
-                        logging.info(f"Firma del encargado guardada: {ruta_firma_encargado}")
-                    else:
-                        logging.error("ERROR: No se pudo guardar firma del encargado desde base64")
-                        firmas_procesadas = False
-                elif firma_encargado_ruta:
-                    # Firma como ruta - usar directamente
-                    # Normalizar la ruta si es necesario
-                    if firma_encargado_ruta.startswith("/static/"):
-                        inspeccion.firma_encargado = firma_encargado_ruta
-                    else:
-                        inspeccion.firma_encargado = f"/static/{firma_encargado_ruta}"
-                    if not inspeccion.fecha_firma_encargado:
-                        inspeccion.fecha_firma_encargado = datetime.now()
-                    logging.info(f"Firma del encargado desde ruta: {inspeccion.firma_encargado}")
-                elif firma_encargado_dict:
-                    # Firma precargada desde diccionario
-                    ruta_firma = firma_encargado_dict.get('ruta')
-                    if ruta_firma:
-                        # Normalizar la ruta
-                        if ruta_firma.startswith("/static/"):
-                            inspeccion.firma_encargado = ruta_firma
+                if completar_sin_firma_encargado:
+                    # Finalizar sin aprobación del encargado implica no persistir su firma en la inspección.
+                    inspeccion.firma_encargado = None
+                    inspeccion.fecha_firma_encargado = None
+                else:
+                    # Procesar firma del encargado
+                    if firma_encargado_base64:
+                        # Firma en base64 - guardar como archivo
+                        firmante_encargado_id = (
+                            encargado.usuario_id if encargado else inspeccion.encargado_id
+                        )
+                        ruta_firma_encargado = guardar_firma_como_archivo(
+                            firma_encargado_base64,
+                            "encargado",
+                            inspeccion.id,
+                            firmante_encargado_id or encargado_id or inspector_id,
+                        )
+                        logging.info(f"Procesando firma_encargado_base64, ruta resultante: {ruta_firma_encargado}")
+                        if ruta_firma_encargado:
+                            inspeccion.firma_encargado = ruta_firma_encargado
+                            inspeccion.fecha_firma_encargado = datetime.now()
+                            logging.info(f"Firma del encargado guardada: {ruta_firma_encargado}")
                         else:
-                            inspeccion.firma_encargado = f"/static/{ruta_firma}"
+                            logging.error("ERROR: No se pudo guardar firma del encargado desde base64")
+                            firmas_procesadas = False
+                    elif firma_encargado_ruta:
+                        # Firma como ruta - usar directamente
+                        # Normalizar la ruta si es necesario
+                        if firma_encargado_ruta.startswith("/static/"):
+                            inspeccion.firma_encargado = firma_encargado_ruta
+                        else:
+                            inspeccion.firma_encargado = f"/static/{firma_encargado_ruta}"
                         if not inspeccion.fecha_firma_encargado:
                             inspeccion.fecha_firma_encargado = datetime.now()
-                        logging.info(f"Firma del encargado desde diccionario precargado: {inspeccion.firma_encargado}")
-                    else:
-                        logging.error("ERROR: Diccionario de firma del encargado no contiene ruta")
-                        firmas_procesadas = False
+                        logging.info(f"Firma del encargado desde ruta: {inspeccion.firma_encargado}")
+                    elif firma_encargado_dict:
+                        # Firma precargada desde diccionario
+                        ruta_firma = firma_encargado_dict.get('ruta')
+                        if ruta_firma:
+                            # Normalizar la ruta
+                            if ruta_firma.startswith("/static/"):
+                                inspeccion.firma_encargado = ruta_firma
+                            else:
+                                inspeccion.firma_encargado = f"/static/{ruta_firma}"
+                            if not inspeccion.fecha_firma_encargado:
+                                inspeccion.fecha_firma_encargado = datetime.now()
+                            logging.info(f"Firma del encargado desde diccionario precargado: {inspeccion.firma_encargado}")
+                        else:
+                            logging.error("ERROR: Diccionario de firma del encargado no contiene ruta")
+                            firmas_procesadas = False
 
                 # Procesar firma del inspector
                 if firma_inspector_base64:
@@ -1433,13 +1870,37 @@ class InspeccionesController:
                         logging.error("ERROR: Diccionario de firma del inspector no contiene ruta")
                         firmas_procesadas = False
 
-                # Verificar que ambas firmas estén presentes después del procesamiento
+                # Verificar firmas requeridas después del procesamiento
                 logging.info(f"Después del procesamiento - firma_encargado: {inspeccion.firma_encargado}")
                 logging.info(f"Después del procesamiento - firma_inspector: {inspeccion.firma_inspector}")
-                
-                if not inspeccion.firma_encargado or not inspeccion.firma_inspector:
-                    logging.error("ERROR: Una o ambas firmas faltan después del procesamiento")
+
+                if not inspeccion.firma_inspector:
+                    logging.error("ERROR: Falta la firma del inspector después del procesamiento")
                     firmas_procesadas = False
+
+                if completar_sin_firma_encargado or not inspeccion.firma_encargado:
+                    if not motivo_sin_firma_encargado:
+                        return (
+                            jsonify(
+                                {
+                                    "error": "Debe ingresar un motivo obligatorio para finalizar sin la firma del encargado"
+                                }
+                            ),
+                            400,
+                        )
+                    inspeccion.observaciones = (
+                        InspeccionesController._combinar_observaciones_con_motivo(
+                            observaciones_limpias,
+                            motivo_sin_firma_encargado,
+                        )
+                    )
+                else:
+                    inspeccion.observaciones = (
+                        InspeccionesController._combinar_observaciones_con_motivo(
+                            observaciones_limpias,
+                            None,
+                        )
+                    )
 
                 if not firmas_procesadas:
                     return jsonify({"error": "Error al procesar las firmas"}), 500
@@ -1499,13 +1960,49 @@ class InspeccionesController:
                 logging.info("DEBUG - Estado establecido a 'en_proceso' (borrador)")
 
             items_procesados = 0
+            items_establecimiento = (
+                InspeccionesController._obtener_items_activos_establecimiento(
+                    establecimiento_id
+                )
+            )
+            items_validos_por_id = {
+                item_est.id: item_base for item_est, item_base in items_establecimiento
+            }
 
             # Guardar o actualizar detalles de items
-            for item_id, item_data in items_data.items():
+            for item_id_raw, item_data in items_data.items():
                 rating = item_data.get("rating")
                 observacion_item = item_data.get("observacion", "")
 
                 if rating is not None:
+                    try:
+                        item_id = int(item_id_raw)
+                    except (TypeError, ValueError):
+                        continue
+
+                    item_base = items_validos_por_id.get(item_id)
+                    if not item_base:
+                        continue
+
+                    es_valido, rating_normalizado, _ = (
+                        InspeccionesController._normalizar_rating_por_riesgo(
+                            item_base.riesgo, rating
+                        )
+                    )
+                    if not es_valido:
+                        db.session.rollback()
+                        return (
+                            jsonify(
+                                {
+                                    "error": (
+                                        f"Calificación inválida para el item "
+                                        f"{item_base.codigo}. Revise la escala aplicada."
+                                    )
+                                }
+                            ),
+                            400,
+                        )
+
                     items_procesados += 1
                     # Buscar detalle existente
                     detalle = InspeccionDetalle.query.filter_by(
@@ -1518,8 +2015,8 @@ class InspeccionesController:
                         )
                         db.session.add(detalle)
 
-                    detalle.rating = rating
-                    detalle.score = float(rating)  # Por ahora score = rating
+                    detalle.rating = rating_normalizado
+                    detalle.score = float(rating_normalizado)
                     detalle.observacion_item = observacion_item
 
                     # Emitir actualización en tiempo real para que el encargado vea los cambios
@@ -1530,7 +2027,11 @@ class InspeccionesController:
                             {
                                 "inspeccion_id": inspeccion.id,
                                 "item_id": item_id,
-                                "rating": rating,
+                                "rating": rating_normalizado,
+                                "riesgo": item_base.riesgo,
+                                "puntaje_maximo": InspeccionesController._obtener_configuracion_calificacion(
+                                    item_base.riesgo
+                                )["puntaje_maximo"],
                                 "observacion": observacion_item,
                                 "actualizado_por": session.get(
                                     "user_role", "Inspector"
@@ -1669,6 +2170,9 @@ class InspeccionesController:
                     logging.warning(f"No se pudo emitir cambio de estado: {str(e)}")
             db.session.commit()
             logging.info(f"DEBUG - Inspección guardada con estado: {inspeccion.estado}")
+            observaciones_resultado, motivo_resultado = (
+                InspeccionesController._obtener_observaciones_y_motivo(inspeccion)
+            )
 
             # Verificar que las evidencias se hayan guardado en la BD
             if evidencias_guardadas:
@@ -1713,6 +2217,11 @@ class InspeccionesController:
                 "inspeccion_id": inspeccion.id,
                 "estado": inspeccion.estado,
                 "puntajes": puntajes,
+                "observaciones": observaciones_resultado,
+                "motivo_sin_firma_encargado": motivo_resultado,
+                "finalizada_sin_firma_encargado": bool(
+                    motivo_resultado and not inspeccion.firma_encargado
+                ),
                 "evidencias_guardadas": len(evidencias_guardadas),
                 "limpiar_temporal": True,  # Señal para el frontend
                 "resetear_formulario": True,  # Señal para resetear completamente
@@ -1776,6 +2285,10 @@ class InspeccionesController:
             if not inspeccion:
                 return jsonify({"error": "Inspección no encontrada"}), 404
 
+            observaciones_limpias, motivo_sin_firma_encargado = (
+                InspeccionesController._obtener_observaciones_y_motivo(inspeccion)
+            )
+
             # Obtener detalles de la inspección
             detalles = (
                 db.session.query(
@@ -1823,7 +2336,11 @@ class InspeccionesController:
                 "hora_fin": (
                     inspeccion.hora_fin.isoformat() if inspeccion.hora_fin else None
                 ),
-                "observaciones": inspeccion.observaciones,
+                "observaciones": observaciones_limpias,
+                "motivo_sin_firma_encargado": motivo_sin_firma_encargado,
+                "finalizada_sin_firma_encargado": bool(
+                    motivo_sin_firma_encargado and not inspeccion.firma_encargado
+                ),
                 "estado": inspeccion.estado,
                 "puntaje_total": (
                     float(inspeccion.puntaje_total)
@@ -2060,9 +2577,28 @@ class InspeccionesController:
             if not detalle:
                 return jsonify({"error": "Detalle de inspección no encontrado"}), 404
 
+            item_base = detalle.item_establecimiento.item_base
+            es_valido, rating_normalizado, _ = (
+                InspeccionesController._normalizar_rating_por_riesgo(
+                    item_base.riesgo, nueva_puntuacion
+                )
+            )
+            if not es_valido:
+                db.session.rollback()
+                return (
+                    jsonify(
+                        {
+                            "error": (
+                                f"Calificación inválida para el item {item_base.codigo}"
+                            )
+                        }
+                    ),
+                    400,
+                )
+
             # Actualizar puntuación
-            detalle.rating = nueva_puntuacion
-            detalle.score = float(nueva_puntuacion)
+            detalle.rating = rating_normalizado
+            detalle.score = float(rating_normalizado)
             detalle.observacion_item = observacion
 
             # Recalcular puntajes totales
@@ -2445,12 +2981,27 @@ class InspeccionesController:
                     }
 
                 item_data = {
+                    "configuracion_calificacion": InspeccionesController._obtener_configuracion_calificacion(
+                        item_base.riesgo
+                    ),
                     "id": item_base.id,
                     "codigo": item_base.codigo,
                     "descripcion": item_base.descripcion,
                     "riesgo": item_base.riesgo,
-                    "puntaje_minimo": item_base.puntaje_minimo,
-                    "puntaje_maximo": item_base.puntaje_maximo,
+                    "puntaje_minimo": InspeccionesController._obtener_configuracion_calificacion(
+                        item_base.riesgo
+                    )["puntaje_minimo"],
+                    "puntaje_maximo": InspeccionesController._obtener_configuracion_calificacion(
+                        item_base.riesgo
+                    )["puntaje_maximo"],
+                    "opciones_calificacion": sorted(
+                        InspeccionesController._obtener_configuracion_calificacion(
+                            item_base.riesgo
+                        )["opciones_validas"]
+                    ),
+                    "etiquetas_calificacion": InspeccionesController._obtener_configuracion_calificacion(
+                        item_base.riesgo
+                    )["etiquetas_calificacion"],
                     "detalle": (
                         {
                             "rating": detalle.rating,
@@ -2468,26 +3019,44 @@ class InspeccionesController:
                 print(f"⚠️  Se omitieron {duplicados_encontrados} items duplicados en inspeccion_id {inspeccion_id}")
 
             categorias = list(categorias_dict.values())
+            evaluaciones_unicas = [
+                evaluacion
+                for categoria in categorias
+                for evaluacion in categoria["evaluaciones"]
+            ]
+            resumen_calculado = InspeccionesController._calcular_resumen_desde_evaluaciones(
+                evaluaciones_unicas
+            )
 
             # Obtener evidencias
             evidencias = EvidenciaInspeccion.query.filter_by(
                 inspeccion_id=inspeccion_id
             ).all()
+            observaciones_limpias, motivo_sin_firma_encargado = (
+                InspeccionesController._obtener_observaciones_y_motivo(inspeccion)
+            )
 
             # Organizar datos
             data = {
                 "id": inspeccion.id,
                 "fecha": inspeccion.fecha.isoformat(),
                 "estado": inspeccion.estado,
-                "observaciones": inspeccion.observaciones,
-                "puntaje_total": float(inspeccion.puntaje_total or 0),
-                "puntaje_maximo_posible": float(inspeccion.puntaje_maximo_posible or 0),
-                "porcentaje_cumplimiento": float(
-                    inspeccion.porcentaje_cumplimiento or 0
+                "observaciones": observaciones_limpias,
+                "motivo_sin_firma_encargado": motivo_sin_firma_encargado,
+                "finalizada_sin_firma_encargado": bool(
+                    motivo_sin_firma_encargado and not inspeccion.firma_encargado
                 ),
-                "puntos_criticos_perdidos": float(
-                    inspeccion.puntos_criticos_perdidos or 0
-                ),
+                "puntaje_total": resumen_calculado["puntaje_total"],
+                "puntaje_maximo_posible": resumen_calculado["puntaje_maximo_posible"],
+                "puntaje_promedio_item": resumen_calculado["puntaje_promedio_item"],
+                "porcentaje_cumplimiento": resumen_calculado[
+                    "porcentaje_cumplimiento"
+                ],
+                "puntos_criticos_perdidos": resumen_calculado[
+                    "puntos_criticos_perdidos"
+                ],
+                "items_calificados": resumen_calculado["items_calificados"],
+                "total_items": resumen_calculado["total_items"],
                 "hora_inicio": (
                     inspeccion.hora_inicio.strftime("%H:%M")
                     if inspeccion.hora_inicio
@@ -2941,8 +3510,17 @@ class InspeccionesController:
                     "codigo": detalle.codigo_item,
                     "descripcion": detalle.descripcion,
                     "riesgo": detalle.riesgo,
-                    "puntaje_maximo": int(detalle.puntaje_maximo * float(detalle.factor_ajuste)),
-                    "puntaje_minimo": detalle.puntaje_minimo,
+                    "puntaje_maximo": InspeccionesController._obtener_configuracion_calificacion(
+                        detalle.riesgo
+                    )["puntaje_maximo"],
+                    "puntaje_minimo": InspeccionesController._obtener_configuracion_calificacion(
+                        detalle.riesgo
+                    )["puntaje_minimo"],
+                    "opciones_calificacion": sorted(
+                        InspeccionesController._obtener_configuracion_calificacion(
+                            detalle.riesgo
+                        )["opciones_validas"]
+                    ),
                     "orden": detalle.orden_item,
                     "detalle": {
                         "rating": detalle.rating,
@@ -2963,6 +3541,16 @@ class InspeccionesController:
                     "evaluaciones": categoria_data["evaluaciones"]
                 })
 
+            evaluaciones_unicas = [
+                evaluacion
+                for categoria in categorias
+                for evaluacion in categoria["evaluaciones"]
+            ]
+            resumen_calculado = InspeccionesController._calcular_resumen_desde_evaluaciones(
+                evaluaciones_unicas,
+                total_items=len(evaluaciones_unicas),
+            )
+
             # Obtener evidencias
             evidencias = EvidenciaInspeccion.query.filter_by(
                 inspeccion_id=inspeccion_id
@@ -2977,9 +3565,10 @@ class InspeccionesController:
                 "id": inspeccion.id,
                 "fecha": inspeccion.fecha.isoformat() if inspeccion.fecha else None,
                 "estado": inspeccion.estado,
-                "puntaje_total": inspeccion.puntaje_total,
-                "puntaje_maximo": inspeccion.puntaje_maximo_posible,
-                "porcentaje_cumplimiento": inspeccion.porcentaje_cumplimiento,
+                "puntaje_total": resumen_calculado["puntaje_total"],
+                "puntaje_maximo": resumen_calculado["puntaje_maximo_posible"],
+                "puntaje_promedio_item": resumen_calculado["puntaje_promedio_item"],
+                "porcentaje_cumplimiento": resumen_calculado["porcentaje_cumplimiento"],
                 "observaciones": inspeccion.observaciones,
                 "establecimiento_nombre": (
                     establecimiento.nombre if establecimiento else None
@@ -2989,8 +3578,9 @@ class InspeccionesController:
                 "firma_encargado": inspeccion.firma_encargado,
                 "fecha_firma_inspector": inspeccion.fecha_firma_inspector.isoformat() if inspeccion.fecha_firma_inspector else None,
                 "fecha_firma_encargado": inspeccion.fecha_firma_encargado.isoformat() if inspeccion.fecha_firma_encargado else None,
-                "items_evaluados": len(detalles),
-                "total_items": total_items_disponibles,
+                "items_evaluados": resumen_calculado["items_calificados"],
+                "total_items": resumen_calculado["total_items"] or total_items_disponibles,
+                "puntos_criticos_perdidos": resumen_calculado["puntos_criticos_perdidos"],
                 "categorias": categorias,
                 "evidencias": [
                     {
@@ -3677,7 +4267,31 @@ class InspeccionesController:
             
             if not establecimiento_id:
                 return jsonify({"error": "Establecimiento requerido"}), 400
-            
+
+            if not InspeccionesController._usuario_tiene_acceso_establecimiento(
+                user_id, user_role, establecimiento_id
+            ):
+                return jsonify({"error": "Sin acceso a este establecimiento"}), 403
+
+            firma = None
+            if firma_id:
+                from app.models.Inspecciones_models import FirmaEncargadoPorJefe
+
+                firma = FirmaEncargadoPorJefe.query.filter_by(
+                    id=firma_id,
+                    establecimiento_id=establecimiento_id,
+                    activa=True,
+                ).first()
+
+                if not firma:
+                    return jsonify({"error": "La firma seleccionada no es válida"}), 400
+
+                if user_role == "Encargado" and firma.encargado_id != user_id:
+                    return jsonify({"error": "La firma no pertenece al encargado actual"}), 403
+
+                if user_role == "Jefe de Establecimiento" and firma.jefe_id != user_id:
+                    return jsonify({"error": "La firma no pertenece al jefe actual"}), 403
+             
             # Obtener estado de tiempo real del establecimiento
             clave_tiempo_real = f"establecimiento_{establecimiento_id}"
             
@@ -3711,12 +4325,10 @@ class InspeccionesController:
             
             # Notificar vía WebSocket a todos los conectados
             from app.socket_events import socketio
-            
+             
             # Obtener información de la firma del encargado
             firma_encargado_data = None
-            if firma_id:
-                from app.models.Inspecciones_models import FirmaEncargadoPorJefe
-                firma = FirmaEncargadoPorJefe.query.get(firma_id)
+            if firma:
                 if firma:
                     firma_encargado_data = {
                         'id': firma.id,
@@ -3786,6 +4398,10 @@ class InspeccionesController:
                 # Verificar si es del inspector actual
                 es_propia = inspeccion.inspector_id == current_user_id
 
+                observaciones_limpias, motivo_sin_firma_encargado = (
+                    InspeccionesController._obtener_observaciones_y_motivo(inspeccion)
+                )
+
                 inspecciones_data.append({
                     'id': inspeccion.id,
                     'tipo': 'base_datos',  # Indicar que viene de BD
@@ -3805,7 +4421,8 @@ class InspeccionesController:
                         'total': total_items,
                         'porcentaje': progreso_porcentaje
                     },
-                    'observaciones': inspeccion.observaciones or '',
+                    'observaciones': observaciones_limpias,
+                    'motivo_sin_firma_encargado': motivo_sin_firma_encargado,
                     'tiene_firmas': bool(inspeccion.firma_inspector or inspeccion.firma_encargado)
                 })
 
@@ -4021,13 +4638,21 @@ class InspeccionesController:
                 for evidencia in inspeccion.evidencias:
                     evidencias_urls.append(evidencia.ruta)
 
+            observaciones_limpias, motivo_sin_firma_encargado = (
+                InspeccionesController._obtener_observaciones_y_motivo(inspeccion)
+            )
+
             inspeccion_data = {
                 'success': True,
                 'inspeccion': {
                     'id': inspeccion.id,
                     'establecimiento_id': inspeccion.establecimiento_id,
                     'fecha': inspeccion.fecha.strftime('%Y-%m-%d'),
-                    'observaciones': inspeccion.observaciones or '',
+                    'observaciones': observaciones_limpias,
+                    'motivo_sin_firma_encargado': motivo_sin_firma_encargado,
+                    'finalizada_sin_firma_encargado': bool(
+                        motivo_sin_firma_encargado and not inspeccion.firma_encargado
+                    ),
                     'estado': inspeccion.estado,
                     'items': items_data,
                     'firma_inspector': inspeccion.firma_inspector,
@@ -4097,10 +4722,12 @@ class InspeccionesController:
                         "descripcion_base": item_base.descripcion,
                         "descripcion_personalizada": item.descripcion_personalizada,
                         "riesgo": item_base.riesgo,
-                        "puntaje_minimo": item_base.puntaje_minimo,
-                        "puntaje_maximo": int(
-                            item_base.puntaje_maximo * float(item.factor_ajuste)
-                        ),  # Aplicar factor
+                        "puntaje_minimo": InspeccionesController._obtener_configuracion_calificacion(
+                            item_base.riesgo
+                        )["puntaje_minimo"],
+                        "puntaje_maximo": InspeccionesController._obtener_configuracion_calificacion(
+                            item_base.riesgo
+                        )["puntaje_maximo"],
                         "factor_ajuste": float(item.factor_ajuste),
                         "origen": origen,
                         "orden": item_base.orden,
@@ -4253,8 +4880,12 @@ class InspeccionesController:
                         "descripcion_base": item_base.descripcion,
                         "descripcion_personalizada": item.descripcion_personalizada,
                         "riesgo": item_base.riesgo,
-                        "puntaje_minimo": item_base.puntaje_minimo,
-                        "puntaje_maximo": int(item_base.puntaje_maximo * float(item.factor_ajuste)),
+                        "puntaje_minimo": InspeccionesController._obtener_configuracion_calificacion(
+                            item_base.riesgo
+                        )["puntaje_minimo"],
+                        "puntaje_maximo": InspeccionesController._obtener_configuracion_calificacion(
+                            item_base.riesgo
+                        )["puntaje_maximo"],
                         "orden": item_base.orden,
                         "factor_ajuste": float(item.factor_ajuste),
                         "origen": origen,
@@ -4325,8 +4956,12 @@ class InspeccionesController:
                     'descripcion_personalizada': item.descripcion_personalizada,
                     'categoria': item.item_base.categoria.nombre,
                     'riesgo': item.riesgo,
-                    'puntaje_minimo': item.item_base.puntaje_minimo,
-                    'puntaje_maximo': item.item_base.puntaje_maximo,
+                    'puntaje_minimo': InspeccionesController._obtener_configuracion_calificacion(
+                        item.riesgo
+                    )['puntaje_minimo'],
+                    'puntaje_maximo': InspeccionesController._obtener_configuracion_calificacion(
+                        item.riesgo
+                    )['puntaje_maximo'],
                     'plantilla': item.plantilla.nombre,
                     'tipo_establecimiento': item.plantilla.tipo_establecimiento.nombre
                 })
@@ -4409,11 +5044,11 @@ class InspeccionesController:
             if riesgo not in ["Crítico", "Mayor", "Menor"]:
                 raise Exception("El riesgo debe ser: Crítico, Mayor o Menor")
 
-            if puntaje_minimo < 0 or puntaje_maximo < 0:
-                raise Exception("Los puntajes no pueden ser negativos")
-
-            if puntaje_minimo >= puntaje_maximo:
-                raise Exception("El puntaje mínimo debe ser menor al máximo")
+            configuracion_calificacion = (
+                InspeccionesController._obtener_configuracion_calificacion(riesgo)
+            )
+            puntaje_minimo = configuracion_calificacion["puntaje_minimo"]
+            puntaje_maximo = configuracion_calificacion["puntaje_maximo"]
 
             # Generar código único para el item personalizado
             # Formato: X.Y donde X es el ID de la categoría e Y es el siguiente número disponible
@@ -4527,6 +5162,11 @@ class InspeccionesController:
             # Preparar resultado
             resultado = []
             for item in items:
+                configuracion_calificacion = (
+                    InspeccionesController._obtener_configuracion_calificacion(
+                        item.riesgo
+                    )
+                )
                 resultado.append({
                     'id': item.id,
                     'codigo': item.codigo,
@@ -4534,8 +5174,8 @@ class InspeccionesController:
                     'categoria': item.categoria.nombre,
                     'categoria_id': item.categoria.id,
                     'riesgo': item.riesgo,
-                    'puntaje_minimo': item.puntaje_minimo,
-                    'puntaje_maximo': item.puntaje_maximo,
+                    'puntaje_minimo': configuracion_calificacion['puntaje_minimo'],
+                    'puntaje_maximo': configuracion_calificacion['puntaje_maximo'],
                     'orden': item.orden
                 })
 
