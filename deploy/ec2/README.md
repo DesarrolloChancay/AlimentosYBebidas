@@ -1,6 +1,7 @@
 # Despliegue EC2 Ubuntu 24.04
 
 Objetivo:
+
 - EC2 Ubuntu `24.04.4 LTS`
 - Python `3.12.3`
 - Proyecto en `/home/ubuntu/AlimentosYBebidas`
@@ -15,6 +16,7 @@ Objetivo:
 - `certbot --nginx` instala y renueva HTTPS
 
 Importante:
+
 - Esta app usa `Flask-SocketIO` y estado en memoria para tiempo real.
 - Por eso `gunicorn` debe quedarse en `1 worker`.
 - Si luego quieres varios workers o varias instancias, necesitas sticky sessions y `SOCKETIO_MESSAGE_QUEUE` con Redis.
@@ -48,6 +50,7 @@ sudo nano /etc/alimentosybebidas.env
 ```
 
 Variables mínimas:
+
 - `SECRET_KEY`
 - `DB_USER`
 - `DB_PASSWORD`
@@ -56,6 +59,7 @@ Variables mínimas:
 - `DB_NAME`
 
 Valores recomendados ya preparados:
+
 - `FLASK_ENV=production`
 - `SOCKETIO_CORS_ALLOWED_ORIGINS=https://ayb.clubcastillodechancay.com`
 - `GUNICORN_WORKERS=1`
@@ -160,16 +164,19 @@ sudo systemctl restart alimentosybebidas
 ## 10. Verificaciones rápidas
 
 - App:
+
 ```bash
 curl -I http://127.0.0.1:5060/healthz
 ```
 
 - Dominio:
+
 ```bash
 curl -I https://ayb.clubcastillodechancay.com/healthz
 ```
 
 - Servicio:
+
 ```bash
 systemctl is-active alimentosybebidas
 ```

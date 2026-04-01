@@ -204,26 +204,10 @@ def get_items_establecimiento(establecimiento_id):
     user_id = session.get("user_id")
 
     # Verificar que el usuario tiene acceso a este establecimiento
-    if user_role == "Encargado":
-        # Verificar que el encargado está asignado a este establecimiento
-        from app.models.Inspecciones_models import EncargadoEstablecimiento
-        from datetime import date
-
-        asignacion = (
-            EncargadoEstablecimiento.query.filter(
-                EncargadoEstablecimiento.usuario_id == user_id,
-                EncargadoEstablecimiento.establecimiento_id == establecimiento_id,
-                EncargadoEstablecimiento.activo == True,
-                EncargadoEstablecimiento.fecha_inicio <= date.today(),
-            )
-            .filter(
-                (EncargadoEstablecimiento.fecha_fin.is_(None))
-                | (EncargadoEstablecimiento.fecha_fin >= date.today())
-            )
-            .first()
-        )
-
-        if not asignacion:
+    if user_role in ["Encargado", "Jefe de Establecimiento"]:
+        if not InspeccionesController._usuario_tiene_acceso_establecimiento(
+            user_id, user_role, establecimiento_id
+        ):
             return jsonify({"error": "No tiene acceso a este establecimiento"}), 403
 
     try:
