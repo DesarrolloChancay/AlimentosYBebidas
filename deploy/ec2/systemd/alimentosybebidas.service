@@ -1,0 +1,22 @@
+[Unit]
+Description=Alimentos y Bebidas Gunicorn service
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/AlimentosYBebidas
+EnvironmentFile=/etc/alimentosybebidas.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/ubuntu/AlimentosYBebidas/.venv/bin/gunicorn --config /home/ubuntu/AlimentosYBebidas/gunicorn.conf.py wsgi:app
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+PrivateTmp=true
+NoNewPrivileges=true
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target
