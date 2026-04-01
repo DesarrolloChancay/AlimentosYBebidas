@@ -151,27 +151,66 @@ function asegurarEstadoEvidenciasCompartido() {
     return window.evidenciasAcumuladas;
 }
 
+function limpiarInputsEvidencias() {
+    ['evidencias-input', 'evidencias-camera-input'].forEach((inputId) => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.value = '';
+        }
+    });
+}
+
+function manejarSeleccionEvidencias(event) {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) {
+        return;
+    }
+
+    procesarEvidencias(files);
+
+    // Permite volver a seleccionar o volver a tomar la misma foto si el usuario lo necesita.
+    event.target.value = '';
+}
+
+function registrarInputEvidencias(input) {
+    if (!input || input.dataset.evidenciasInicializado === 'true') {
+        return;
+    }
+
+    input.addEventListener('change', manejarSeleccionEvidencias);
+    input.dataset.evidenciasInicializado = 'true';
+}
+
 /**
  * Inicializa el sistema de evidencias fotográficas
  */
 function inicializarEvidencias() {
     const evidenciasInput = document.getElementById('evidencias-input');
-    if (!evidenciasInput) return;
-    
-    // Array para almacenar todas las evidencias
-    asegurarEstadoEvidenciasCompartido();
+    const camaraInput = document.getElementById('evidencias-camera-input');
+    const abrirArchivosBtn = document.getElementById('abrir-archivos-evidencia');
+    const abrirCamaraBtn = document.getElementById('abrir-camara-evidencia');
 
-    sincronizarEvidenciasExistentes();
+    if (!evidenciasInput && !camaraInput) return;
     
-    evidenciasInput.addEventListener('change', function(event) {
-        const files = Array.from(event.target.files);
-        if (files.length === 0) return;
-        
-        procesarEvidencias(files);
-        
-        // Limpiar el input para permitir seleccionar los mismos archivos otra vez
-        event.target.value = '';
-    });
+    asegurarEstadoEvidenciasCompartido();
+    sincronizarEvidenciasExistentes();
+
+    registrarInputEvidencias(evidenciasInput);
+    registrarInputEvidencias(camaraInput);
+
+    if (abrirArchivosBtn && abrirArchivosBtn.dataset.evidenciasInicializado !== 'true') {
+        abrirArchivosBtn.addEventListener('click', function() {
+            evidenciasInput?.click();
+        });
+        abrirArchivosBtn.dataset.evidenciasInicializado = 'true';
+    }
+
+    if (abrirCamaraBtn && abrirCamaraBtn.dataset.evidenciasInicializado !== 'true') {
+        abrirCamaraBtn.addEventListener('click', function() {
+            abrirModalCamaraEvidencia();
+        });
+        abrirCamaraBtn.dataset.evidenciasInicializado = 'true';
+    }
 }
 
 /**
@@ -219,7 +258,8 @@ function actualizarVistaEvidencias() {
     
     // Actualizar contador
     if (contador) {
-        contador.textContent = `${window.evidenciasAcumuladas.length} evidencia(s) seleccionada(s)`;
+        const total = window.evidenciasAcumuladas.length;
+        contador.textContent = `${total} ${total === 1 ? 'evidencia' : 'evidencias'}`;
     }
     
     // Limpiar y recrear previews
@@ -363,7 +403,6 @@ function eliminarEvidenciaPorId(uniqueId) {
         
         // Actualizar vista
         actualizarVistaEvidencias();
-    } else {
     }
 }
 
@@ -384,6 +423,350 @@ function eliminarEvidencia(indexOrId) {
         eliminarEvidenciaPorId(indexOrId);
     }
 }
+
+function notificarEvidencias(mensaje, tipo = 'info') {
+    if (typeof mostrarNotificacion === 'function') {
+        mostrarNotificacion(mensaje, tipo);
+        return;
+    }
+
+    if (tipo === 'error' || tipo === 'warning') {
+        alert(mensaje);
+    }
+}
+
+function generarNombreArchivoEvidencia(extension = 'jpg') {
+    const ahora = new Date();
+    const sello = [
+        ahora.getFullYear(),
+        String(ahora.getMonth() + 1).padStart(2, '0'),
+        String(ahora.getDate()).padStart(2, '0'),
+        '_',
+        String(ahora.getHours()).padStart(2, '0'),
+        String(ahora.getMinutes()).padStart(2, '0'),
+        String(ahora.getSeconds()).padStart(2, '0')
+    ].join('');
+
+    const sufijo = Math.random().toString(36).slice(2, 8);
+    return `evidencia_${sello}_${sufijo}.${extension}`;
+}
+
+function detenerStreamCamaraEvidencia() {
+    const estado = window.modalCamaraEvidenciaEstado;
+    if (!estado || !estado.stream) {
+        return;
+    }
+
+    estado.stream.getTracks().forEach((track) => {
+        try {
+            track.stop();
+        } catch (error) {
+        }
+    });
+
+    estado.stream = null;
+}
+
+async function capturarBlobCamaraEvidencia(video, canvas) {
+    const width = video.videoWidth || 1280;
+    const height = video.videoHeight || 720;
+
+    if (!width || !height) {
+        throw new Error('La camara aun no esta lista para capturar.');
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext('2d', { alpha: false });
+    context.drawImage(video, 0, 0, width, height);
+
+    return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+            if (blob) {
+                resolve(blob);
+                return;
+            }
+            reject(new Error('No se pudo generar la imagen capturada.'));
+        }, 'image/jpeg', 0.92);
+    });
+}
+
+async function iniciarStreamCamaraEvidencia(video, mensajeError, facingMode = 'environment') {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Este navegador no soporta camara embebida.');
+    }
+
+    if (!window.isSecureContext && !['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+        throw new Error('La camara embebida requiere HTTPS o localhost.');
+    }
+
+    detenerStreamCamaraEvidencia();
+
+    if (mensajeError) {
+        mensajeError.textContent = '';
+        mensajeError.classList.add('hidden');
+    }
+
+    const videoBase = {
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+    };
+
+    const constraintsPreferidos = {
+        audio: false,
+        video: {
+            ...videoBase,
+            facingMode: { ideal: facingMode }
+        }
+    };
+
+    const constraintsBasicos = {
+        audio: false,
+        video: videoBase
+    };
+
+    let stream;
+    try {
+        stream = await navigator.mediaDevices.getUserMedia(constraintsPreferidos);
+    } catch (error) {
+        stream = await navigator.mediaDevices.getUserMedia(constraintsBasicos);
+    }
+
+    const estado = window.modalCamaraEvidenciaEstado || {};
+    estado.stream = stream;
+    estado.facingMode = facingMode;
+    window.modalCamaraEvidenciaEstado = estado;
+
+    video.srcObject = stream;
+    video.muted = true;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.setAttribute('playsinline', 'true');
+    await video.play();
+}
+
+function cerrarModalCamaraEvidencia() {
+    const estado = window.modalCamaraEvidenciaEstado;
+    if (!estado) {
+        return;
+    }
+
+    detenerStreamCamaraEvidencia();
+
+    if (estado.previewUrl) {
+        URL.revokeObjectURL(estado.previewUrl);
+    }
+
+    if (estado.keydownHandler) {
+        document.removeEventListener('keydown', estado.keydownHandler);
+    }
+
+    if (estado.modal && estado.modal.parentNode) {
+        estado.modal.parentNode.removeChild(estado.modal);
+    }
+
+    window.modalCamaraEvidenciaEstado = null;
+}
+
+async function abrirModalCamaraEvidencia() {
+    if (document.getElementById('modal-camara-evidencia')) {
+        return;
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'modal-camara-evidencia';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center overflow-y-auto p-3 sm:p-6';
+    modal.style.zIndex = '10050';
+    modal.innerHTML = `
+        <div class="my-auto flex w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-2xl" style="max-height: calc(100vh - 2rem);">
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 px-4 py-3 sm:px-6">
+                <div>
+                    <h3 class="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100">Tomar evidencia fotografica</h3>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Capture la foto sin salir del sistema.</p>
+                </div>
+                <button type="button" id="cerrar-modal-camara-evidencia" class="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200" aria-label="Cerrar camara">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 sm:p-6">
+                <div class="mx-auto flex w-full items-center justify-center rounded-2xl bg-slate-950 p-2 sm:p-3">
+                    <video id="video-camara-evidencia" class="block w-full rounded-xl bg-black object-contain" style="min-height: 280px; max-height: calc(100vh - 18rem);" autoplay muted playsinline></video>
+                    <img id="preview-camara-evidencia" class="hidden w-full rounded-xl bg-black object-contain" style="min-height: 280px; max-height: calc(100vh - 18rem);" alt="Vista previa de la captura">
+                    <canvas id="canvas-camara-evidencia" class="hidden"></canvas>
+                </div>
+                <p id="mensaje-error-camara-evidencia" class="hidden mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300"></p>
+                <p id="mensaje-ayuda-camara-evidencia" class="mt-3 text-xs sm:text-sm text-slate-500 dark:text-slate-400">Apunte la camara y presione "Tomar foto".</p>
+            </div>
+            <div class="flex flex-col gap-3 border-t border-slate-200 dark:border-slate-700 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                <button type="button" id="cambiar-camara-evidencia" class="inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:border-rose-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors">
+                    Cambiar camara
+                </button>
+                <div class="flex flex-col-reverse gap-3 sm:flex-row">
+                    <button type="button" id="cancelar-camara-evidencia" class="inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="button" id="repetir-camara-evidencia" class="hidden inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                        Repetir
+                    </button>
+                    <button type="button" id="capturar-camara-evidencia" class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 transition-colors">
+                        Tomar foto
+                    </button>
+                    <button type="button" id="guardar-camara-evidencia" class="hidden inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors">
+                        Usar foto
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const video = modal.querySelector('#video-camara-evidencia');
+    const preview = modal.querySelector('#preview-camara-evidencia');
+    const canvas = modal.querySelector('#canvas-camara-evidencia');
+    const mensajeError = modal.querySelector('#mensaje-error-camara-evidencia');
+    const mensajeAyuda = modal.querySelector('#mensaje-ayuda-camara-evidencia');
+    const btnCerrar = modal.querySelector('#cerrar-modal-camara-evidencia');
+    const btnCancelar = modal.querySelector('#cancelar-camara-evidencia');
+    const btnCambiarCamara = modal.querySelector('#cambiar-camara-evidencia');
+    const btnCapturar = modal.querySelector('#capturar-camara-evidencia');
+    const btnRepetir = modal.querySelector('#repetir-camara-evidencia');
+    const btnGuardar = modal.querySelector('#guardar-camara-evidencia');
+
+    const estado = {
+        modal,
+        video,
+        canvas,
+        preview,
+        mensajeError,
+        mensajeAyuda,
+        btnCambiarCamara,
+        btnCapturar,
+        btnRepetir,
+        btnGuardar,
+        stream: null,
+        previewUrl: null,
+        capturedBlob: null,
+        facingMode: 'environment'
+    };
+
+    estado.keydownHandler = (event) => {
+        if (event.key === 'Escape') {
+            cerrarModalCamaraEvidencia();
+        }
+    };
+
+    window.modalCamaraEvidenciaEstado = estado;
+    document.addEventListener('keydown', estado.keydownHandler);
+
+    const mostrarError = (mensaje) => {
+        mensajeError.textContent = mensaje;
+        mensajeError.classList.remove('hidden');
+        mensajeAyuda.textContent = 'Si la camara no abre, verifique permisos del navegador.';
+    };
+
+    const resetVistaCaptura = () => {
+        if (estado.previewUrl) {
+            URL.revokeObjectURL(estado.previewUrl);
+            estado.previewUrl = null;
+        }
+
+        estado.capturedBlob = null;
+        preview.src = '';
+        preview.classList.add('hidden');
+        video.classList.remove('hidden');
+        btnCapturar.classList.remove('hidden');
+        btnGuardar.classList.add('hidden');
+        btnRepetir.classList.add('hidden');
+        btnCambiarCamara.classList.remove('hidden');
+        mensajeAyuda.textContent = 'Apunte la camara y presione "Tomar foto".';
+    };
+
+    const iniciarCamara = async (facingMode = estado.facingMode) => {
+        btnCapturar.disabled = true;
+        btnCambiarCamara.disabled = true;
+        btnGuardar.disabled = true;
+        btnRepetir.disabled = true;
+
+        resetVistaCaptura();
+
+        try {
+            await iniciarStreamCamaraEvidencia(video, mensajeError, facingMode);
+            estado.facingMode = facingMode;
+            btnCapturar.disabled = false;
+            btnCambiarCamara.disabled = false;
+            mensajeAyuda.textContent = 'Apunte la camara y presione "Tomar foto".';
+        } catch (error) {
+            mostrarError(error.message || 'No se pudo iniciar la camara.');
+        }
+    };
+
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            cerrarModalCamaraEvidencia();
+        }
+    });
+
+    btnCerrar.addEventListener('click', cerrarModalCamaraEvidencia);
+    btnCancelar.addEventListener('click', cerrarModalCamaraEvidencia);
+
+    btnCambiarCamara.addEventListener('click', async () => {
+        const siguiente = estado.facingMode === 'environment' ? 'user' : 'environment';
+        await iniciarCamara(siguiente);
+    });
+
+    btnCapturar.addEventListener('click', async () => {
+        try {
+            const blob = await capturarBlobCamaraEvidencia(video, canvas);
+            detenerStreamCamaraEvidencia();
+
+            estado.capturedBlob = blob;
+            estado.previewUrl = URL.createObjectURL(blob);
+            preview.src = estado.previewUrl;
+            preview.classList.remove('hidden');
+            video.classList.add('hidden');
+
+            btnCapturar.classList.add('hidden');
+            btnGuardar.classList.remove('hidden');
+            btnRepetir.classList.remove('hidden');
+            btnCambiarCamara.classList.add('hidden');
+            btnGuardar.disabled = false;
+            btnRepetir.disabled = false;
+            mensajeAyuda.textContent = 'Revise la foto. Puede repetirla o usarla como evidencia.';
+        } catch (error) {
+            mostrarError(error.message || 'No se pudo capturar la imagen.');
+        }
+    });
+
+    btnRepetir.addEventListener('click', async () => {
+        await iniciarCamara(estado.facingMode);
+    });
+
+    btnGuardar.addEventListener('click', () => {
+        if (!estado.capturedBlob) {
+            mostrarError('Primero debe tomar una foto.');
+            return;
+        }
+
+        const file = new File(
+            [estado.capturedBlob],
+            generarNombreArchivoEvidencia('jpg'),
+            { type: 'image/jpeg', lastModified: Date.now() }
+        );
+
+        procesarEvidencias([file]);
+        cerrarModalCamaraEvidencia();
+        notificarEvidencias('Foto agregada como evidencia', 'success');
+    });
+
+    await iniciarCamara(estado.facingMode);
+}
+
+window.limpiarInputsEvidencias = limpiarInputsEvidencias;
+window.abrirModalCamaraEvidencia = abrirModalCamaraEvidencia;
 
 /**
  * Abre modal para ver evidencia en grande

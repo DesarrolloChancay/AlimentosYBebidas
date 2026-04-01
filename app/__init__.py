@@ -8,6 +8,7 @@ from app.routes.plantillas_routes import plantillas_bp
 from app.controllers.usuarios_controller import usuarios_bp
 from app.controllers.auth_controller import AuthController
 from app.controllers.admin_controller import admin_bp
+from app.controllers.reglamento_controller import reglamento_bp
 
 def create_app():
     app = Flask(__name__)
@@ -35,6 +36,7 @@ def create_app():
     app.register_blueprint(plantillas_bp)
     app.register_blueprint(usuarios_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(reglamento_bp)
     
     # Registrar filtros personalizados
     from app.template_filters import register_filters

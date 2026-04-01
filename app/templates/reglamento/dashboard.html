@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Reglamento de Restaurante{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-slate-900 dark:to-gray-900">
+    <!-- Header -->
+    <div class="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50">
+        <div class="px-4 py-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <span class="ph ph-clipboard-text text-2xl text-white"></span>
+                    </div>
+                    <div>
+                        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Reglamento de Restaurante</h1>
+                        <p class="text-sm text-gray-600 dark:text-gray-300">{{ establecimiento.nombre }}</p>
+                    </div>
+                </div>
+                
+                <button id="btnNuevaReunion" 
+                        class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+                    <span class="ph ph-plus-circle text-lg mr-2"></span>
+                    Nueva Reunión
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenido principal -->
+    <div class="px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+        <!-- Instrucciones -->
+        <div class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded-xl p-4 shadow-sm">
+            <div class="flex items-start space-x-3">
+                <span class="ph ph-info text-2xl text-blue-600 dark:text-blue-400 mt-0.5"></span>
+                <div>
+                    <h3 class="text-sm font-semibold text-blue-900 dark:text-blue-100">Información importante</h3>
+                    <p class="text-sm text-blue-800 dark:text-blue-200 mt-1">
+                        Las reuniones se realizan cada lunes para evaluar el cumplimiento del reglamento de la semana anterior (lunes a domingo). 
+                        Marque cada item como "Cumple" o "No Cumple" y registre las observaciones necesarias.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Reuniones -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border-b border-gray-200 dark:border-gray-600">
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white">Historial de Reuniones</h2>
+            </div>
+            
+            {% if reuniones %}
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 dark:bg-gray-700/50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Semana
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Fecha Reunión
+                            </th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Estado
+                            </th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Acciones
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for reunion in reuniones %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                    Semana {{ reunion.semana }} - {{ reunion.ano }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-700 dark:text-gray-300">
+                                    {% if reunion.fecha_reunion %}
+                                        {{ reunion.fecha_reunion.strftime('%d/%m/%Y') }}
+                                    {% else %}
+                                        <span class="text-gray-400">No registrada</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                {% if reunion.estado == 'pendiente' %}
+                                    <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                                        Pendiente
+                                    </span>
+                                {% else %}
+                                    <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                        Completada
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <a href="{{ url_for('reglamento.ver_reunion', reunion_id=reunion.id) }}" 
+                                   class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white rounded-lg transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md transform hover:scale-105">
+                                    {% if reunion.estado == 'pendiente' %}
+                                        <span class="ph ph-pencil mr-2"></span>
+                                        Evaluar
+                                    {% else %}
+                                        <span class="ph ph-eye mr-2"></span>
+                                        Ver Detalle
+                                    {% endif %}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="px-6 py-12 text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
+                    <span class="ph ph-clipboard-text text-4xl text-gray-400 dark:text-gray-500"></span>
+                </div>
+                <p class="text-gray-600 dark:text-gray-400 text-lg font-medium">No hay reuniones registradas</p>
+                <p class="text-gray-500 dark:text-gray-500 mt-2">Haga clic en "Nueva Reunión" para comenzar</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Descripción: Script para crear nueva reunión semanal
+// Lógica: Envía petición al servidor para crear reunión de la semana actual
+document.getElementById('btnNuevaReunion').addEventListener('click', async function() {
+    const establecimientoId = {{ establecimiento.id }};
+    
+    if (!confirm('¿Crear nueva reunión semanal para evaluar la semana anterior?')) {
+        return;
+    }
+    
+    this.disabled = true;
+    this.innerHTML = '<span class="ph ph-spinner text-lg mr-2 animate-spin"></span>Creando...';
+    
+    try {
+        const response = await fetch('/reglamento/crear-reunion', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                establecimiento_id: establecimientoId
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert('Reunión creada exitosamente para ' + data.semana_evaluada);
+            window.location.reload();
+        } else {
+            if (response.status === 409) {
+                alert('Ya existe una reunión para esta semana. Vea el listado.');
+            } else {
+                alert('Error: ' + data.error);
+            }
+            this.disabled = false;
+            this.innerHTML = '<span class="ph ph-plus-circle text-lg mr-2"></span>Nueva Reunión';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error de conexión');
+        this.disabled = false;
+        this.innerHTML = '<span class="ph ph-plus-circle text-lg mr-2"></span>Nueva Reunión';
+    }
+});
+</script>
+{% endblock %}

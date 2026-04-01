@@ -9,7 +9,7 @@ let inspecciones = [];
 // ===== ELEMENTOS DEL DOM =====
 let filtroEstablecimiento, filtroEncargado, filtroFechaDesde, filtroFechaHasta, filtroEstado;
 let btnBuscar, btnLimpiar, btnNuevaInspeccion;
-let listaInspecciones, contadorResultados, loadingResultados, sinResultados, vistaTabla, tbodyResultados;
+let listaInspecciones, contadorResultados, loadingResultados, contenedorResultados, sinResultados, vistaTabla, tbodyResultados;
 let modalVistaPrevia, cerrarModal, contenidoModal;
 
 // ===== INICIALIZACIÓN =====
@@ -65,6 +65,7 @@ function obtenerElementosDOM() {
     listaInspecciones = document.getElementById('lista-inspecciones');
     contadorResultados = document.getElementById('contador-resultados');
     loadingResultados = document.getElementById('loading-resultados');
+    contenedorResultados = document.getElementById('contenedor-resultados');
     sinResultados = document.getElementById('sin-resultados');
     vistaTabla = document.getElementById('vista-tabla');
     tbodyResultados = document.getElementById('tbody-resultados');
@@ -115,6 +116,8 @@ function configurarEventos() {
 
 // ===== CARGA DE DATOS INICIALES =====
 async function cargarDatosIniciales() {
+    mostrarLoading(true);
+
     // Cargar solo establecimientos al inicio - NO cargar encargados hasta seleccionar establecimiento
     await cargarEstablecimientos();
     
@@ -229,15 +232,21 @@ async function buscarInspecciones() {
 // ===== VISUALIZACIÓN DE RESULTADOS =====
 function mostrarResultados() {
     if (!listaInspecciones || !contadorResultados) return;
-    
+
     if (inspecciones.length === 0) {
+        configurarEstadoResultadosVacios(
+            'No se encontraron inspecciones',
+            'Utiliza los filtros para buscar inspecciones específicas.'
+        );
+        alternarVistasResultados(false);
         if (sinResultados) sinResultados.classList.remove('hidden');
         listaInspecciones.innerHTML = '';
         contadorResultados.textContent = '0 inspecciones encontradas';
         if (tbodyResultados) tbodyResultados.innerHTML = '';
         return;
     }
-    
+
+    alternarVistasResultados(true);
     if (sinResultados) sinResultados.classList.add('hidden');
     contadorResultados.textContent = `${inspecciones.length} inspección${inspecciones.length !== 1 ? 'es' : ''} encontrada${inspecciones.length !== 1 ? 's' : ''}`;
     
@@ -437,7 +446,7 @@ function mostrarModalDetalle(detalle) {
             
             ${observaciones ? `
                 <div>
-                    <h4 class="font-semibold text-slate-900 dark:text-white mb-2">Observaciones</h4>
+                    <h4 class="font-semibold text-slate-900 dark:text-slate-300 mb-2">Observaciones</h4>
                     <p class="text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">${observaciones}</p>
                 </div>
             ` : ''}
@@ -478,19 +487,66 @@ function limpiarFiltros() {
 }
 
 // ===== UTILIDADES =====
+function alternarVistasResultados(mostrar) {
+    if (listaInspecciones) {
+        listaInspecciones.style.display = mostrar ? '' : 'none';
+    }
+
+    if (vistaTabla) {
+        vistaTabla.style.display = mostrar ? '' : 'none';
+    }
+}
+
+function configurarEstadoResultadosVacios(titulo, descripcion) {
+    if (!sinResultados) return;
+
+    const tituloEstado = sinResultados.querySelector('h3');
+    const descripcionEstado = sinResultados.querySelector('p');
+
+    if (tituloEstado) {
+        tituloEstado.textContent = titulo;
+    }
+
+    if (descripcionEstado) {
+        descripcionEstado.textContent = descripcion;
+    }
+}
+
 function mostrarLoading(mostrar) {
-    if (!loadingResultados || !sinResultados) return;
-    
+    if (!loadingResultados) return;
+
     if (mostrar) {
         loadingResultados.classList.remove('hidden');
-        sinResultados.classList.add('hidden');
+        contenedorResultados?.classList.add('hidden');
+        sinResultados?.classList.add('hidden');
     } else {
         loadingResultados.classList.add('hidden');
+        contenedorResultados?.classList.remove('hidden');
     }
 }
 
 function mostrarError(mensaje) {
-    // TODO: Implementar notificación visual de error
+    alternarVistasResultados(false);
+
+    if (sinResultados) {
+        configurarEstadoResultadosVacios(
+            'No se pudo completar la búsqueda',
+            mensaje || 'Ocurrió un problema al cargar las inspecciones.'
+        );
+        sinResultados.classList.remove('hidden');
+    }
+
+    if (contadorResultados) {
+        contadorResultados.textContent = '0 inspecciones';
+    }
+
+    if (listaInspecciones) {
+        listaInspecciones.innerHTML = '';
+    }
+
+    if (tbodyResultados) {
+        tbodyResultados.innerHTML = '';
+    }
 }
 
 function formatearFechaLocal(fechaValor) {
