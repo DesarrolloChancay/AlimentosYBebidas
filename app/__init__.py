@@ -9,18 +9,38 @@ from app.controllers.usuarios_controller import usuarios_bp
 from app.controllers.auth_controller import AuthController
 from app.controllers.admin_controller import admin_bp
 from app.controllers.reglamento_controller import reglamento_bp
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
+    trusted_proxy_count = app.config.get('TRUST_PROXY_COUNT', 0)
+    if trusted_proxy_count:
+        app.wsgi_app = ProxyFix(
+            app.wsgi_app,
+            x_for=trusted_proxy_count,
+            x_proto=trusted_proxy_count,
+            x_host=trusted_proxy_count,
+            x_port=trusted_proxy_count,
+        )
+
     # Inicializar extensiones
     db.init_app(app)
-    socketio.init_app(app,
-                      cors_allowed_origins="*",
-                      logger=app.config['FLASK_ENV'] == 'development',
-                      engineio_logger=app.config['FLASK_ENV'] == 'development',
-                      async_mode=app.config.get('SOCKETIO_ASYNC_MODE', 'threading'))
+    socketio_options = {
+        'logger': app.config['FLASK_ENV'] == 'development',
+        'engineio_logger': app.config['FLASK_ENV'] == 'development',
+        'async_mode': app.config.get('SOCKETIO_ASYNC_MODE', 'threading'),
+    }
+    cors_allowed_origins = app.config.get('SOCKETIO_CORS_ALLOWED_ORIGINS')
+    if cors_allowed_origins is not None:
+        socketio_options['cors_allowed_origins'] = cors_allowed_origins
+
+    message_queue = app.config.get('SOCKETIO_MESSAGE_QUEUE')
+    if message_queue:
+        socketio_options['message_queue'] = message_queue
+
+    socketio.init_app(app, **socketio_options)
 
     # Importar eventos de socket después de inicializar
     try:
@@ -94,6 +114,10 @@ def create_app():
                 }
             })
         return jsonify({'authenticated': False}), 401
+
+    @app.get('/healthz')
+    def healthz():
+        return jsonify({'status': 'ok'}), 200
 
     @app.before_request
     def verificar_cambio_contrasena_obligatorio():
