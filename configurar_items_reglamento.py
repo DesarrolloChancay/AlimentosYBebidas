@@ -27,6 +27,7 @@ with app.app_context():
         'A-16',  # Contratar personal de otros (SI contraté = malo)
         'A-17',  # Sin planilla (SI no tienen = malo)
         'A-18',  # Incumplir acuerdos (SI incumplí = malo)
+        'A-19',  # No cumplir programación semanal (SI ocurrió = malo)
         'A-20',  # Sin fumigación (SI operé sin certificado = malo)
         'A-21',  # Chancho inseguro (SI preparé mal = malo)
         'A-22',  # Ingreso fuera de horario (SI ingresé = malo)
@@ -72,7 +73,7 @@ with app.app_context():
     }
     
     # Items con cumplimiento programado (lógica NORMAL: SI=bueno)
-    items_normal = ['A-19']  # Menaje completo y en buen estado (SI=bueno, NO=malo)
+    items_normal = []
     
     print("Configurando items...")
     

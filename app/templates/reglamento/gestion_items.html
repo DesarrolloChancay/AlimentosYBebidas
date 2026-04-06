@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}Configurar Items de Reglamento{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div class="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+        <div class="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Configurar Items</h1>
+                <p class="text-sm text-slate-600 dark:text-slate-300">{{ establecimiento.nombre }}</p>
+            </div>
+            <a href="{{ url_for('reglamento.dashboard', establecimiento_id=establecimiento.id) }}" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                Volver al dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <div id="itemsAlert" class="hidden rounded-xl border px-4 py-3 text-sm font-medium"></div>
+
+        <div class="grid gap-4 md:grid-cols-4">
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <p class="text-sm text-slate-500 dark:text-slate-400">Total items</p>
+                <p class="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{{ items|length }}</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <p class="text-sm text-slate-500 dark:text-slate-400">Activos</p>
+                <p class="mt-2 text-3xl font-bold text-emerald-600 dark:text-emerald-400">{{ items|selectattr('activo')|list|length }}</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <p class="text-sm text-slate-500 dark:text-slate-400">Temporales</p>
+                <p class="mt-2 text-3xl font-bold text-amber-600 dark:text-amber-400">{{ items|selectattr('tipo_vigencia', 'equalto', 'temporal')|list|length }}</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <p class="text-sm text-slate-500 dark:text-slate-400">Plantillas globales</p>
+                <p class="mt-2 text-3xl font-bold text-blue-600 dark:text-blue-400">{{ items|selectattr('alcance', 'equalto', 'global')|list|length }}</p>
+            </div>
+        </div>
+
+        <div class="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Crear o editar item</h2>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Estos items pertenecen solo al reglamento. No comparten catálogo con el checklist de inspecciones. Los cambios afectan reuniones nuevas y cada reunión conserva su propio snapshot editable.</p>
+
+                <form id="itemForm" class="mt-6 space-y-4">
+                    <input type="hidden" id="itemId">
+                    <input type="hidden" id="establecimientoId" value="{{ establecimiento.id }}">
+
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Código</label>
+                        <input id="codigo" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300" placeholder="Se genera automáticamente" readonly>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Categoría</label>
+                        <select id="categoria" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white" required>
+                            {% for categoria in categorias_disponibles %}
+                            <option value="{{ categoria }}">{{ categoria }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Descripción</label>
+                        <textarea id="descripcion" rows="4" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white" required></textarea>
+                    </div>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Riesgo</label>
+                            <select id="riesgo" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                                {% for riesgo in riesgos_disponibles %}
+                                <option value="{{ riesgo }}">{{ riesgo }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Puntaje base</label>
+                            <input id="puntaje" type="number" min="0" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white" value="1" required>
+                        </div>
+                    </div>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Alcance</label>
+                            <select id="alcance" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                                {% for value, label in alcances_disponibles %}
+                                <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Vigencia</label>
+                            <select id="tipoVigencia" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                                {% for value, label in vigencias_disponibles %}
+                                <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div id="bloqueFechaFinVigencia" class="hidden">
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Vigente hasta</label>
+                        <input id="fechaFinVigencia" type="date" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Si el item es temporal, dejará de replicarse en reuniones nuevas después de esta fecha.</p>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Tipo de validación</label>
+                        <select id="tipoValidacion" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                            {% for value, label in tipos_validacion %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="reglaNumerica" class="hidden grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Operador</label>
+                            <select id="operadorComparacion" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                                <option value="<"><</option>
+                                <option value="<="><=</option>
+                                <option value=">">></option>
+                                <option value=">=">>=</option>
+                                <option value="=">=</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Umbral</label>
+                            <input id="valorUmbral" type="number" step="0.01" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                        </div>
+                    </div>
+                    <label class="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-3 text-sm text-slate-700 dark:border-slate-800 dark:text-slate-200">
+                        <input id="logicaInversa" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600">
+                        La lógica es inversa: “SI” o cumplir la regla cuenta como infracción
+                    </label>
+                    <label class="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-3 text-sm text-slate-700 dark:border-slate-800 dark:text-slate-200">
+                        <input id="activo" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600" checked>
+                        Item activo para nuevas reuniones
+                    </label>
+
+                    <div class="flex flex-wrap gap-3">
+                        <button type="submit" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 dark:bg-blue-600 dark:hover:bg-blue-500">
+                            Guardar item
+                        </button>
+                        <button type="button" id="btnResetItem" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 dark:border-slate-700 dark:text-slate-200">
+                            Limpiar
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div class="border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Items disponibles para este establecimiento</h2>
+                </div>
+
+                {% if items %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-semibold">Código</th>
+                                <th class="px-4 py-3 text-left font-semibold">Detalle</th>
+                                <th class="px-4 py-3 text-center font-semibold">Puntaje</th>
+                                <th class="px-4 py-3 text-center font-semibold">Tipo</th>
+                                <th class="px-4 py-3 text-center font-semibold">Estado</th>
+                                <th class="px-4 py-3 text-center font-semibold">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                            {% for item in items %}
+                            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                <td class="px-4 py-4 font-semibold text-slate-900 dark:text-white">{{ item.codigo }}</td>
+                                <td class="px-4 py-4">
+                                    <div class="font-medium text-slate-900 dark:text-white">{{ item.categoria }}</div>
+                                    <div class="text-slate-600 dark:text-slate-300">{{ item.descripcion }}</div>
+                                    <div class="mt-2 flex flex-wrap gap-2 text-xs">
+                                        <span class="rounded-full bg-slate-100 px-2 py-1 text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ item.riesgo }}</span>
+                                        <span class="rounded-full bg-blue-100 px-2 py-1 text-blue-700 dark:bg-blue-950/40 dark:text-blue-200">{{ item.alcance_label }}</span>
+                                        <span class="rounded-full bg-amber-100 px-2 py-1 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{{ item.tipo_vigencia|capitalize }}</span>
+                                        {% if item.tipo_vigencia == 'temporal' and item.fecha_fin_vigencia_label %}
+                                        <span class="rounded-full bg-rose-100 px-2 py-1 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">Hasta {{ item.fecha_fin_vigencia_label }}</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4 text-center font-semibold text-orange-600 dark:text-orange-400">{{ item.puntaje }}</td>
+                                <td class="px-4 py-4 text-center text-slate-700 dark:text-slate-300">{{ item.tipo_validacion }}</td>
+                                <td class="px-4 py-4 text-center">
+                                    {% if item.activo %}
+                                    <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">Activo</span>
+                                    {% else %}
+                                    <span class="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">Inactivo</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-4 text-center">
+                                    <button type="button" class="btnEditarItem rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 dark:border-slate-700 dark:text-slate-200" data-item='{{ item|tojson|forceescape }}'>
+                                        Editar
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                    Aún no hay items configurados. Crea el primero desde el formulario lateral.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const alertEl = document.getElementById('itemsAlert');
+    const form = document.getElementById('itemForm');
+    const tipoValidacion = document.getElementById('tipoValidacion');
+    const reglaNumerica = document.getElementById('reglaNumerica');
+    const tipoVigencia = document.getElementById('tipoVigencia');
+    const bloqueFechaFinVigencia = document.getElementById('bloqueFechaFinVigencia');
+    const fechaFinVigencia = document.getElementById('fechaFinVigencia');
+    const btnReset = document.getElementById('btnResetItem');
+
+    function mostrarMensaje(tipo, texto) {
+        const estilos = {
+            success: 'border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300',
+            error: 'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300',
+            info: 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
+        };
+        alertEl.className = `rounded-xl border px-4 py-3 text-sm font-medium ${estilos[tipo] || estilos.info}`;
+        alertEl.textContent = texto;
+        alertEl.classList.remove('hidden');
+    }
+
+    function actualizarReglaNumerica() {
+        reglaNumerica.classList.toggle('hidden', tipoValidacion.value === 'si_no');
+    }
+
+    function actualizarVigenciaTemporal() {
+        const esTemporal = tipoVigencia.value === 'temporal';
+        bloqueFechaFinVigencia.classList.toggle('hidden', !esTemporal);
+        fechaFinVigencia.required = esTemporal;
+        if (!esTemporal) {
+            fechaFinVigencia.value = '';
+        }
+    }
+
+    function limpiarFormulario() {
+        form.reset();
+        document.getElementById('itemId').value = '';
+        document.getElementById('activo').checked = true;
+        document.getElementById('alcance').value = 'establecimiento';
+        document.getElementById('tipoVigencia').value = 'permanente';
+        document.getElementById('tipoValidacion').value = 'si_no';
+        actualizarReglaNumerica();
+        actualizarVigenciaTemporal();
+    }
+
+    tipoValidacion.addEventListener('change', actualizarReglaNumerica);
+    tipoVigencia.addEventListener('change', actualizarVigenciaTemporal);
+    btnReset.addEventListener('click', limpiarFormulario);
+    limpiarFormulario();
+
+    document.querySelectorAll('.btnEditarItem').forEach((button) => {
+        button.addEventListener('click', function () {
+            const item = JSON.parse(this.dataset.item);
+            document.getElementById('itemId').value = item.id;
+            document.getElementById('codigo').value = item.codigo || '';
+            document.getElementById('categoria').value = item.categoria || '';
+            document.getElementById('descripcion').value = item.descripcion || '';
+            document.getElementById('riesgo').value = item.riesgo || 'Menor';
+            document.getElementById('puntaje').value = item.puntaje ?? 0;
+            document.getElementById('alcance').value = item.alcance || 'establecimiento';
+            document.getElementById('tipoVigencia').value = item.tipo_vigencia || 'permanente';
+            document.getElementById('fechaFinVigencia').value = item.fecha_fin_vigencia || '';
+            document.getElementById('tipoValidacion').value = item.tipo_validacion || 'si_no';
+            document.getElementById('operadorComparacion').value = item.operador_comparacion || '<';
+            document.getElementById('valorUmbral').value = item.valor_umbral ?? '';
+            document.getElementById('logicaInversa').checked = !!item.logica_inversa;
+            document.getElementById('activo').checked = !!item.activo;
+            actualizarReglaNumerica();
+            actualizarVigenciaTemporal();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+
+    form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const payload = {
+            item_id: document.getElementById('itemId').value || null,
+            establecimiento_id: document.getElementById('establecimientoId').value,
+            categoria: document.getElementById('categoria').value,
+            descripcion: document.getElementById('descripcion').value.trim(),
+            riesgo: document.getElementById('riesgo').value,
+            puntaje: document.getElementById('puntaje').value,
+            alcance: document.getElementById('alcance').value,
+            tipo_vigencia: document.getElementById('tipoVigencia').value,
+            fecha_fin_vigencia: document.getElementById('fechaFinVigencia').value,
+            tipo_validacion: document.getElementById('tipoValidacion').value,
+            operador_comparacion: document.getElementById('operadorComparacion').value,
+            valor_umbral: document.getElementById('valorUmbral').value,
+            logica_inversa: document.getElementById('logicaInversa').checked,
+            activo: document.getElementById('activo').checked,
+        };
+
+        try {
+            const response = await fetch('/reglamento/items/guardar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'No se pudo guardar el item.');
+            }
+            mostrarMensaje('success', 'Item guardado correctamente. Recargando...');
+            setTimeout(() => window.location.reload(), 600);
+        } catch (error) {
+            mostrarMensaje('error', error.message || 'Error de conexión.');
+        }
+    });
+});
+</script>
+{% endblock %}
