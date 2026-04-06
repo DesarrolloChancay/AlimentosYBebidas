@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Historial Reglamento - {{ establecimiento.nombre }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-slate-900 dark:to-gray-900">
+    <div class="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50">
+        <div class="px-4 py-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <span class="ph ph-clock-counter-clockwise text-2xl text-white"></span>
+                    </div>
+                    <div>
+                        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Historial de Reglamento</h1>
+                        <p class="text-sm text-gray-600 dark:text-gray-300">{{ establecimiento.nombre }}</p>
+                    </div>
+                </div>
+
+                <a
+                    href="{{ url_for('reglamento.dashboard', establecimiento_id=establecimiento.id) }}"
+                    class="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-medium rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all"
+                >
+                    <span class="ph ph-arrow-left text-lg mr-2"></span>
+                    Volver al tablero
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-5">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Total reuniones</p>
+                <p class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{{ reuniones|length }}</p>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-5">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Puntos acumulados</p>
+                <p class="mt-2 text-3xl font-bold text-orange-600 dark:text-orange-400">
+                    {{ reuniones|sum(attribute='total_puntos') }}
+                </p>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-5">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Infracciones acumuladas</p>
+                <p class="mt-2 text-3xl font-bold text-red-600 dark:text-red-400">
+                    {{ reuniones|sum(attribute='total_infracciones') }}
+                </p>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-5">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Platos sancionados</p>
+                <p class="mt-2 text-3xl font-bold text-purple-600 dark:text-purple-400">
+                    {{ reuniones|sum(attribute='total_platos_sancion') }}
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border-b border-gray-200 dark:border-gray-600">
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white">Todas las reuniones registradas</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Este historial resume el resultado semanal del reglamento por establecimiento.
+                </p>
+            </div>
+
+            {% if reuniones %}
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[1080px]">
+                        <thead class="bg-gray-50 dark:bg-gray-700/50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Semana</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Periodo</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Estado</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Infracciones</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Puntos</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sanción</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Observaciones</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            {% for item in reuniones %}
+                                {% set reunion = item.reunion %}
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-semibold text-gray-900 dark:text-white">
+                                            Semana {{ reunion.semana }} - {{ reunion.ano }}
+                                        </div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                                            {{ reunion.fecha_reunion.strftime('%d/%m/%Y') if reunion.fecha_reunion else 'N/A' }}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                                        {{ reunion.fecha_inicio_semana.strftime('%d/%m/%Y') if reunion.fecha_inicio_semana else 'N/A' }}
+                                        al
+                                        {{ reunion.fecha_fin_semana.strftime('%d/%m/%Y') if reunion.fecha_fin_semana else 'N/A' }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                                        {% if reunion.estado == 'pendiente' %}
+                                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                                                Pendiente
+                                            </span>
+                                        {% else %}
+                                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                                Completada
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-semibold text-red-600 dark:text-red-400">
+                                        {{ item.total_infracciones }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-semibold text-orange-600 dark:text-orange-400">
+                                        {{ item.total_puntos }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-semibold text-purple-600 dark:text-purple-400">
+                                        {{ item.sancion_descripcion }}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 max-w-sm">
+                                        {{ reunion.observaciones or 'Sin observaciones generales.' }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                                        <a
+                                            href="{{ url_for('reglamento.ver_reunion', reunion_id=reunion.id) }}"
+                                            class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white rounded-lg transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md"
+                                        >
+                                            <span class="ph ph-eye mr-2"></span>
+                                            Abrir
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="px-6 py-12 text-center">
+                    <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
+                        <span class="ph ph-clipboard-text text-4xl text-gray-400 dark:text-gray-500"></span>
+                    </div>
+                    <p class="text-gray-600 dark:text-gray-400 text-lg font-medium">No hay reuniones registradas</p>
+                    <p class="text-gray-500 dark:text-gray-500 mt-2">Cuando cierres reuniones de reglamento aparecerán aquí con sus totales.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

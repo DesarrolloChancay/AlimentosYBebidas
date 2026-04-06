@@ -3,237 +3,452 @@
 {% block title %}Reglamento Restaurante - Semana {{ reunion.semana }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <!-- Encabezado -->
-    <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
-        <div class="flex justify-between items-center">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800 dark:text-white">
-                    REGLAMENTO RESTAURANTE
-                </h1>
-                <p class="text-gray-600 dark:text-gray-300 mt-2">
-                    Establecimiento: <span class="font-semibold">{{ reunion.establecimiento.nombre }}</span>
-                </p>
-                <p class="text-gray-600 dark:text-gray-300">
-                    Semana: <span class="font-semibold">{{ reunion.semana }}</span> - 
-                    Año: <span class="font-semibold">{{ reunion.ano }}</span>
-                </p>
-                {% if reunion.fecha_reunion %}
-                <p class="text-gray-600 dark:text-gray-300">
-                    Fecha de Reunión: <span class="font-semibold">{{ reunion.fecha_reunion.strftime('%d/%m/%Y') }}</span>
-                </p>
+<style>
+    .reglamento-btn {
+        border: 1px solid #cbd5e1;
+        background: #e2e8f0;
+        color: #475569;
+    }
+    .reglamento-btn.is-selected-good {
+        border-color: #059669;
+        background: #10b981;
+        color: #fff;
+    }
+    .reglamento-btn.is-selected-bad {
+        border-color: #dc2626;
+        background: #ef4444;
+        color: #fff;
+    }
+    .reglamento-row-good { background: rgba(16, 185, 129, 0.08); }
+    .reglamento-row-bad { background: rgba(239, 68, 68, 0.08); }
+    .reglamento-row-pending { background: rgba(148, 163, 184, 0.08); }
+    .reglamento-row-disabled { opacity: 0.58; }
+</style>
+
+<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div class="space-y-2">
+                <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Reglamento Restaurante</h1>
+                <p class="text-slate-600 dark:text-slate-300">Establecimiento: <span class="font-semibold">{{ reunion.establecimiento.nombre }}</span></p>
+                <p class="text-slate-600 dark:text-slate-300">Semana evaluada: <span class="font-semibold">{{ reunion.semana }}</span> del <span class="font-semibold">{{ reunion.fecha_inicio_semana.strftime('%d/%m/%Y') }}</span> al <span class="font-semibold">{{ reunion.fecha_fin_semana.strftime('%d/%m/%Y') }}</span></p>
+                <p class="text-slate-600 dark:text-slate-300">Fecha de reunión: <span class="font-semibold">{{ reunion.fecha_reunion.strftime('%d/%m/%Y') }}</span></p>
+                <p class="text-slate-600 dark:text-slate-300">Inspecciones completadas: <span class="font-semibold">{{ reunion.total_inspecciones }}</span></p>
+            </div>
+            <div class="max-w-sm text-left lg:text-right">
+                {% if solo_lectura %}
+                <span class="inline-flex rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">COMPLETADA</span>
+                <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">La reunión quedó cerrada. Los valores guardados son el snapshot histórico de esa semana.</p>
+                {% else %}
+                <span class="inline-flex rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">PENDIENTE</span>
+                <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">Aquí puedes ajustar puntaje por reunión, deshabilitar items para esta semana y agregar nuevos items del reglamento.</p>
+                <button id="btnAbrirModalAgregarItem" type="button" class="mt-4 inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-blue-600 dark:hover:bg-blue-500">
+                    Agregar item a la reunión
+                </button>
                 {% endif %}
             </div>
-            
-            <div class="text-right">
-                {% if reunion.estado == 'pendiente' %}
-                    <span class="px-4 py-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-full text-sm font-semibold">
-                        PENDIENTE
-                    </span>
-                {% else %}
-                    <span class="px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full text-sm font-semibold">
-                        COMPLETADA
-                    </span>
-                {% endif %}
-                        <th class="px-4 py-3 text-left" style="width: 5%">Nro</th>
-                        <th class="px-4 py-3 text-left" style="width: 45%">Descripción</th>
-                        <th class="px-4 py-3 text-center" style="width: 15%">Puntaje</th>
-                        <th class="px-4 py-3 text-center" style="width: 10%">Estado</th>
-                        <th class="px-4 py-3 text-center" style="width: 10%">Infracciones</th>
-                        <th class="px-4 py-3 text-left" style="width: 15%">Observaciones</th>
+        </div>
+    </div>
+
+    <div id="reglamento-alert" class="hidden mt-6 rounded-xl border px-4 py-3 text-sm font-medium"></div>
+
+    {% if not solo_lectura %}
+    <div id="modalAgregarItemReunion" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/70 px-4 py-6">
+        <div class="w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+            <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Agregar item de reglamento</h3>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Puedes reusar una plantilla existente o crear un item nuevo desde esta reunión.</p>
+                </div>
+                <button id="btnCerrarModalAgregarItem" type="button" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    Cerrar
+                </button>
+            </div>
+
+            <form id="formAgregarItemReunion" class="space-y-6 px-6 py-5">
+                <input id="modalModoItem" type="hidden" value="nuevo">
+
+                <div class="grid gap-3 md:grid-cols-2">
+                    <button id="selectorModoExistente" type="button" data-modo="existente" class="selector-modo-item rounded-2xl border px-4 py-4 text-left transition">
+                        <span class="block text-sm font-semibold text-slate-900 dark:text-white">Seleccionar plantilla existente</span>
+                        <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">
+                            {% if items_reutilizables %}
+                            Reutiliza un item global o del establecimiento y ajusta solo la fecha de vigencia para esta reunión.
+                            {% else %}
+                            No hay plantillas pendientes por agregar. Las plantillas aplicables ya suelen cargarse automáticamente en esta reunión.
+                            {% endif %}
+                        </span>
+                    </button>
+                    <button id="selectorModoNuevo" type="button" data-modo="nuevo" class="selector-modo-item rounded-2xl border px-4 py-4 text-left transition">
+                        <span class="block text-sm font-semibold text-slate-900 dark:text-white">Crear item nuevo</span>
+                        <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">Genera un item nuevo desde esta reunión y decide si será solo temporal, de establecimiento o plantilla global.</span>
+                    </button>
+                </div>
+
+                <div id="bloqueModoExistente" class="space-y-4">
+                    <div>
+                        <label for="existenteItemCatalogo" class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Plantilla disponible</label>
+                        <select id="existenteItemCatalogo" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                            <option value="">Selecciona una plantilla para agregarla a esta reunión</option>
+                            {% for item in items_reutilizables %}
+                            <option value="{{ item.id }}">{{ item.codigo }} · {{ item.categoria }} · {{ item.descripcion }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div id="sinItemsReutilizables" class="{% if items_reutilizables %}hidden {% endif %}rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200">
+                        No hay plantillas pendientes por agregar. Las plantillas globales y las del establecimiento ya se incorporan automáticamente a esta reunión cuando aplican. Aquí solo verás plantillas adicionales que todavía no formen parte de esta reunión.
+                    </div>
+
+                    <div id="resumenItemExistente" class="hidden rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Código</p>
+                                <p id="existenteCodigo" class="mt-1 text-sm font-semibold text-slate-900 dark:text-white"></p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Alcance</p>
+                                <p id="existenteAlcance" class="mt-1 text-sm text-slate-700 dark:text-slate-200"></p>
+                            </div>
+                            <div class="md:col-span-2">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Descripción</p>
+                                <p id="existenteDescripcion" class="mt-1 text-sm text-slate-700 dark:text-slate-200"></p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Categoría</p>
+                                <p id="existenteCategoria" class="mt-1 text-sm text-slate-700 dark:text-slate-200"></p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Riesgo / puntaje</p>
+                                <p id="existenteRiesgoPuntaje" class="mt-1 text-sm text-slate-700 dark:text-slate-200"></p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Validación</p>
+                                <p id="existenteValidacion" class="mt-1 text-sm text-slate-700 dark:text-slate-200"></p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Vigencia actual</p>
+                                <p id="existenteVigencia" class="mt-1 text-sm text-slate-700 dark:text-slate-200"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="existenteFechaFinVigencia" class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Vigente hasta para esta reunión</label>
+                        <input id="existenteFechaFinVigencia" type="date" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Si dejas la fecha vacía, se conserva la vigencia original de la plantilla. Si asignas una fecha, esta reunión usará ese límite sin modificar la plantilla base.</p>
+                    </div>
+                </div>
+
+                <div id="bloqueModoNuevo" class="hidden grid gap-4 lg:grid-cols-2">
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Código</label>
+                        <input id="nuevoCodigo" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300" value="Se generará automáticamente" readonly>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Categoría</label>
+                        <select id="nuevoCategoria" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                            {% for categoria in categorias_disponibles %}
+                            <option value="{{ categoria }}">{{ categoria }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Descripción</label>
+                        <textarea id="nuevoDescripcion" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white"></textarea>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Riesgo</label>
+                        <select id="nuevoRiesgo" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                            {% for riesgo in riesgos_disponibles %}
+                            <option value="{{ riesgo }}">{{ riesgo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Puntaje base</label>
+                        <input id="nuevoPuntaje" type="number" min="0" value="1" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Alcance</label>
+                        <select id="nuevoAlcance" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                            {% for value, label in alcances_creables %}
+                            <option value="{{ value }}" {% if value == 'establecimiento' %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <p id="nuevoAlcanceAyuda" class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                            Se guardará como plantilla reutilizable para este establecimiento.
+                        </p>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Vigencia</label>
+                        <select id="nuevoTipoVigencia" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                            {% for value, label in vigencias_disponibles %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="nuevoBloqueFechaVigencia" class="hidden">
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Vigente hasta</label>
+                        <input id="nuevoFechaFinVigencia" type="date" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Mientras esta fecha siga vigente, la plantilla podrá replicarse en reuniones nuevas.</p>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Tipo de validación</label>
+                        <select id="nuevoTipoValidacion" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                            <option value="si_no">SI / NO</option>
+                            <option value="numerico">Numérico</option>
+                            <option value="porcentaje">Porcentaje</option>
+                        </select>
+                    </div>
+                    <div id="nuevoBloqueRegla" class="hidden grid gap-4 lg:col-span-2 lg:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Operador</label>
+                            <select id="nuevoOperador" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                                <option value="<"><</option>
+                                <option value="<="><=</option>
+                                <option value=">">></option>
+                                <option value=">=">>=</option>
+                                <option value="=">=</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Umbral</label>
+                            <input id="nuevoUmbral" type="number" step="0.01" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                        </div>
+                    </div>
+                    <label class="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-3 text-sm text-slate-700 dark:border-slate-800 dark:text-slate-200 lg:col-span-2">
+                        <input id="nuevoLogicaInversa" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600">
+                        La lógica es inversa: “SI” o cumplir la regla cuenta como infracción
+                    </label>
+                </div>
+
+                <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 dark:border-slate-800 sm:flex-row sm:justify-end">
+                    <button id="btnCancelarAgregarItem" type="button" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+                        Cancelar
+                    </button>
+                    <button id="btnGuardarAgregarItem" type="submit" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 dark:bg-blue-600 dark:hover:bg-blue-500">
+                        Agregar item a la reunión
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalEditarItemReunion" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/70 px-4 py-6">
+        <div class="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+            <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Editar item agregado</h3>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Ajusta este item sin salir de la reunión. Si nació aquí como plantilla reutilizable, también se actualizará para futuras reuniones según el alcance y la vigencia que indiques.</p>
+                </div>
+                <button id="btnCerrarModalEditarItem" type="button" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    Cerrar
+                </button>
+            </div>
+
+            <form id="formEditarItemReunion" class="space-y-6 px-6 py-5">
+                <input id="editarItemId" type="hidden">
+
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Código</label>
+                        <input id="editarItemCodigo" type="text" class="w-full rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300" readonly>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Puntaje en reunión</label>
+                        <input id="editarItemPuntaje" type="number" min="0" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Descripción</label>
+                    <textarea id="editarItemDescripcion" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white" required></textarea>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-3">
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Riesgo</label>
+                        <select id="editarItemRiesgo" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white" required>
+                            {% for riesgo in riesgos_disponibles %}
+                            <option value="{{ riesgo }}">{{ riesgo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Alcance mostrado</label>
+                        <select id="editarItemAlcance" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white" required>
+                            {% for value, label in alcances_creables %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Vigencia en reunión</label>
+                        <select id="editarItemTipoVigencia" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white" required>
+                            {% for value, label in vigencias_disponibles %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div id="editarItemBloqueFechaVigencia" class="hidden">
+                    <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Vigente hasta</label>
+                    <input id="editarItemFechaFinVigencia" type="date" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">La fecha no puede ser anterior a la fecha de la reunión.</p>
+                </div>
+
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300">
+                    Si este item fue creado en esta reunión como plantilla global o de establecimiento, el cambio también quedará listo para futuras reuniones. Si lo dejas como solo reunión, el ajuste se guarda únicamente aquí.
+                </div>
+
+                <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 dark:border-slate-800 sm:flex-row sm:justify-end">
+                    <button id="btnCancelarEditarItem" type="button" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+                        Cancelar
+                    </button>
+                    <button id="btnGuardarEditarItem" type="submit" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700">
+                        Guardar cambios del item
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div class="border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Items del reglamento de la reunión</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Cada fila usa el snapshot de esta reunión. Puedes deshabilitarla o ajustar su puntaje sin tocar el histórico ni la plantilla base. Estos items del reglamento no comparten relación con el checklist de inspecciones.</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-semibold">Código</th>
+                        <th class="px-4 py-3 text-left font-semibold">Infracción</th>
+                        <th class="px-4 py-3 text-center font-semibold">Puntaje reunión</th>
+                        <th class="px-4 py-3 text-center font-semibold">Activo</th>
+                        <th class="px-4 py-3 text-center font-semibold">Evaluación</th>
+                        <th class="px-4 py-3 text-center font-semibold">Infracciones</th>
+                        <th class="px-4 py-3 text-left font-semibold">Observación</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                    {% for tipo_sancion, items in items_por_tipo.items() %}
-                        <!-- Fila de encabezado de categoría -->
-                        <tr class="bg-gray-100 dark:bg-gray-700/50">
-                            <td colspan="6" class="px-4 py-2 font-semibold text-gray-700 dark:text-gray-200">
-                                {{ tipo_sancion }}
-                            </td>
-                        </tr>
-                        
-                        {% for item in items %}
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                            <td class="px-4 py-3 text-center text-gray-900 dark:text-gray-100">
-                                {{ item.codigo }}
-                            </td>
-                            <td class="px-4 py-3 text-gray-900 dark:text-gray-100">
-                                <div class="flex items-center gap-2">
-                                    <span>{{ item.descripcion }}</span>
-                                    {% if item.logica_inversa and item.tipo_validacion == 'si_no' %}
-                                        <span class="px-2 py-0.5 text-xs font-bold bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 rounded border border-amber-400 dark:border-amber-600">
-                                            SI=MALO
-                                        </span>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                    {% for categoria, categoria_items in items_por_tipo.items() %}
+                    <tr class="bg-slate-100 dark:bg-slate-800/80">
+                        <td colspan="7" class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100">{{ categoria }}</td>
+                    </tr>
+                    {% for item in categoria_items %}
+                    {% set eval_data = evaluaciones.get(item.id) %}
+                    {% set alcance_label = 'Plantilla global' if item.alcance == 'global' else 'Solo establecimiento' if item.alcance == 'establecimiento' else 'Solo esta reunión' %}
+                    <tr data-item-row="{{ item.id }}" data-item-code="{{ item.codigo }}" data-tipo="{{ item.tipo_validacion or 'si_no' }}" data-logica-inversa="{{ 'true' if item.logica_inversa_efectiva else 'false' }}" class="reglamento-row-pending">
+                        <td class="px-4 py-4 align-top">
+                            <div class="font-semibold text-slate-900 dark:text-white">{{ item.codigo }}</div>
+                        </td>
+                        <td class="px-4 py-4 align-top">
+                            <div class="space-y-2">
+                                <p class="text-slate-900 dark:text-slate-100" data-item-descripcion="{{ item.id }}">{{ item.descripcion }}</p>
+                                <div class="flex flex-wrap gap-2 text-xs" data-item-badges="{{ item.id }}">
+                                    <span class="rounded-full bg-slate-100 px-2 py-1 text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ item.riesgo }}</span>
+                                    <span class="rounded-full bg-blue-100 px-2 py-1 text-blue-700 dark:bg-blue-950/40 dark:text-blue-200">{{ alcance_label }}</span>
+                                    <span class="rounded-full bg-amber-100 px-2 py-1 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{{ item.tipo_vigencia|capitalize }}</span>
+                                    {% if item.tipo_vigencia == 'temporal' and item.fecha_fin_vigencia %}
+                                    <span class="rounded-full bg-rose-100 px-2 py-1 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">Hasta {{ item.fecha_fin_vigencia.strftime('%d/%m/%Y') }}</span>
+                                    {% endif %}
+                                    {% if item.es_adicional %}
+                                    <span class="rounded-full bg-fuchsia-100 px-2 py-1 text-fuchsia-800 dark:bg-fuchsia-950/40 dark:text-fuchsia-200">Agregado en reunión</span>
                                     {% endif %}
                                 </div>
-                            </td>
-                            <td class="px-4 py-3 text-center">
-                                {% if item.puntaje %}
-                                    <span class="text-red-600 dark:text-red-400 font-semibold">{{ item.puntaje }} puntos</span>
-                                {% else %}
-                                    <span class="text-gray-400 dark:text-gray-500">N/A</span>
+                                {% if item.es_adicional and not solo_lectura %}
+                                <div class="pt-1">
+                                    <button type="button" class="btn-editar-item-reunion inline-flex items-center rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100 dark:border-indigo-900/40 dark:bg-indigo-950/30 dark:text-indigo-200" data-item-id="{{ item.id }}">
+                                        Editar item agregado
+                                    </button>
+                                </div>
                                 {% endif %}
-                            </td>
-                            <td class="px-4 py-3 text-center">
-                                {% if item.tipo_validacion in ['numerico', 'porcentaje'] %}
-                                    <!-- Input numérico para validación -->
-                                    <div class="flex flex-col items-center space-y-1">
-                                        <input type="number" 
-                                               step="0.01"
-                                               class="input-valor-medido w-24 px-2 py-1 border border-blue-400 dark:border-blue-600 dark:bg-gray-700 dark:text-white rounded text-center font-semibold"
-                                               data-item-id="{{ item.id }}"
-                                               data-puntaje="{{ item.puntaje }}"
-                                                                                              data-tipo="{{ item.tipo_validacion }}"
-                                               data-logica-inversa="{{ item.logica_inversa }}"
-                                               data-umbral="{{ item.valor_umbral }}"
-                                               data-operador="{{ item.operador_comparacion }}"
-                                               placeholder="{% if item.tipo_validacion == 'porcentaje' %}%{% else %}Cant{% endif %}"
-                                               value="{{ evaluaciones.get(item.id).valor_medido if evaluaciones.get(item.id) else '' }}">
-                                        <small class="text-xs text-gray-500 dark:text-gray-400">
-                                            {{ item.operador_comparacion }}{{ item.valor_umbral }}{% if item.tipo_validacion == 'porcentaje' %}%{% endif %}
-                                        </small>
-                                    </div>
-                                {% else %}
-                                    <!-- Toggle Cumple/No Cumple -->
-                                    <div class="flex justify-center space-x-2">
-                                        <button type="button" 
-                                                class="btn-estado px-3 py-1 rounded text-sm font-semibold transition-colors"
-                                                data-item-id="{{ item.id }}"
-                                                data-puntaje="{{ item.puntaje }}"
-                                                data-logica-inversa="{{ item.logica_inversa }}"
-                                                data-estado="cumple"
-                                                data-activo="{% if evaluaciones.get(item.id) and evaluaciones[item.id].cumple %}true{% else %}false{% endif %}"
-                                                {% if evaluaciones.get(item.id) and evaluaciones[item.id].cumple %}
-                                                    {% if item.logica_inversa %}
-                                                        style="background-color: #ef4444; color: white;"
-                                                    {% else %}
-                                                        style="background-color: #10b981; color: white;"
-                                                    {% endif %}
-                                                {% else %}
-                                                    style="background-color: #e5e7eb; color: #6b7280;"
-                                                {% endif %}>
-                                            SI
-                                        </button>
-                                        <button type="button" 
-                                                class="btn-estado px-3 py-1 rounded text-sm font-semibold transition-colors"
-                                                data-item-id="{{ item.id }}"
-                                                data-puntaje="{{ item.puntaje }}"
-                                                data-logica-inversa="{{ item.logica_inversa }}"
-                                                data-estado="no_cumple"
-                                                data-activo="{% if evaluaciones.get(item.id) and not evaluaciones[item.id].cumple %}true{% else %}false{% endif %}"
-                                                {% if evaluaciones.get(item.id) and not evaluaciones[item.id].cumple %}
-                                                    {% if item.logica_inversa %}
-                                                        style="background-color: #10b981; color: white;"
-                                                    {% else %}
-                                                        style="background-color: #ef4444; color: white;"
-                                                    {% endif %}
-                                                {% else %}
-                                                    style="background-color: #e5e7eb; color: #6b7280;"
-                                                {% endif %}>
-                                            NO
-                                        </button>
-                                    </div>
-                                {% endif %}
-                            </td>
-                            <td class="px-4 py-3 text-center">
-                                <input type="number" 
-                                       class="input-infracciones w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded text-center"
-                                       data-item-id="{{ item.id }}"
-                                       data-puntaje="{{ item.puntaje }}"
-                                       min="0"
-                                       value="{{ evaluaciones.get(item.id).numero_infracciones if evaluaciones.get(item.id) else 0 }}">
-                            </td>
-                            <td class="px-4 py-3">
-                                <input type="text" 
-                                       class="input-observacion w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded text-sm"
-                                       data-item-id="{{ item.id }}"
-                                       placeholder="Observación..."
-                                       value="{{ evaluaciones.get(item.id).observacion if evaluaciones.get(item.id) else '' }}">
-                            </td>
-                        </tr>
-                        {% endfor %}
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 align-top text-center">
+                            <input type="number" min="0" step="1" class="input-puntaje w-24 rounded-lg border border-slate-300 px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-item-id="{{ item.id }}" value="{{ item.puntaje }}" {% if solo_lectura %}disabled{% endif %}>
+                        </td>
+                        <td class="px-4 py-4 align-top text-center">
+                            <input type="checkbox" class="toggle-item-activo h-4 w-4 rounded border-slate-300 text-blue-600" data-item-id="{{ item.id }}" {% if item.activo %}checked{% endif %} {% if solo_lectura %}disabled{% endif %}>
+                        </td>
+                        <td class="px-4 py-4 align-top text-center">
+                            {% if item.tipo_validacion in ['numerico', 'porcentaje'] %}
+                            <div class="flex flex-col items-center gap-2">
+                                <input type="number" step="0.01" class="input-valor-medido w-28 rounded-lg border border-slate-300 px-3 py-2 text-center font-semibold dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-item-id="{{ item.id }}" data-logica-inversa="{{ 'true' if item.logica_inversa_efectiva else 'false' }}" data-umbral="{{ item.valor_umbral }}" data-operador="{{ item.operador_comparacion }}" value="{{ eval_data.valor_medido if eval_data and eval_data.valor_medido is not none else '' }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>
+                                <span class="text-xs text-slate-500 dark:text-slate-400">{{ item.operador_comparacion }} {{ item.valor_umbral }}{% if item.tipo_validacion == 'porcentaje' %}%{% endif %}</span>
+                            </div>
+                            {% else %}
+                            <div class="flex justify-center gap-2">
+                                <button type="button" class="btn-estado reglamento-btn rounded-lg px-4 py-2 font-semibold transition-colors" data-item-id="{{ item.id }}" data-estado="cumple" data-selected="{{ 'true' if eval_data and eval_data.estado == 'cumple' else 'false' }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>SI</button>
+                                <button type="button" class="btn-estado reglamento-btn rounded-lg px-4 py-2 font-semibold transition-colors" data-item-id="{{ item.id }}" data-estado="no_cumple" data-selected="{{ 'true' if eval_data and eval_data.estado == 'no_cumple' else 'false' }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>NO</button>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-4 align-top text-center">
+                            <input type="number" min="0" step="1" class="input-infracciones w-20 rounded-lg border border-slate-300 px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-item-id="{{ item.id }}" value="{{ eval_data.numero_infracciones if eval_data and eval_data.numero_infracciones is not none else 0 }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>
+                        </td>
+                        <td class="px-4 py-4 align-top">
+                            <input type="text" class="input-observacion w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-item-id="{{ item.id }}" value="{{ eval_data.observacion if eval_data else '' }}" placeholder="Detalle adicional..." {% if solo_lectura or not item.activo %}disabled{% endif %}>
+                        </td>
+                    </tr>
+                    {% endfor %}
                     {% endfor %}
                 </tbody>
             </table>
-        </form>
-    </div>
-
-    <!-- Resumen de Sanciones -->
-    <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mt-6 border border-gray-200 dark:border-gray-700">
-        <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-4">Resumen de Sanciones</h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded">
-                <p class="text-gray-700 dark:text-gray-300 font-semibold">Total Infracciones</p>
-                <p id="totalInfracciones" class="text-3xl font-bold text-red-600 dark:text-red-400">0</p>
-            </div>
-            
-            <div class="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4 rounded">
-                <p class="text-gray-700 dark:text-gray-300 font-semibold">Puntos Acumulados</p>
-                <p id="totalPuntos" class="text-3xl font-bold text-orange-600 dark:text-orange-400">0</p>
-            </div>
-            
-            <div class="bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500 p-4 rounded">
-                <p class="text-gray-700 dark:text-gray-300 font-semibold">Sanción Aplicada</p>
-                <p id="sancionTexto" class="text-3xl font-bold text-purple-600 dark:text-purple-400">0 platos</p>
-            </div>
-        </div>
-        
-        <!-- Tabla de Escala de Sanciones -->
-        <div class="mt-6 bg-gray-50 dark:bg-gray-700/50 p-4 rounded">
-            <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3">Escala de Sanciones:</h3>
-            <div class="grid grid-cols-2 md:grid-cols-6 gap-2 text-sm">
-                <div class="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
-                    <p class="font-semibold text-gray-700 dark:text-gray-200">1-2 puntos</p>
-                    <p class="text-yellow-600 dark:text-yellow-400">Llamado de atencion</p>
-                </div>
-                <div class="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
-                    <p class="font-semibold text-gray-700 dark:text-gray-200">3-4 puntos</p>
-                    <p class="text-orange-600 dark:text-orange-400">5 platos</p>
-                </div>
-                <div class="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
-                    <p class="font-semibold text-gray-700 dark:text-gray-200">5-6 puntos</p>
-                    <p class="text-orange-600 dark:text-orange-400">10 platos</p>
-                </div>
-                <div class="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
-                    <p class="font-semibold text-gray-700 dark:text-gray-200">7-8 puntos</p>
-                    <p class="text-red-500 dark:text-red-400">15 platos</p>
-                </div>
-                <div class="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
-                    <p class="font-semibold text-gray-700 dark:text-gray-200">9-10 puntos</p>
-                    <p class="text-red-600 dark:text-red-400">20 platos</p>
-                </div>
-                <div class="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
-                    <p class="font-semibold text-gray-700 dark:text-gray-200">11+ puntos</p>
-                    <p class="text-red-700 dark:text-red-400 font-bold">25 platos</p>
-                </div>
-            </div>
         </div>
     </div>
 
-    <!-- Botones de Acción -->
-    <div class="flex justify-between items-center mt-6">
-        <a href="{{ url_for('reglamento.dashboard', establecimiento_id=reunion.establecimiento_id) }}" 
-           class="px-6 py-3 bg-gray-500 hover:bg-gray-600 dark:bg-gray-600 dark:hover:bg-gray-700 text-white rounded transition-colors">
-            Volver
-        </a>
-        
-        {% if reunion.estado == 'pendiente' %}
-        <button type="button" 
-                id="btnGuardar"
-                class="px-8 py-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded transition-colors font-semibold">
-            Guardar Evaluación
-        </button>
+    <div class="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div class="grid gap-4 md:grid-cols-3">
+            <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-950/40 dark:bg-rose-950/20">
+                <p class="text-sm font-medium text-slate-700 dark:text-slate-300">Total infracciones</p>
+                <p id="totalInfracciones" class="mt-2 text-3xl font-bold text-rose-600 dark:text-rose-400">{{ resumen_actual.total_infracciones }}</p>
+            </div>
+            <div class="rounded-xl border border-orange-200 bg-orange-50 p-4 dark:border-orange-950/40 dark:bg-orange-950/20">
+                <p class="text-sm font-medium text-slate-700 dark:text-slate-300">Puntos acumulados</p>
+                <p id="totalPuntos" class="mt-2 text-3xl font-bold text-orange-600 dark:text-orange-400">{{ resumen_actual.total_puntos }}</p>
+            </div>
+            <div class="rounded-xl border border-fuchsia-200 bg-fuchsia-50 p-4 dark:border-fuchsia-950/40 dark:bg-fuchsia-950/20">
+                <p class="text-sm font-medium text-slate-700 dark:text-slate-300">Sanción aplicada</p>
+                <p id="sancionTexto" class="mt-2 text-3xl font-bold text-fuchsia-600 dark:text-fuchsia-400">{{ resumen_actual.sancion.descripcion }}</p>
+            </div>
+        </div>
+
+        <div class="mt-6">
+            <label for="observacionesReunion" class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">Observaciones generales de la reunión</label>
+            <textarea id="observacionesReunion" rows="4" maxlength="5000" class="w-full rounded-lg border border-slate-300 px-4 py-3 dark:border-slate-700 dark:bg-slate-800 dark:text-white" {% if solo_lectura %}disabled{% endif %}>{{- observaciones_reunion -}}</textarea>
+        </div>
+    </div>
+
+    <div class="mt-6 flex items-center justify-between">
+        <a href="{{ url_for('reglamento.dashboard', establecimiento_id=reunion.establecimiento_id) }}" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 dark:border-slate-700 dark:text-slate-200">Volver</a>
+        {% if not solo_lectura %}
+        <button type="button" id="btnGuardar" class="rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-blue-600 dark:hover:bg-blue-500">Guardar y cerrar reunión</button>
         {% endif %}
     </div>
 </div>
 
 <script>
-// Descripcion: JavaScript para manejo del checklist interactivo
-// Logica: Maneja toggle de botones SI/NO y calculo automatico de sanciones
+document.addEventListener('DOMContentLoaded', function () {
+    const reunionId = Number({{ reunion.id }});
+    const soloLectura = {{ 'true' if solo_lectura else 'false' }};
+    const alertEl = document.getElementById('reglamento-alert');
+    const observacionesReunionEl = document.getElementById('observacionesReunion');
 
-document.addEventListener('DOMContentLoaded', function() {
-    const reunionId = {{ reunion.id }};
+    function mostrarMensaje(tipo, texto) {
+        const estilos = {
+            success: 'border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300',
+            error: 'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300',
+            info: 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
+        };
+        alertEl.className = `rounded-xl border px-4 py-3 text-sm font-medium ${estilos[tipo] || estilos.info}`;
+        alertEl.textContent = texto;
+        alertEl.classList.remove('hidden');
+    }
 
     function evaluarCondicion(valor, operador, umbral) {
         switch (operador) {
@@ -246,281 +461,751 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function obtenerNumeroInfracciones(itemId) {
-        const input = document.querySelector(`.input-infracciones[data-item-id="${itemId}"]`);
-        const valor = parseInt(input?.value, 10);
-        if (!input || Number.isNaN(valor) || valor <= 0) {
-            return 1;
-        }
-        return valor;
+    function obtenerDescripcionSancion(totalPuntos) {
+        if (totalPuntos <= 0) return 'Sin sanción';
+        if (totalPuntos <= 2) return 'Llamado de atención';
+        if (totalPuntos <= 4) return '5 platos';
+        if (totalPuntos <= 6) return '10 platos';
+        if (totalPuntos <= 8) return '15 platos';
+        if (totalPuntos <= 10) return '20 platos';
+        return '25 platos';
+    }
+
+    function esVerdadero(valor) {
+        return String(valor).toLowerCase() === 'true';
+    }
+
+    function obtenerFilaItem(itemId) {
+        return document.querySelector(`[data-item-row="${itemId}"]`);
+    }
+
+    function obtenerToggleActivo(itemId) {
+        return document.querySelector(`.toggle-item-activo[data-item-id="${itemId}"]`);
+    }
+
+    function itemEstaActivoEnReunion(itemId) {
+        return obtenerToggleActivo(itemId)?.checked ?? true;
+    }
+
+    function obtenerInputPuntaje(itemId) {
+        return document.querySelector(`.input-puntaje[data-item-id="${itemId}"]`);
+    }
+
+    function obtenerInputInfracciones(itemId) {
+        return document.querySelector(`.input-infracciones[data-item-id="${itemId}"]`);
+    }
+
+    function obtenerInputObservacion(itemId) {
+        return document.querySelector(`.input-observacion[data-item-id="${itemId}"]`);
     }
 
     function obtenerPuntajeItem(itemId) {
-        const el = document.querySelector(`[data-item-id="${itemId}"][data-puntaje]`);
-        const puntaje = parseInt(el?.dataset?.puntaje, 10);
-        return Number.isNaN(puntaje) ? 0 : puntaje;
+        const puntaje = Number(obtenerInputPuntaje(itemId)?.value || 0);
+        return Number.isFinite(puntaje) ? puntaje : 0;
     }
 
-    // Manejo de botones de estado SI/NO
-    const botonesEstado = document.querySelectorAll('.btn-estado');
+    function obtenerEstadoSiNo(itemId) {
+        const cumpleBtn = document.querySelector(`.btn-estado[data-item-id="${itemId}"][data-estado="cumple"]`);
+        const noCumpleBtn = document.querySelector(`.btn-estado[data-item-id="${itemId}"][data-estado="no_cumple"]`);
+        if (cumpleBtn?.dataset.selected === 'true') return 'cumple';
+        if (noCumpleBtn?.dataset.selected === 'true') return 'no_cumple';
+        return null;
+    }
 
-    botonesEstado.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const itemId = this.dataset.itemId;
-            const nuevoEstado = this.dataset.estado;
-            const logicaInversa = this.dataset.logicaInversa === 'True';
+    function determinarIncumplimientoSiNo(itemId) {
+        if (!itemEstaActivoEnReunion(itemId)) return null;
+        const fila = obtenerFilaItem(itemId);
+        const estado = obtenerEstadoSiNo(itemId);
+        if (!fila || !estado) return null;
+        const logicaInversa = esVerdadero(fila.dataset.logicaInversa);
+        return logicaInversa ? estado === 'cumple' : estado === 'no_cumple';
+    }
 
-            // Obtener ambos botones del mismo item
-            const botonesMismoItem = document.querySelectorAll(`.btn-estado[data-item-id="${itemId}"]`);
+    function determinarIncumplimientoNumerico(itemId) {
+        if (!itemEstaActivoEnReunion(itemId)) return null;
+        const input = document.querySelector(`.input-valor-medido[data-item-id="${itemId}"]`);
+        if (!input || input.value === '') return null;
+        const valor = Number(input.value);
+        const umbral = Number(input.dataset.umbral);
+        if (!Number.isFinite(valor) || !Number.isFinite(umbral)) return null;
+        const condicion = evaluarCondicion(valor, input.dataset.operador, umbral);
+        return esVerdadero(input.dataset.logicaInversa) ? !condicion : condicion;
+    }
 
-            // Resetear todos los botones del item
-            botonesMismoItem.forEach(b => {
-                b.style.backgroundColor = '#e5e7eb';
-                b.style.color = '#6b7280';
-                b.dataset.activo = 'false';
-            });
+    function obtenerNumeroInfracciones(itemId, incumplimiento) {
+        const input = obtenerInputInfracciones(itemId);
+        const valor = Number.parseInt(input?.value || '0', 10);
+        if (!incumplimiento) return 0;
+        if (!Number.isInteger(valor) || valor <= 0) return 1;
+        return valor;
+    }
 
-            // Determinar color segun logica
-            let colorBoton;
-            if (logicaInversa) {
-                // Logica inversa: SI=malo(rojo), NO=bueno(verde)
-                colorBoton = nuevoEstado === 'cumple' ? '#ef4444' : '#10b981';
-            } else {
-                // Logica normal: SI=bueno(verde), NO=malo(rojo)
-                colorBoton = nuevoEstado === 'cumple' ? '#10b981' : '#ef4444';
+    function actualizarEstadoFila(itemId, incumplimiento) {
+        const fila = obtenerFilaItem(itemId);
+        if (!fila) return;
+        fila.classList.remove('reglamento-row-good', 'reglamento-row-bad', 'reglamento-row-pending', 'reglamento-row-disabled');
+        if (!itemEstaActivoEnReunion(itemId)) {
+            fila.classList.add('reglamento-row-disabled');
+            return;
+        }
+        if (incumplimiento === true) fila.classList.add('reglamento-row-bad');
+        else if (incumplimiento === false) fila.classList.add('reglamento-row-good');
+        else fila.classList.add('reglamento-row-pending');
+    }
+
+    function actualizarDisponibilidadItem(itemId) {
+        const activo = itemEstaActivoEnReunion(itemId);
+        document.querySelectorAll(`.btn-estado[data-item-id="${itemId}"]`).forEach((btn) => { btn.disabled = soloLectura || !activo; });
+        document.querySelectorAll(`.input-valor-medido[data-item-id="${itemId}"], .input-infracciones[data-item-id="${itemId}"], .input-observacion[data-item-id="${itemId}"], .input-puntaje[data-item-id="${itemId}"]`).forEach((input) => {
+            if (!input.classList.contains('input-puntaje')) {
+                input.disabled = soloLectura || !activo;
             }
-
-            this.style.backgroundColor = colorBoton;
-            this.style.color = 'white';
-            this.dataset.activo = 'true';
-
-            // Recalcular sanciones
-            calcularSanciones();
         });
-    });
+    }
 
-    // Manejo de inputs numericos (porcentaje/numerico)
-    const inputsValorMedido = document.querySelectorAll('.input-valor-medido');
-    inputsValorMedido.forEach(input => {
-        input.addEventListener('input', function() {
-            const valor = parseFloat(this.value) || 0;
-            const umbral = parseFloat(this.dataset.umbral);
-            const operador = this.dataset.operador;
-            const logicaInversa = this.dataset.logicaInversa === 'True';
-
-            const condicion = evaluarCondicion(valor, operador, umbral);
-            const incumplimiento = logicaInversa ? !condicion : condicion;
-
-            // Cambiar color del input segun cumplimiento
-            if (this.value !== '') {
-                this.style.borderColor = incumplimiento ? '#ef4444' : '#10b981';
-                this.style.borderWidth = '2px';
-            } else {
-                this.style.borderColor = '#94a3b8';
-                this.style.borderWidth = '1px';
+    function actualizarBotonesItem(itemId) {
+        const incumplimiento = determinarIncumplimientoSiNo(itemId);
+        const estado = obtenerEstadoSiNo(itemId);
+        document.querySelectorAll(`.btn-estado[data-item-id="${itemId}"]`).forEach((boton) => {
+            boton.classList.remove('is-selected-good', 'is-selected-bad');
+            if (boton.dataset.estado === estado && itemEstaActivoEnReunion(itemId)) {
+                boton.classList.add(incumplimiento ? 'is-selected-bad' : 'is-selected-good');
             }
-
-            calcularSanciones();
         });
-    });
+        actualizarEstadoFila(itemId, incumplimiento);
+        calcularResumen();
+    }
 
-    // Actualizar sanciones al cambiar numero de infracciones
-    const inputsInfracciones = document.querySelectorAll('.input-infracciones');
-    inputsInfracciones.forEach(input => {
-        input.addEventListener('input', calcularSanciones);
-    });
+    function actualizarInputNumerico(itemId) {
+        const input = document.querySelector(`.input-valor-medido[data-item-id="${itemId}"]`);
+        if (!input) return;
+        const incumplimiento = determinarIncumplimientoNumerico(itemId);
+        if (!itemEstaActivoEnReunion(itemId) || input.value === '') {
+            input.style.borderWidth = '1px';
+            input.style.borderColor = '#cbd5e1';
+        } else if (incumplimiento) {
+            input.style.borderWidth = '2px';
+            input.style.borderColor = '#ef4444';
+        } else {
+            input.style.borderWidth = '2px';
+            input.style.borderColor = '#10b981';
+        }
+        actualizarEstadoFila(itemId, incumplimiento);
+        calcularResumen();
+    }
 
-    /**
-     * Descripcion: Calcula el total de infracciones y puntos acumulados
-     * Logica: Recorre items SI/NO y numericos para determinar incumplimientos
-     */
-    function calcularSanciones() {
+    function calcularResumen() {
         let totalInfracciones = 0;
         let totalPuntos = 0;
-
-        // 1. Revisar botones SI/NO
-        const botonesEstado = document.querySelectorAll('.btn-estado');
-        const itemsRevisados = new Set();
-
-        botonesEstado.forEach(btn => {
-            const itemId = btn.dataset.itemId;
-            if (itemsRevisados.has(itemId)) return;
-
-            const logicaInversa = btn.dataset.logicaInversa === 'True';
-            const btnCumple = document.querySelector(`.btn-estado[data-item-id="${itemId}"][data-estado="cumple"]`);
-            const btnNoCumple = document.querySelector(`.btn-estado[data-item-id="${itemId}"][data-estado="no_cumple"]`);
-
-            const seleccionadoCumple = btnCumple?.dataset?.activo === 'true';
-            const seleccionadoNoCumple = btnNoCumple?.dataset?.activo === 'true';
-            const haySeleccion = seleccionadoCumple || seleccionadoNoCumple;
-
-            const hayIncumplimiento = haySeleccion
-                ? (logicaInversa ? seleccionadoCumple : seleccionadoNoCumple)
-                : false;
-
-            if (hayIncumplimiento) {
-                const numInfracciones = obtenerNumeroInfracciones(itemId);
-                const puntaje = obtenerPuntajeItem(itemId);
-                totalInfracciones += numInfracciones;
-                totalPuntos += (puntaje * numInfracciones);
-            }
-
-            itemsRevisados.add(itemId);
-        });
-
-        // 2. Revisar inputs numericos
-        const inputsValorMedido = document.querySelectorAll('.input-valor-medido');
-        inputsValorMedido.forEach(input => {
-            if (input.value === '') return;
-
-            const valor = parseFloat(input.value);
-            const umbral = parseFloat(input.dataset.umbral);
-            const operador = input.dataset.operador;
-            const logicaInversa = input.dataset.logicaInversa === 'True';
-            const itemId = input.dataset.itemId;
-
-            const condicion = evaluarCondicion(valor, operador, umbral);
-            const incumplimiento = logicaInversa ? !condicion : condicion;
-
-            if (incumplimiento) {
-                const numInfracciones = obtenerNumeroInfracciones(itemId);
-                const puntaje = obtenerPuntajeItem(itemId);
-                totalInfracciones += numInfracciones;
-                totalPuntos += (puntaje * numInfracciones);
+        document.querySelectorAll('[data-item-row]').forEach((fila) => {
+            const itemId = fila.dataset.itemRow;
+            if (!itemEstaActivoEnReunion(itemId)) return;
+            const tipo = (fila.dataset.tipo || 'si_no').toLowerCase();
+            const incumplimiento = ['numerico', 'porcentaje'].includes(tipo)
+                ? determinarIncumplimientoNumerico(itemId)
+                : determinarIncumplimientoSiNo(itemId);
+            if (incumplimiento === true) {
+                const numeroInfracciones = obtenerNumeroInfracciones(itemId, true);
+                totalInfracciones += numeroInfracciones;
+                totalPuntos += obtenerPuntajeItem(itemId) * numeroInfracciones;
             }
         });
-
-        // Calcular sancion
-        let sancion = '';
-        if (totalPuntos <= 2) {
-            sancion = 'Llamado de atencion';
-        } else if (totalPuntos <= 4) {
-            sancion = '5 platos';
-        } else if (totalPuntos <= 6) {
-            sancion = '10 platos';
-        } else if (totalPuntos <= 8) {
-            sancion = '15 platos';
-        } else if (totalPuntos <= 10) {
-            sancion = '20 platos';
-        } else {
-            sancion = '25 platos';
-        }
-
-        // Actualizar UI
         document.getElementById('totalInfracciones').textContent = totalInfracciones;
         document.getElementById('totalPuntos').textContent = totalPuntos;
-        document.getElementById('sancionTexto').textContent = sancion;
+        document.getElementById('sancionTexto').textContent = obtenerDescripcionSancion(totalPuntos);
     }
 
-    /**
-     * Descripcion: Guarda la evaluacion del reglamento
-     * Logica: Recopila SI/NO y valores numericos para enviar al servidor
-     */
-    const btnGuardar = document.getElementById('btnGuardar');
-    if (btnGuardar) {
-        btnGuardar.addEventListener('click', async function() {
-            const evaluaciones = [];
-
-            // 1. Recopilar evaluaciones SI/NO
-            const botonesEstado = document.querySelectorAll('.btn-estado');
-            const itemsEvaluados = new Set();
-
-            botonesEstado.forEach(btn => {
-                const itemId = btn.dataset.itemId;
-
-                if (!itemsEvaluados.has(itemId)) {
-                    itemsEvaluados.add(itemId);
-
-                    const btnCumple = document.querySelector(`.btn-estado[data-item-id="${itemId}"][data-estado="cumple"]`);
-                    const btnNoCumple = document.querySelector(`.btn-estado[data-item-id="${itemId}"][data-estado="no_cumple"]`);
-                    const logicaInversa = btn.dataset.logicaInversa === 'True';
-
-                    const seleccionadoCumple = btnCumple?.dataset?.activo === 'true';
-                    const seleccionadoNoCumple = btnNoCumple?.dataset?.activo === 'true';
-
-                    let cumple = true;
-                    if (seleccionadoCumple || seleccionadoNoCumple) {
-                        cumple = logicaInversa ? seleccionadoNoCumple : seleccionadoCumple;
-                    }
-
-                    const numInfracciones = cumple ? 0 : obtenerNumeroInfracciones(itemId);
-                    const inputObs = document.querySelector(`.input-observacion[data-item-id="${itemId}"]`);
-
-                    evaluaciones.push({
-                        item_id: parseInt(itemId),
-                        cumple: cumple,
-                        numero_infracciones: numInfracciones,
-                        observacion: inputObs.value || ''
-                    });
+    function validarFormulario() {
+        const errores = [];
+        document.querySelectorAll('[data-item-row]').forEach((fila) => {
+            const itemId = fila.dataset.itemRow;
+            if (!itemEstaActivoEnReunion(itemId)) return;
+            const codigo = fila.dataset.itemCode;
+            const tipo = (fila.dataset.tipo || 'si_no').toLowerCase();
+            if (obtenerPuntajeItem(itemId) < 0) {
+                errores.push(`${codigo}: el puntaje no puede ser negativo.`);
+                return;
+            }
+            if (['numerico', 'porcentaje'].includes(tipo)) {
+                const input = document.querySelector(`.input-valor-medido[data-item-id="${itemId}"]`);
+                if (!input || input.value === '') {
+                    errores.push(`${codigo}: debe ingresar un valor medido.`);
+                    return;
                 }
-            });
-
-            // 2. Recopilar evaluaciones numericas
-            const inputsValorMedido = document.querySelectorAll('.input-valor-medido');
-            inputsValorMedido.forEach(input => {
-                const itemId = input.dataset.itemId;
-                const valor = parseFloat(input.value);
-                const umbral = parseFloat(input.dataset.umbral);
-                const operador = input.dataset.operador;
-                const logicaInversa = input.dataset.logicaInversa === 'True';
-
-                const tieneValor = input.value !== '';
-                let incumplimiento = false;
-                if (tieneValor) {
-                    const condicion = evaluarCondicion(valor, operador, umbral);
-                    incumplimiento = logicaInversa ? !condicion : condicion;
+                if (!Number.isFinite(Number(input.value))) {
+                    errores.push(`${codigo}: el valor medido no es válido.`);
                 }
-
-                const cumple = !incumplimiento;
-                const numInfracciones = cumple ? 0 : obtenerNumeroInfracciones(itemId);
-                const inputObs = document.querySelector(`.input-observacion[data-item-id="${itemId}"]`);
-
-                evaluaciones.push({
-                    item_id: parseInt(itemId),
-                    cumple: cumple,
-                    numero_infracciones: numInfracciones,
-                    valor_medido: input.value !== '' ? valor : null,
-                    observacion: inputObs.value || ''
-                });
-            });
-
-            // Enviar al servidor
-            try {
-                btnGuardar.disabled = true;
-                btnGuardar.textContent = 'Guardando...';
-
-                const response = await fetch('/reglamento/guardar-evaluacion', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        reunion_id: reunionId,
-                        evaluaciones: evaluaciones
-                    })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    alert('Evaluacion guardada exitosamente');
-                    window.location.reload();
-                } else {
-                    alert('Error: ' + data.error);
-                    btnGuardar.disabled = false;
-                    btnGuardar.textContent = 'Guardar Evaluacion';
-                }
-            } catch (error) {
-                console.error('Error al guardar:', error);
-                alert('Error de conexion');
-                btnGuardar.disabled = false;
-                btnGuardar.textContent = 'Guardar Evaluacion';
+                return;
+            }
+            if (!obtenerEstadoSiNo(itemId)) {
+                errores.push(`${codigo}: debe seleccionar SI o NO.`);
             }
         });
+        return errores;
     }
 
-    // Calcular sanciones al cargar la pagina
-    calcularSanciones();
+    function construirPayload() {
+        const evaluaciones = [];
+        document.querySelectorAll('[data-item-row]').forEach((fila) => {
+            const itemId = Number(fila.dataset.itemRow);
+            const tipo = (fila.dataset.tipo || 'si_no').toLowerCase();
+            const activo = itemEstaActivoEnReunion(itemId);
+            const payload = {
+                reunion_item_id: itemId,
+                activo: activo,
+                puntaje_reunion: obtenerPuntajeItem(itemId),
+                numero_infracciones: Number.parseInt(obtenerInputInfracciones(itemId)?.value || '0', 10),
+                observacion: obtenerInputObservacion(itemId)?.value?.trim() || '',
+            };
+            if (['numerico', 'porcentaje'].includes(tipo)) {
+                const input = document.querySelector(`.input-valor-medido[data-item-id="${itemId}"]`);
+                payload.valor_medido = input?.value ?? '';
+            } else {
+                payload.estado = obtenerEstadoSiNo(itemId);
+            }
+            evaluaciones.push(payload);
+        });
+        return evaluaciones;
+    }
+
+    document.querySelectorAll('.btn-estado').forEach((boton) => {
+        const itemId = boton.dataset.itemId;
+        boton.addEventListener('click', function () {
+            if (soloLectura || !itemEstaActivoEnReunion(itemId)) return;
+            document.querySelectorAll(`.btn-estado[data-item-id="${itemId}"]`).forEach((btn) => {
+                btn.dataset.selected = 'false';
+            });
+            this.dataset.selected = 'true';
+            actualizarBotonesItem(itemId);
+        });
+        actualizarBotonesItem(itemId);
+    });
+
+    document.querySelectorAll('.input-valor-medido').forEach((input) => {
+        const itemId = input.dataset.itemId;
+        input.addEventListener('input', function () { actualizarInputNumerico(itemId); });
+        actualizarInputNumerico(itemId);
+    });
+
+    document.querySelectorAll('.toggle-item-activo').forEach((toggle) => {
+        const itemId = toggle.dataset.itemId;
+        toggle.addEventListener('change', function () {
+            actualizarDisponibilidadItem(itemId);
+            actualizarBotonesItem(itemId);
+            actualizarInputNumerico(itemId);
+            calcularResumen();
+        });
+        actualizarDisponibilidadItem(itemId);
+    });
+
+    document.querySelectorAll('.input-infracciones, .input-puntaje').forEach((input) => {
+        input.addEventListener('input', calcularResumen);
+    });
+
+    calcularResumen();
+
+    const btnGuardar = document.getElementById('btnGuardar');
+    btnGuardar?.addEventListener('click', async function () {
+        const errores = validarFormulario();
+        if (errores.length > 0) {
+            mostrarMensaje('error', errores[0]);
+            return;
+        }
+
+        btnGuardar.disabled = true;
+        btnGuardar.textContent = 'Guardando...';
+
+        try {
+            const response = await fetch('/reglamento/guardar-evaluacion', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    reunion_id: reunionId,
+                    evaluaciones: construirPayload(),
+                    observaciones_reunion: observacionesReunionEl?.value?.trim() || '',
+                }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'No se pudo guardar la evaluación.');
+            mostrarMensaje('success', 'La reunión fue guardada y cerrada correctamente.');
+            setTimeout(() => window.location.reload(), 800);
+        } catch (error) {
+            mostrarMensaje('error', error.message || 'Error de conexión.');
+            btnGuardar.disabled = false;
+            btnGuardar.textContent = 'Guardar y cerrar reunión';
+        }
+    });
+
+    const itemsReutilizables = {{ items_reutilizables|tojson }};
+    const itemsReunionEditables = {{ items_reunion_editables|tojson }};
+    const modalAgregarItem = document.getElementById('modalAgregarItemReunion');
+    const btnAbrirModalAgregarItem = document.getElementById('btnAbrirModalAgregarItem');
+    const btnCerrarModalAgregarItem = document.getElementById('btnCerrarModalAgregarItem');
+    const btnCancelarAgregarItem = document.getElementById('btnCancelarAgregarItem');
+    const btnGuardarAgregarItem = document.getElementById('btnGuardarAgregarItem');
+    const formAgregarItemReunion = document.getElementById('formAgregarItemReunion');
+    const modalModoItem = document.getElementById('modalModoItem');
+    const selectorModoExistente = document.getElementById('selectorModoExistente');
+    const selectorModoNuevo = document.getElementById('selectorModoNuevo');
+    const bloqueModoExistente = document.getElementById('bloqueModoExistente');
+    const bloqueModoNuevo = document.getElementById('bloqueModoNuevo');
+    const existenteItemCatalogo = document.getElementById('existenteItemCatalogo');
+    const sinItemsReutilizables = document.getElementById('sinItemsReutilizables');
+    const existenteFechaFinVigencia = document.getElementById('existenteFechaFinVigencia');
+    const resumenItemExistente = document.getElementById('resumenItemExistente');
+    const existenteCodigo = document.getElementById('existenteCodigo');
+    const existenteAlcance = document.getElementById('existenteAlcance');
+    const existenteDescripcion = document.getElementById('existenteDescripcion');
+    const existenteCategoria = document.getElementById('existenteCategoria');
+    const existenteRiesgoPuntaje = document.getElementById('existenteRiesgoPuntaje');
+    const existenteValidacion = document.getElementById('existenteValidacion');
+    const existenteVigencia = document.getElementById('existenteVigencia');
+    const nuevoTipoValidacion = document.getElementById('nuevoTipoValidacion');
+    const nuevoBloqueRegla = document.getElementById('nuevoBloqueRegla');
+    const nuevoTipoVigencia = document.getElementById('nuevoTipoVigencia');
+    const nuevoBloqueFechaVigencia = document.getElementById('nuevoBloqueFechaVigencia');
+    const nuevoFechaFinVigencia = document.getElementById('nuevoFechaFinVigencia');
+    const nuevoCategoria = document.getElementById('nuevoCategoria');
+    const nuevoDescripcion = document.getElementById('nuevoDescripcion');
+    const nuevoRiesgo = document.getElementById('nuevoRiesgo');
+    const nuevoPuntaje = document.getElementById('nuevoPuntaje');
+    const nuevoAlcance = document.getElementById('nuevoAlcance');
+    const nuevoAlcanceAyuda = document.getElementById('nuevoAlcanceAyuda');
+    const nuevoOperador = document.getElementById('nuevoOperador');
+    const nuevoUmbral = document.getElementById('nuevoUmbral');
+    const nuevoLogicaInversa = document.getElementById('nuevoLogicaInversa');
+    const modalEditarItemReunion = document.getElementById('modalEditarItemReunion');
+    const formEditarItemReunion = document.getElementById('formEditarItemReunion');
+    const btnCerrarModalEditarItem = document.getElementById('btnCerrarModalEditarItem');
+    const btnCancelarEditarItem = document.getElementById('btnCancelarEditarItem');
+    const btnGuardarEditarItem = document.getElementById('btnGuardarEditarItem');
+    const editarItemId = document.getElementById('editarItemId');
+    const editarItemCodigo = document.getElementById('editarItemCodigo');
+    const editarItemDescripcion = document.getElementById('editarItemDescripcion');
+    const editarItemRiesgo = document.getElementById('editarItemRiesgo');
+    const editarItemPuntaje = document.getElementById('editarItemPuntaje');
+    const editarItemAlcance = document.getElementById('editarItemAlcance');
+    const editarItemTipoVigencia = document.getElementById('editarItemTipoVigencia');
+    const editarItemBloqueFechaVigencia = document.getElementById('editarItemBloqueFechaVigencia');
+    const editarItemFechaFinVigencia = document.getElementById('editarItemFechaFinVigencia');
+
+    function obtenerItemEditableReunion(itemId) {
+        return itemsReunionEditables[String(itemId)] || itemsReunionEditables[itemId] || null;
+    }
+
+    function describirAlcanceItemReunion(alcance) {
+        if (alcance === 'establecimiento') return 'Solo establecimiento';
+        if (alcance === 'reunion') return 'Solo esta reunión';
+        return 'Plantilla global';
+    }
+
+    function capitalizarTexto(valor) {
+        if (!valor) return '';
+        return `${valor.charAt(0).toUpperCase()}${valor.slice(1)}`;
+    }
+
+    function construirBadgesItemReunion(item) {
+        const badges = [
+            `<span class="rounded-full bg-slate-100 px-2 py-1 text-slate-700 dark:bg-slate-800 dark:text-slate-200">${item.riesgo || '-'}</span>`,
+            `<span class="rounded-full bg-blue-100 px-2 py-1 text-blue-700 dark:bg-blue-950/40 dark:text-blue-200">${describirAlcanceItemReunion(item.alcance)}</span>`,
+            `<span class="rounded-full bg-amber-100 px-2 py-1 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">${capitalizarTexto(item.tipo_vigencia || 'permanente')}</span>`,
+        ];
+
+        if (item.tipo_vigencia === 'temporal' && item.fecha_fin_vigencia_label) {
+            badges.push(
+                `<span class="rounded-full bg-rose-100 px-2 py-1 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">Hasta ${item.fecha_fin_vigencia_label}</span>`
+            );
+        }
+        if (item.es_adicional) {
+            badges.push(
+                '<span class="rounded-full bg-fuchsia-100 px-2 py-1 text-fuchsia-800 dark:bg-fuchsia-950/40 dark:text-fuchsia-200">Agregado en reunión</span>'
+            );
+        }
+        return badges.join('');
+    }
+
+    function sincronizarFilaItemEditado(item) {
+        const descripcionEl = document.querySelector(`[data-item-descripcion="${item.id}"]`);
+        if (descripcionEl) {
+            descripcionEl.textContent = item.descripcion || '';
+        }
+
+        const badgesEl = document.querySelector(`[data-item-badges="${item.id}"]`);
+        if (badgesEl) {
+            badgesEl.innerHTML = construirBadgesItemReunion(item);
+        }
+
+        const inputPuntaje = obtenerInputPuntaje(item.id);
+        if (inputPuntaje) {
+            inputPuntaje.value = item.puntaje ?? 0;
+        }
+
+        itemsReunionEditables[String(item.id)] = item;
+        calcularResumen();
+    }
+
+    function actualizarBloqueFechaEditarItem() {
+        if (!editarItemTipoVigencia || !editarItemBloqueFechaVigencia || !editarItemFechaFinVigencia) return;
+        const esTemporal = editarItemTipoVigencia.value === 'temporal';
+        editarItemBloqueFechaVigencia.classList.toggle('hidden', !esTemporal);
+        editarItemFechaFinVigencia.required = esTemporal;
+        if (!esTemporal) {
+            editarItemFechaFinVigencia.value = '';
+        }
+    }
+
+    function abrirModalEditarItem(itemId) {
+        const item = obtenerItemEditableReunion(itemId);
+        if (!item || !modalEditarItemReunion) return;
+
+        if (editarItemId) editarItemId.value = item.id;
+        if (editarItemCodigo) editarItemCodigo.value = item.codigo || '';
+        if (editarItemDescripcion) editarItemDescripcion.value = item.descripcion || '';
+        if (editarItemRiesgo) editarItemRiesgo.value = item.riesgo || 'Menor';
+        if (editarItemPuntaje) editarItemPuntaje.value = item.puntaje ?? 0;
+        if (editarItemAlcance) editarItemAlcance.value = item.alcance || 'reunion';
+        if (editarItemTipoVigencia) editarItemTipoVigencia.value = item.tipo_vigencia || 'permanente';
+        if (editarItemFechaFinVigencia) editarItemFechaFinVigencia.value = item.fecha_fin_vigencia || '';
+        if (btnGuardarEditarItem) {
+            btnGuardarEditarItem.disabled = false;
+            btnGuardarEditarItem.textContent = 'Guardar cambios del item';
+        }
+
+        actualizarBloqueFechaEditarItem();
+        modalEditarItemReunion.classList.remove('hidden');
+        modalEditarItemReunion.classList.add('flex');
+        document.body.classList.add('overflow-hidden');
+    }
+
+    function cerrarModalEditarItem() {
+        if (!modalEditarItemReunion) return;
+        modalEditarItemReunion.classList.add('hidden');
+        modalEditarItemReunion.classList.remove('flex');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    function actualizarNuevoBloqueRegla() {
+        if (!nuevoTipoValidacion || !nuevoBloqueRegla) return;
+        const visible = nuevoTipoValidacion.value !== 'si_no' && modalModoItem?.value === 'nuevo';
+        nuevoBloqueRegla.classList.toggle('hidden', !visible);
+        if (nuevoOperador) {
+            nuevoOperador.required = visible;
+        }
+        if (nuevoUmbral) {
+            nuevoUmbral.required = visible;
+        }
+    }
+
+    function actualizarNuevaVigencia() {
+        if (!nuevoTipoVigencia || !nuevoBloqueFechaVigencia || !nuevoFechaFinVigencia) return;
+        const esTemporal = nuevoTipoVigencia.value === 'temporal' && modalModoItem?.value === 'nuevo';
+        nuevoBloqueFechaVigencia.classList.toggle('hidden', !esTemporal);
+        nuevoFechaFinVigencia.required = esTemporal;
+        if (!esTemporal) {
+            nuevoFechaFinVigencia.value = '';
+        }
+    }
+
+    function actualizarAyudaAlcanceNuevo() {
+        if (!nuevoAlcanceAyuda || !nuevoAlcance) return;
+        if (nuevoAlcance.value === 'reunion') {
+            nuevoAlcanceAyuda.textContent = 'Este item solo existirá en esta reunión. No aparecerá como plantilla reutilizable en futuras reuniones.';
+            nuevoAlcanceAyuda.className = 'mt-2 text-xs text-amber-600 dark:text-amber-300';
+            return;
+        }
+        if (nuevoAlcance.value === 'global') {
+            nuevoAlcanceAyuda.textContent = 'Se guardará como plantilla global y podrá reutilizarse en reuniones de cualquier establecimiento autorizado.';
+            nuevoAlcanceAyuda.className = 'mt-2 text-xs text-slate-500 dark:text-slate-400';
+            return;
+        }
+        nuevoAlcanceAyuda.textContent = 'Se guardará como plantilla reutilizable para este establecimiento.';
+        nuevoAlcanceAyuda.className = 'mt-2 text-xs text-slate-500 dark:text-slate-400';
+    }
+
+    function actualizarRequeridosNuevoModo(activo) {
+        if (nuevoCategoria) nuevoCategoria.required = activo;
+        if (nuevoDescripcion) nuevoDescripcion.required = activo;
+        if (nuevoRiesgo) nuevoRiesgo.required = activo;
+        if (nuevoPuntaje) nuevoPuntaje.required = activo;
+        if (nuevoAlcance) nuevoAlcance.required = activo;
+        if (nuevoTipoVigencia) nuevoTipoVigencia.required = activo;
+        if (nuevoTipoValidacion) nuevoTipoValidacion.required = activo;
+        if (!activo && nuevoFechaFinVigencia) {
+            nuevoFechaFinVigencia.required = false;
+        }
+        if (!activo && nuevoOperador) {
+            nuevoOperador.required = false;
+        }
+        if (!activo && nuevoUmbral) {
+            nuevoUmbral.required = false;
+        }
+    }
+
+    function obtenerItemReutilizableSeleccionado() {
+        const itemId = Number.parseInt(existenteItemCatalogo?.value || '', 10);
+        if (!Number.isFinite(itemId)) return null;
+        return itemsReutilizables.find((item) => Number(item.id) === itemId) || null;
+    }
+
+    function describirValidacionExistente(item) {
+        if (!item) return '';
+        if (item.tipo_validacion === 'numerico' || item.tipo_validacion === 'porcentaje') {
+            const sufijo = item.tipo_validacion === 'porcentaje' ? '%' : '';
+            return `${item.tipo_validacion === 'porcentaje' ? 'Porcentaje' : 'Numérico'} · ${item.operador_comparacion || ''} ${item.valor_umbral ?? ''}${sufijo}`.trim();
+        }
+        return item.logica_inversa ? 'SI / NO · lógica inversa' : 'SI / NO';
+    }
+
+    function describirVigenciaExistente(item) {
+        if (!item) return '';
+        if (item.tipo_vigencia === 'temporal') {
+            return item.fecha_fin_vigencia_label
+                ? `Temporal hasta ${item.fecha_fin_vigencia_label}`
+                : 'Temporal sin fecha configurada';
+        }
+        return 'Permanente';
+    }
+
+    function actualizarResumenItemExistente() {
+        if (!resumenItemExistente) return;
+        const item = obtenerItemReutilizableSeleccionado();
+        if (!item) {
+            resumenItemExistente.classList.add('hidden');
+            if (existenteFechaFinVigencia) {
+                existenteFechaFinVigencia.value = '';
+            }
+            return;
+        }
+
+        existenteCodigo.textContent = item.codigo || '-';
+        existenteAlcance.textContent = item.alcance_label || '-';
+        existenteDescripcion.textContent = item.descripcion || '-';
+        existenteCategoria.textContent = item.categoria || '-';
+        existenteRiesgoPuntaje.textContent = `${item.riesgo || '-'} · ${item.puntaje ?? 0} punto(s)`;
+        existenteValidacion.textContent = describirValidacionExistente(item);
+        existenteVigencia.textContent = describirVigenciaExistente(item);
+        if (existenteFechaFinVigencia) {
+            existenteFechaFinVigencia.value = item.fecha_fin_vigencia || '';
+        }
+        resumenItemExistente.classList.remove('hidden');
+    }
+
+    function aplicarEstadoSelectorModo(selector, activo) {
+        if (!selector) return;
+        selector.className = activo
+            ? 'selector-modo-item rounded-2xl border border-blue-500 bg-blue-50 px-4 py-4 text-left shadow-sm transition dark:border-blue-500/80 dark:bg-blue-950/30'
+            : 'selector-modo-item rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800';
+    }
+
+    function actualizarModoAgregarItem(modo) {
+        const hayItemsReutilizables = itemsReutilizables.length > 0;
+        const modoFinal = modo === 'existente' ? 'existente' : 'nuevo';
+        if (modalModoItem) {
+            modalModoItem.value = modoFinal;
+        }
+
+        aplicarEstadoSelectorModo(selectorModoExistente, modoFinal === 'existente');
+        aplicarEstadoSelectorModo(selectorModoNuevo, modoFinal === 'nuevo');
+
+        if (bloqueModoExistente) {
+            bloqueModoExistente.classList.toggle('hidden', modoFinal !== 'existente');
+        }
+        if (bloqueModoNuevo) {
+            bloqueModoNuevo.classList.toggle('hidden', modoFinal !== 'nuevo');
+        }
+        if (sinItemsReutilizables) {
+            sinItemsReutilizables.classList.toggle(
+                'hidden',
+                modoFinal !== 'existente' || hayItemsReutilizables
+            );
+        }
+
+        if (existenteItemCatalogo) {
+            if (modoFinal === 'existente' && hayItemsReutilizables && !existenteItemCatalogo.value) {
+                existenteItemCatalogo.value = String(itemsReutilizables[0].id);
+            }
+            if (modoFinal === 'existente' && !hayItemsReutilizables) {
+                existenteItemCatalogo.value = '';
+            }
+            existenteItemCatalogo.disabled = modoFinal === 'existente' && !hayItemsReutilizables;
+            existenteItemCatalogo.required = modoFinal === 'existente' && hayItemsReutilizables;
+        }
+        actualizarRequeridosNuevoModo(modoFinal === 'nuevo');
+        actualizarNuevoBloqueRegla();
+        actualizarNuevaVigencia();
+        actualizarAyudaAlcanceNuevo();
+
+        if (btnGuardarAgregarItem) {
+            btnGuardarAgregarItem.disabled = modoFinal === 'existente' && !hayItemsReutilizables;
+            btnGuardarAgregarItem.textContent = modoFinal === 'existente'
+                ? (hayItemsReutilizables ? 'Agregar plantilla a la reunión' : 'No hay plantillas disponibles')
+                : 'Crear y agregar item';
+        }
+
+        if (modoFinal === 'existente') {
+            actualizarResumenItemExistente();
+        }
+    }
+
+    function restablecerModalAgregarItem() {
+        if (formAgregarItemReunion) {
+            formAgregarItemReunion.reset();
+        }
+        if (existenteItemCatalogo) {
+            existenteItemCatalogo.value = '';
+        }
+        if (resumenItemExistente) {
+            resumenItemExistente.classList.add('hidden');
+        }
+        if (btnGuardarAgregarItem) {
+            btnGuardarAgregarItem.disabled = false;
+        }
+        actualizarModoAgregarItem('nuevo');
+    }
+
+    function abrirModalAgregarItem() {
+        if (!modalAgregarItem) return;
+        restablecerModalAgregarItem();
+        modalAgregarItem.classList.remove('hidden');
+        modalAgregarItem.classList.add('flex');
+        document.body.classList.add('overflow-hidden');
+    }
+
+    function cerrarModalAgregarItem() {
+        if (!modalAgregarItem) return;
+        modalAgregarItem.classList.add('hidden');
+        modalAgregarItem.classList.remove('flex');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    nuevoTipoValidacion?.addEventListener('change', actualizarNuevoBloqueRegla);
+    nuevoTipoVigencia?.addEventListener('change', actualizarNuevaVigencia);
+    nuevoAlcance?.addEventListener('change', actualizarAyudaAlcanceNuevo);
+    editarItemTipoVigencia?.addEventListener('change', actualizarBloqueFechaEditarItem);
+    selectorModoExistente?.addEventListener('click', () => actualizarModoAgregarItem('existente'));
+    selectorModoNuevo?.addEventListener('click', () => actualizarModoAgregarItem('nuevo'));
+    existenteItemCatalogo?.addEventListener('change', actualizarResumenItemExistente);
+    btnAbrirModalAgregarItem?.addEventListener('click', abrirModalAgregarItem);
+    btnCerrarModalAgregarItem?.addEventListener('click', cerrarModalAgregarItem);
+    btnCancelarAgregarItem?.addEventListener('click', cerrarModalAgregarItem);
+    btnCerrarModalEditarItem?.addEventListener('click', cerrarModalEditarItem);
+    btnCancelarEditarItem?.addEventListener('click', cerrarModalEditarItem);
+    modalAgregarItem?.addEventListener('click', function (event) {
+        if (event.target === modalAgregarItem) {
+            cerrarModalAgregarItem();
+        }
+    });
+    modalEditarItemReunion?.addEventListener('click', function (event) {
+        if (event.target === modalEditarItemReunion) {
+            cerrarModalEditarItem();
+        }
+    });
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && modalAgregarItem?.classList.contains('flex')) {
+            cerrarModalAgregarItem();
+        }
+        if (event.key === 'Escape' && modalEditarItemReunion?.classList.contains('flex')) {
+            cerrarModalEditarItem();
+        }
+    });
+    actualizarModoAgregarItem('nuevo');
+    document.querySelectorAll('.btn-editar-item-reunion').forEach((boton) => {
+        boton.addEventListener('click', function () {
+            abrirModalEditarItem(this.dataset.itemId);
+        });
+    });
+
+    formAgregarItemReunion?.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        const modoActual = modalModoItem?.value || 'nuevo';
+        let payload;
+
+        if (modoActual === 'existente') {
+            if (!existenteItemCatalogo?.value) {
+                mostrarMensaje('error', 'Debes seleccionar una plantilla existente.');
+                return;
+            }
+
+            payload = {
+                modo: 'existente',
+                item_catalogo_id: existenteItemCatalogo.value,
+                fecha_fin_vigencia: existenteFechaFinVigencia?.value || '',
+            };
+        } else {
+            payload = {
+                modo: 'nuevo',
+                categoria: nuevoCategoria?.value,
+                descripcion: nuevoDescripcion?.value.trim(),
+                riesgo: nuevoRiesgo?.value,
+                puntaje: nuevoPuntaje?.value,
+                alcance: nuevoAlcance?.value,
+                tipo_vigencia: nuevoTipoVigencia?.value,
+                fecha_fin_vigencia: nuevoFechaFinVigencia?.value || '',
+                tipo_validacion: nuevoTipoValidacion?.value,
+                operador_comparacion: nuevoOperador?.value,
+                valor_umbral: nuevoUmbral?.value,
+                logica_inversa: nuevoLogicaInversa?.checked,
+            };
+        }
+
+        btnGuardarAgregarItem.disabled = true;
+        btnGuardarAgregarItem.textContent = 'Guardando...';
+
+        try {
+            const response = await fetch(`/reglamento/reunion/${reunionId}/items`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'No se pudo agregar el item.');
+            mostrarMensaje('success', 'Item agregado correctamente. Recargando reunión...');
+            cerrarModalAgregarItem();
+            setTimeout(() => window.location.reload(), 700);
+        } catch (error) {
+            mostrarMensaje('error', error.message || 'Error de conexión al agregar el item.');
+            btnGuardarAgregarItem.disabled = false;
+            actualizarModoAgregarItem(modoActual);
+        }
+    });
+
+    formEditarItemReunion?.addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const itemId = Number.parseInt(editarItemId?.value || '', 10);
+        if (!Number.isFinite(itemId)) {
+            mostrarMensaje('error', 'No se pudo identificar el item que intentas editar.');
+            return;
+        }
+
+        btnGuardarEditarItem.disabled = true;
+        btnGuardarEditarItem.textContent = 'Guardando cambios...';
+
+        try {
+            const response = await fetch(`/reglamento/reunion/${reunionId}/items/${itemId}/editar`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    descripcion: editarItemDescripcion?.value?.trim() || '',
+                    riesgo: editarItemRiesgo?.value,
+                    puntaje: editarItemPuntaje?.value,
+                    alcance: editarItemAlcance?.value,
+                    tipo_vigencia: editarItemTipoVigencia?.value,
+                    fecha_fin_vigencia: editarItemFechaFinVigencia?.value || '',
+                }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'No se pudo actualizar el item.');
+
+            sincronizarFilaItemEditado(data.item);
+            cerrarModalEditarItem();
+            mostrarMensaje('success', data.message || 'Item actualizado correctamente dentro de la reunión.');
+        } catch (error) {
+            mostrarMensaje('error', error.message || 'Error de conexión al editar el item.');
+            btnGuardarEditarItem.disabled = false;
+            btnGuardarEditarItem.textContent = 'Guardar cambios del item';
+        }
+    });
 });
 </script>
 {% endblock %}

@@ -102,30 +102,44 @@ class FirmaEncargadoPorJefe(db.Model):
 
 
 class ItemReglamentoRestaurante(db.Model):
-    """Descripción: Items del checklist del reglamento de restaurante
-    Lógica: Cada item representa una infracción que se evalúa semanalmente
+    """Descripción: Catálogo base de items del reglamento de restaurante.
+    Lógica: Sirve como plantilla global, por establecimiento o ad hoc de reunión.
+    Es independiente del checklist de inspecciones.
     """
+
     __tablename__ = "items_reglamento_restaurante"
+
     id = db.Column(db.Integer, primary_key=True)
     codigo = db.Column(db.String(10), nullable=False, unique=True)  # A-01, A-02, etc.
     descripcion = db.Column(db.Text, nullable=False)
-    categoria = db.Column(db.String(100), nullable=False)  # Checklist, Satisfacción, etc.
+    categoria = db.Column(db.String(100), nullable=False)  # Higiene, servicio, atención, etc.
     riesgo = db.Column(db.String(20), nullable=False)  # Mayor, Crítico, Menor
     puntaje = db.Column(db.Integer, nullable=False)  # 1, 3, 5
     tipo_validacion = db.Column(db.String(20), default='si_no')  # 'si_no', 'numerico', 'porcentaje'
     logica_inversa = db.Column(db.Boolean, default=False)  # True = SI es malo, NO es bueno
     valor_umbral = db.Column(db.Numeric(10, 2))  # Valor de referencia para validación numérica
     operador_comparacion = db.Column(db.String(10))  # '<', '>', '<=', '>=', '='
+    establecimiento_id = db.Column(db.Integer)
+    alcance = db.Column(db.String(20), nullable=False, default='global')
+    tipo_vigencia = db.Column(db.String(20), nullable=False, default='permanente')
+    fecha_fin_vigencia = db.Column(db.Date)
+    reunion_origen_id = db.Column(db.Integer)
+    created_by_user_id = db.Column(db.Integer)
     orden = db.Column(db.Integer, default=0)
     activo = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
 
 class ReunionReglamento(db.Model):
-    """Descripción: Reunión semanal para revisar infracciones
-    Lógica: Se crea cada lunes para revisar la semana anterior
+    """Descripción: Reunión semanal para revisar infracciones.
+    Lógica: Se crea cada lunes para revisar la semana anterior.
     """
+
     __tablename__ = "reuniones_reglamento"
+
     id = db.Column(db.Integer, primary_key=True)
     establecimiento_id = db.Column(db.Integer, db.ForeignKey("establecimientos.id"), nullable=False)
     semana = db.Column(db.Integer, nullable=False)  # Número de semana ISO
@@ -135,32 +149,118 @@ class ReunionReglamento(db.Model):
     fecha_fin_semana = db.Column(db.Date, nullable=False)  # Domingo de semana evaluada
     total_inspecciones = db.Column(db.Integer, default=0)
     total_infracciones = db.Column(db.Integer, default=0)
+    total_puntos = db.Column(db.Integer, default=0)
     total_platos_sancion = db.Column(db.Integer, default=0)
     observaciones = db.Column(db.Text)
     estado = db.Column(db.String(20), default='pendiente')  # pendiente, completada
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
-    
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "establecimiento_id",
+            "semana",
+            "ano",
+            name="uq_reuniones_reglamento_establecimiento_semana",
+        ),
+    )
+
     # Relaciones
     establecimiento = db.relationship("Establecimiento", backref="reuniones_reglamento", lazy=True)
+    items_configurados = db.relationship(
+        "ReunionItemReglamento",
+        backref="reunion",
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
     evaluaciones = db.relationship("EvaluacionReglamento", backref="reunion", lazy=True, cascade="all, delete-orphan")
 
 
-class EvaluacionReglamento(db.Model):
-    """Descripción: Evaluación de cada item del reglamento en la reunión
-    Lógica: Registra si cumple o no cumple cada item del checklist
+class ReunionItemReglamento(db.Model):
+    """Snapshot configurable de items del reglamento para una reunión específica.
+    Se mantiene separado del checklist de inspecciones.
     """
+
+    __tablename__ = "reunion_items_reglamento"
+
+    id = db.Column(db.Integer, primary_key=True)
+    reunion_id = db.Column(
+        db.Integer, db.ForeignKey("reuniones_reglamento.id"), nullable=False
+    )
+    item_id = db.Column(
+        db.Integer,
+        db.ForeignKey("items_reglamento_restaurante.id"),
+        nullable=False,
+    )
+    codigo = db.Column(db.String(10), nullable=False)
+    descripcion = db.Column(db.Text, nullable=False)
+    categoria = db.Column(db.String(100), nullable=False)
+    riesgo = db.Column(db.String(20), nullable=False)
+    puntaje = db.Column(db.Integer, nullable=False, default=0)
+    tipo_validacion = db.Column(db.String(20), nullable=False, default='si_no')
+    logica_inversa = db.Column(db.Boolean, default=False)
+    valor_umbral = db.Column(db.Numeric(10, 2))
+    operador_comparacion = db.Column(db.String(10))
+    tipo_vigencia = db.Column(db.String(20), nullable=False, default='permanente')
+    fecha_fin_vigencia = db.Column(db.Date)
+    alcance = db.Column(db.String(20), nullable=False, default='global')
+    orden = db.Column(db.Integer, default=0)
+    activo = db.Column(db.Boolean, default=True)
+    es_adicional = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "reunion_id",
+            "item_id",
+            name="uq_reunion_items_reglamento_reunion_item",
+        ),
+    )
+
+    item = db.relationship(
+        "ItemReglamentoRestaurante", backref="instancias_reunion", lazy=True
+    )
+
+
+class EvaluacionReglamento(db.Model):
+    """Descripción: Evaluación de cada item del reglamento en la reunión.
+    Lógica: Registra si cumple o no cumple cada item del checklist.
+    """
+
     __tablename__ = "evaluaciones_reglamento"
+
     id = db.Column(db.Integer, primary_key=True)
     reunion_id = db.Column(db.Integer, db.ForeignKey("reuniones_reglamento.id"), nullable=False)
     item_id = db.Column(db.Integer, db.ForeignKey("items_reglamento_restaurante.id"), nullable=False)
+    reunion_item_id = db.Column(
+        db.Integer,
+        db.ForeignKey("reunion_items_reglamento.id"),
+        unique=True,
+    )
     cumple = db.Column(db.Boolean, nullable=False)  # True = Cumple, False = No Cumple
     numero_infracciones = db.Column(db.Integer, default=0)  # Cuántas veces se detectó en la semana
+    puntaje_aplicado = db.Column(db.Integer, nullable=False, default=0)
     valor_medido = db.Column(db.Numeric(10, 2))  # Valor medido para validaciones numéricas
     observacion = db.Column(db.Text)
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
-    
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "reunion_id",
+            "item_id",
+            name="uq_evaluaciones_reglamento_reunion_item",
+        ),
+    )
+
     # Relaciones
     item = db.relationship("ItemReglamentoRestaurante", backref="evaluaciones", lazy=True)
+    reunion_item = db.relationship(
+        "ReunionItemReglamento",
+        backref=db.backref("evaluacion", uselist=False),
+        lazy=True,
+    )
 
 
 class PlanSemanal(db.Model):

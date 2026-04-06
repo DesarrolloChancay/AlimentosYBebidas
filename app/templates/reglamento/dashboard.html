@@ -3,109 +3,129 @@
 {% block title %}Reglamento de Restaurante{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-slate-900 dark:to-gray-900">
-    <!-- Header -->
-    <div class="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50">
-        <div class="px-4 py-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                        <span class="ph ph-clipboard-text text-2xl text-white"></span>
-                    </div>
-                    <div>
-                        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Reglamento de Restaurante</h1>
-                        <p class="text-sm text-gray-600 dark:text-gray-300">{{ establecimiento.nombre }}</p>
-                    </div>
-                </div>
-                
-                <button id="btnNuevaReunion" 
-                        class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
-                    <span class="ph ph-plus-circle text-lg mr-2"></span>
-                    Nueva Reunión
+<div class="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div class="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+        <div class="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Reglamento de Restaurante</h1>
+                <p class="text-sm text-slate-600 dark:text-slate-300">{{ establecimiento.nombre }}</p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <a href="{{ url_for('reglamento.historial_reuniones', establecimiento_id=establecimiento.id) }}" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    Historial
+                </a>
+                <a href="{{ url_for('reglamento.gestionar_items', establecimiento_id=establecimiento.id) }}" class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 shadow-sm transition hover:bg-blue-100 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-200">
+                    Configurar items
+                </a>
+                <button id="btnNuevaReunion" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow transition hover:bg-slate-700 dark:bg-blue-600 dark:hover:bg-blue-500">
+                    Nueva reunión
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Contenido principal -->
-    <div class="px-4 py-6 sm:px-6 lg:px-8 space-y-6">
-        <!-- Instrucciones -->
-        <div class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded-xl p-4 shadow-sm">
-            <div class="flex items-start space-x-3">
-                <span class="ph ph-info text-2xl text-blue-600 dark:text-blue-400 mt-0.5"></span>
-                <div>
-                    <h3 class="text-sm font-semibold text-blue-900 dark:text-blue-100">Información importante</h3>
-                    <p class="text-sm text-blue-800 dark:text-blue-200 mt-1">
-                        Las reuniones se realizan cada lunes para evaluar el cumplimiento del reglamento de la semana anterior (lunes a domingo). 
-                        Marque cada item como "Cumple" o "No Cumple" y registre las observaciones necesarias.
-                    </p>
+    <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <div id="reglamentoDashboardAlert" class="hidden rounded-xl border px-4 py-3 text-sm font-medium"></div>
+
+        <div id="modalNuevaReunion" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/70 px-4 py-6">
+            <div class="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+                <div class="border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Crear reunión semanal</h3>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Confirma la apertura de una nueva reunión de reglamento.</p>
+                </div>
+                <div class="space-y-4 px-6 py-5">
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4m0 4h.01M4.93 19h14.14c1.54 0 2.5-1.67 1.73-3L13.73 3c-.77-1.33-2.69-1.33-3.46 0L3.2 16c-.77 1.33.19 3 1.73 3z" />
+                            </svg>
+                        </div>
+                        <div class="space-y-2">
+                            <p class="text-sm font-medium text-slate-800 dark:text-slate-100">Se generará una reunión para evaluar la semana anterior.</p>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Si ya existe una reunión para este periodo, se abrirá la reunión registrada en lugar de crear otra nueva.</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <button id="btnCancelarNuevaReunion" type="button" class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+                            Cancelar
+                        </button>
+                        <button id="btnConfirmarNuevaReunion" type="button" class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow transition hover:bg-slate-700 dark:bg-blue-600 dark:hover:bg-blue-500">
+                            Sí, crear reunión
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Lista de Reuniones -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
-            <div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border-b border-gray-200 dark:border-gray-600">
-                <h2 class="text-lg font-bold text-gray-900 dark:text-white">Historial de Reuniones</h2>
+        <div class="grid gap-4 md:grid-cols-4">
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <p class="text-sm text-slate-500 dark:text-slate-400">Reuniones registradas</p>
+                <p class="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{{ total_reuniones }}</p>
             </div>
-            
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <p class="text-sm text-slate-500 dark:text-slate-400">Pendientes</p>
+                <p class="mt-2 text-3xl font-bold text-amber-600 dark:text-amber-400">{{ pendientes_count }}</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <p class="text-sm text-slate-500 dark:text-slate-400">Última sanción</p>
+                <p class="mt-2 text-2xl font-bold text-fuchsia-600 dark:text-fuchsia-400">{{ ultima_sancion }}</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <p class="text-sm text-slate-500 dark:text-slate-400">Items activos</p>
+                <p class="mt-2 text-3xl font-bold text-blue-600 dark:text-blue-400">{{ items_activos_count }}</p>
+            </div>
+        </div>
+
+        <div class="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100">
+            El catálogo de items ahora es configurable. Puedes crear items temporales o permanentes, dejarlos como plantilla y luego ajustar su uso o puntaje dentro de cada reunión.
+        </div>
+
+        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div class="border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Últimas reuniones</h2>
+                <p class="text-sm text-slate-500 dark:text-slate-400">Las reuniones completadas quedan en solo lectura para mantener trazabilidad.</p>
+            </div>
+
             {% if reuniones %}
             <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50 dark:bg-gray-700/50">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Semana
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Fecha Reunión
-                            </th>
-                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Estado
-                            </th>
-                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Acciones
-                            </th>
+                            <th class="px-4 py-3 text-left font-semibold">Semana</th>
+                            <th class="px-4 py-3 text-left font-semibold">Periodo</th>
+                            <th class="px-4 py-3 text-center font-semibold">Estado</th>
+                            <th class="px-4 py-3 text-center font-semibold">Infracciones</th>
+                            <th class="px-4 py-3 text-center font-semibold">Puntos</th>
+                            <th class="px-4 py-3 text-center font-semibold">Sanción</th>
+                            <th class="px-4 py-3 text-center font-semibold">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        {% for reunion in reuniones %}
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900 dark:text-white">
-                                    Semana {{ reunion.semana }} - {{ reunion.ano }}
-                                </div>
+                    <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                        {% for item in reuniones %}
+                        {% set reunion = item.reunion %}
+                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                            <td class="px-4 py-4">
+                                <div class="font-semibold text-slate-900 dark:text-white">Semana {{ reunion.semana }} - {{ reunion.ano }}</div>
+                                <div class="text-xs text-slate-500 dark:text-slate-400">Reunión: {{ reunion.fecha_reunion.strftime('%d/%m/%Y') if reunion.fecha_reunion else 'N/A' }}</div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-700 dark:text-gray-300">
-                                    {% if reunion.fecha_reunion %}
-                                        {{ reunion.fecha_reunion.strftime('%d/%m/%Y') }}
-                                    {% else %}
-                                        <span class="text-gray-400">No registrada</span>
-                                    {% endif %}
-                                </div>
+                            <td class="px-4 py-4 text-slate-700 dark:text-slate-300">
+                                {{ reunion.fecha_inicio_semana.strftime('%d/%m/%Y') if reunion.fecha_inicio_semana else 'N/A' }}
+                                al
+                                {{ reunion.fecha_fin_semana.strftime('%d/%m/%Y') if reunion.fecha_fin_semana else 'N/A' }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <td class="px-4 py-4 text-center">
                                 {% if reunion.estado == 'pendiente' %}
-                                    <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
-                                        Pendiente
-                                    </span>
+                                <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Pendiente</span>
                                 {% else %}
-                                    <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                                        Completada
-                                    </span>
+                                <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">Completada</span>
                                 {% endif %}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-center">
-                                <a href="{{ url_for('reglamento.ver_reunion', reunion_id=reunion.id) }}" 
-                                   class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white rounded-lg transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md transform hover:scale-105">
-                                    {% if reunion.estado == 'pendiente' %}
-                                        <span class="ph ph-pencil mr-2"></span>
-                                        Evaluar
-                                    {% else %}
-                                        <span class="ph ph-eye mr-2"></span>
-                                        Ver Detalle
-                                    {% endif %}
+                            <td class="px-4 py-4 text-center font-semibold text-rose-600 dark:text-rose-400">{{ item.total_infracciones }}</td>
+                            <td class="px-4 py-4 text-center font-semibold text-orange-600 dark:text-orange-400">{{ item.total_puntos }}</td>
+                            <td class="px-4 py-4 text-center font-semibold text-fuchsia-600 dark:text-fuchsia-400">{{ item.sancion_descripcion }}</td>
+                            <td class="px-4 py-4 text-center">
+                                <a href="{{ url_for('reglamento.ver_reunion', reunion_id=reunion.id) }}" class="inline-flex rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 dark:bg-blue-600 dark:hover:bg-blue-500">
+                                    {% if reunion.estado == 'pendiente' %}Evaluar{% else %}Ver detalle{% endif %}
                                 </a>
                             </td>
                         </tr>
@@ -114,12 +134,8 @@
                 </table>
             </div>
             {% else %}
-            <div class="px-6 py-12 text-center">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
-                    <span class="ph ph-clipboard-text text-4xl text-gray-400 dark:text-gray-500"></span>
-                </div>
-                <p class="text-gray-600 dark:text-gray-400 text-lg font-medium">No hay reuniones registradas</p>
-                <p class="text-gray-500 dark:text-gray-500 mt-2">Haga clic en "Nueva Reunión" para comenzar</p>
+            <div class="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                No hay reuniones registradas. Crea la primera reunión semanal para empezar.
             </div>
             {% endif %}
         </div>
@@ -127,49 +143,119 @@
 </div>
 
 <script>
-// Descripción: Script para crear nueva reunión semanal
-// Lógica: Envía petición al servidor para crear reunión de la semana actual
-document.getElementById('btnNuevaReunion').addEventListener('click', async function() {
+document.addEventListener('DOMContentLoaded', function () {
+    const btnNuevaReunion = document.getElementById('btnNuevaReunion');
+    const feedback = document.getElementById('reglamentoDashboardAlert');
+    const modalNuevaReunion = document.getElementById('modalNuevaReunion');
+    const btnCancelarNuevaReunion = document.getElementById('btnCancelarNuevaReunion');
+    const btnConfirmarNuevaReunion = document.getElementById('btnConfirmarNuevaReunion');
     const establecimientoId = {{ establecimiento.id }};
-    
-    if (!confirm('¿Crear nueva reunión semanal para evaluar la semana anterior?')) {
-        return;
+
+    function mostrarMensaje(tipo, texto) {
+        const estilos = {
+            success: 'border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300',
+            error: 'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300',
+            info: 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
+        };
+
+        feedback.className = `rounded-xl border px-4 py-3 text-sm font-medium ${estilos[tipo] || estilos.info}`;
+        feedback.textContent = texto;
+        feedback.classList.remove('hidden');
     }
-    
-    this.disabled = true;
-    this.innerHTML = '<span class="ph ph-spinner text-lg mr-2 animate-spin"></span>Creando...';
-    
-    try {
-        const response = await fetch('/reglamento/crear-reunion', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                establecimiento_id: establecimientoId
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            alert('Reunión creada exitosamente para ' + data.semana_evaluada);
-            window.location.reload();
-        } else {
-            if (response.status === 409) {
-                alert('Ya existe una reunión para esta semana. Vea el listado.');
-            } else {
-                alert('Error: ' + data.error);
-            }
-            this.disabled = false;
-            this.innerHTML = '<span class="ph ph-plus-circle text-lg mr-2"></span>Nueva Reunión';
+
+    function solicitarConfirmacionNuevaReunion() {
+        if (!modalNuevaReunion || !btnCancelarNuevaReunion || !btnConfirmarNuevaReunion) {
+            return Promise.resolve(window.confirm('Se creará la reunión para evaluar la semana anterior. ¿Deseas continuar?'));
         }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error de conexión');
-        this.disabled = false;
-        this.innerHTML = '<span class="ph ph-plus-circle text-lg mr-2"></span>Nueva Reunión';
+
+        return new Promise((resolve) => {
+            let resuelto = false;
+
+            const limpiar = () => {
+                btnCancelarNuevaReunion.removeEventListener('click', cancelar);
+                btnConfirmarNuevaReunion.removeEventListener('click', confirmar);
+                modalNuevaReunion.removeEventListener('click', fondo);
+                document.removeEventListener('keydown', escape);
+            };
+
+            const cerrar = (resultado) => {
+                if (resuelto) {
+                    return;
+                }
+
+                resuelto = true;
+                limpiar();
+                modalNuevaReunion.classList.add('hidden');
+                modalNuevaReunion.classList.remove('flex');
+                document.body.classList.remove('overflow-hidden');
+                resolve(resultado);
+            };
+
+            const cancelar = () => cerrar(false);
+            const confirmar = () => cerrar(true);
+            const fondo = (event) => {
+                if (event.target === modalNuevaReunion) {
+                    cerrar(false);
+                }
+            };
+            const escape = (event) => {
+                if (event.key === 'Escape') {
+                    cerrar(false);
+                }
+            };
+
+            btnCancelarNuevaReunion.addEventListener('click', cancelar);
+            btnConfirmarNuevaReunion.addEventListener('click', confirmar);
+            modalNuevaReunion.addEventListener('click', fondo);
+            document.addEventListener('keydown', escape);
+
+            modalNuevaReunion.classList.remove('hidden');
+            modalNuevaReunion.classList.add('flex');
+            document.body.classList.add('overflow-hidden');
+            btnConfirmarNuevaReunion.focus();
+        });
     }
+
+    btnNuevaReunion?.addEventListener('click', async function () {
+        const confirmado = await solicitarConfirmacionNuevaReunion();
+        if (!confirmado) {
+            return;
+        }
+
+        btnNuevaReunion.disabled = true;
+        btnNuevaReunion.textContent = 'Creando...';
+
+        try {
+            const response = await fetch('/reglamento/crear-reunion', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ establecimiento_id: establecimientoId }),
+            });
+            const data = await response.json();
+
+            if (response.ok && data.reunion_id) {
+                mostrarMensaje('success', 'La reunión fue creada correctamente. Redirigiendo...');
+                setTimeout(() => {
+                    window.location.href = `/reglamento/reunion/${data.reunion_id}`;
+                }, 700);
+                return;
+            }
+
+            if (response.status === 409 && data.reunion_id) {
+                mostrarMensaje('info', 'Ya existe una reunión para esta semana. Se abrirá la reunión existente.');
+                setTimeout(() => {
+                    window.location.href = `/reglamento/reunion/${data.reunion_id}`;
+                }, 700);
+                return;
+            }
+
+            throw new Error(data.error || 'No se pudo crear la reunión.');
+        } catch (error) {
+            mostrarMensaje('error', error.message || 'Error de conexión al crear la reunión.');
+            btnNuevaReunion.disabled = false;
+            btnNuevaReunion.textContent = 'Nueva reunión';
+        }
+    });
 });
 </script>
 {% endblock %}
