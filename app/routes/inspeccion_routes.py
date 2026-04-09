@@ -1278,6 +1278,12 @@ def agregar_plantilla_completa_establecimiento(establecimiento_id, plantilla_id)
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"Error al agregar plantilla completa: {str(e)}"}), 500
+
+
+@inspeccion_bp.route("/api/establecimientos/<int:establecimiento_id>/items", methods=["POST"])
+@login_required
+@role_required(["Administrador", "Inspector"])
+def agregar_item_establecimiento(establecimiento_id):
     """
     Agregar item individual de plantilla a un establecimiento
     PERMISOS: Administrador e Inspector
