@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Plan Semanal - Castillo de Chancay{% endblock %}
+{% block title %}Dashboard - Inspecciones - Castillo de Chancay{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
 <style>
     .stats-card {
         transition: all 0.3s ease;
@@ -58,6 +60,82 @@
         height: 12px;
         border-radius: 2px;
     }
+
+    .flatpickr-input[readonly] {
+        cursor: pointer;
+    }
+
+    .flatpickr-calendar {
+        border-radius: 1rem;
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
+    }
+
+    .dark .flatpickr-calendar,
+    .dark .flatpickr-monthSelect-theme-dark.monthSelect {
+        background: rgb(15 23 42);
+        border-color: rgb(51 65 85);
+        box-shadow: 0 24px 48px rgba(2, 6, 23, 0.55);
+    }
+
+    .dark .flatpickr-months .flatpickr-month,
+    .dark .flatpickr-weekdays,
+    .dark .flatpickr-weekwrapper .flatpickr-weeks,
+    .dark .flatpickr-current-month,
+    .dark .flatpickr-current-month .flatpickr-monthDropdown-months,
+    .dark .flatpickr-current-month input.cur-year,
+    .dark span.flatpickr-weekday,
+    .dark .flatpickr-time .flatpickr-time-separator,
+    .dark .flatpickr-time input,
+    .dark .flatpickr-monthSelect-month {
+        background: rgb(15 23 42);
+        color: rgb(226 232 240);
+        fill: rgb(226 232 240);
+    }
+
+    .dark .flatpickr-day {
+        color: rgb(226 232 240);
+    }
+
+    .dark .flatpickr-day.today,
+    .dark .flatpickr-monthSelect-month.today {
+        border-color: rgb(59 130 246);
+    }
+
+    .dark .flatpickr-day:hover,
+    .dark .flatpickr-day:focus,
+    .dark .flatpickr-monthSelect-month:hover,
+    .dark .flatpickr-monthSelect-month:focus {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: rgba(59, 130, 246, 0.45);
+    }
+
+    .dark .flatpickr-day.selected,
+    .dark .flatpickr-day.startRange,
+    .dark .flatpickr-day.endRange,
+    .dark .flatpickr-monthSelect-month.selected {
+        background: rgb(59 130 246);
+        border-color: rgb(59 130 246);
+        color: white;
+    }
+
+    .dark .flatpickr-day.inRange {
+        background: rgba(59, 130, 246, 0.18);
+        border-color: rgba(59, 130, 246, 0.18);
+        box-shadow: none;
+    }
+
+    .dark .flatpickr-day.flatpickr-disabled,
+    .dark .flatpickr-monthSelect-month.disabled,
+    .dark .flatpickr-day.prevMonthDay,
+    .dark .flatpickr-day.nextMonthDay {
+        color: rgb(100 116 139);
+    }
+
+    .dark .flatpickr-months .flatpickr-prev-month svg,
+    .dark .flatpickr-months .flatpickr-next-month svg {
+        fill: rgb(226 232 240);
+    }
 </style>
 {% endblock %}
 
@@ -77,7 +155,7 @@
                     </div>
                     <div class="hidden sm:block">
                         <h1 class="text-xl font-bold text-slate-800 dark:text-white">Dashboard</h1>
-                        <p class="text-xs text-slate-500 dark:text-slate-400">Plan Semanal</p>
+                        <p id="dashboard-subtitle" class="text-xs text-slate-500 dark:text-slate-400">Plan Semanal</p>
                     </div>
                 </div>
 
@@ -107,20 +185,42 @@
 
             <!-- ===== FILTROS Y CONTROLES ===== -->
             <div class="p-6 border-b border-slate-200 dark:border-slate-700">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
 
-                    <!-- Selector de Semana -->
+                    <!-- Selector de Tipo de Período -->
                     <div class="space-y-2">
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                            Semana
+                            Período
                         </label>
                         <div class="relative">
-                            <select id="semana-select" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-white">
-                                <option value="">Cargando semanas...</option>
+                            <select id="periodo-tipo-select" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-white">
+                                <option value="semanal">Semanal</option>
+                                <option value="mensual">Consolidado mensual</option>
                             </select>
                             <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                 <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Selector de Rango -->
+                    <div class="space-y-2">
+                        <label id="periodo-rango-label" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                            Semana
+                        </label>
+                        <div class="relative">
+                            <input
+                                id="periodo-rango-picker"
+                                type="text"
+                                readonly
+                                placeholder="Selecciona una fecha"
+                                class="w-full px-4 py-3 pr-11 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-white"
+                            >
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10m2 10H5a2 2 0 01-2-2V7a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2z"/>
                                 </svg>
                             </div>
                         </div>
@@ -189,6 +289,16 @@
             </div>
 
             <!-- ===== RESUMEN GENERAL ===== -->
+            <div class="px-6 pt-4">
+                <div class="bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Periodo activo</p>
+                        <p id="periodo-descripcion" class="text-sm font-semibold text-slate-800 dark:text-white">Semana actual</p>
+                    </div>
+                    <p id="periodo-rango-texto" class="text-sm text-slate-600 dark:text-slate-300">Cargando rango...</p>
+                </div>
+            </div>
+
             <div class="p-6">
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="resumen-cards">
                     <!-- Cards de resumen se generan dinámicamente -->
@@ -290,6 +400,9 @@
 
 <!-- Dashboard JavaScript -->
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
 <script src="{{ url_for('static', filename='js/common.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}
