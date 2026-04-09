@@ -4,10 +4,17 @@
  */
 
 // ===== VARIABLES GLOBALES =====
+let currentPeriodType = 'semanal';
 let currentWeekOffset = 0;
+let currentMonthOffset = 0;
 let currentEstablecimiento = null;
 let dashboardData = null;
 let charts = {};
+let periodoPicker = null;
+let sincronizandoPeriodoPicker = false;
+
+const SEMANAS_DISPONIBLES_PICKER = 8;
+const MESES_DISPONIBLES_PICKER = 11;
 
 // ===== INICIALIZACIÓN =====
 document.addEventListener('DOMContentLoaded', function() {
@@ -36,8 +43,8 @@ async function inicializarDashboard() {
         // 1. Inicializar eventos
         inicializarEventos();
 
-        // 2. Cargar semanas disponibles
-        await cargarSemanasDisponibles();
+        // 2. Cargar opciones del período activo
+        await cargarOpcionesPeriodo();
 
         // 3. Cargar establecimientos si el usuario tiene permisos
         await cargarEstablecimientos();
@@ -46,7 +53,7 @@ async function inicializarDashboard() {
         await cargarDashboard();
 
         // 5. Configurar estado inicial de botones
-        actualizarEstadoBotonesSemana();
+        actualizarEstadoBotonesPeriodo();
 
     } catch (error) {
     }
@@ -54,27 +61,27 @@ async function inicializarDashboard() {
 
 // ===== GESTIÓN DE EVENTOS =====
 function inicializarEventos() {
-    // Navegación de semanas
+    // Navegación del período
     const btnAnterior = document.getElementById('btn-anterior');
     const btnActual = document.getElementById('btn-actual');
     const btnSiguiente = document.getElementById('btn-siguiente');
     const btnRefresh = document.getElementById('btn-refresh');
+    const periodoTipoSelect = document.getElementById('periodo-tipo-select');
 
-    if (btnAnterior) btnAnterior.onclick = () => cambiarSemana(-1);
-    if (btnActual) btnActual.onclick = () => cambiarSemana(0);
-    if (btnSiguiente) btnSiguiente.onclick = () => cambiarSemana(1);
+    if (btnAnterior) btnAnterior.onclick = () => cambiarPeriodoNavegacion(-1);
+    if (btnActual) btnActual.onclick = () => cambiarPeriodoNavegacion(0);
+    if (btnSiguiente) btnSiguiente.onclick = () => cambiarPeriodoNavegacion(1);
     if (btnRefresh) btnRefresh.onclick = () => cargarDashboard();
 
-    // Selector de semana
-    const semanaSelect = document.getElementById('semana-select');
-    if (semanaSelect) {
-        semanaSelect.onchange = function() {
-            const selectedValue = parseInt(this.value);
-            if (!isNaN(selectedValue)) {
-                currentWeekOffset = selectedValue;
-                actualizarEstadoBotonesSemana();
-                cargarDashboard();
-            }
+    if (periodoTipoSelect) {
+        periodoTipoSelect.onchange = async function() {
+            currentPeriodType = this.value === 'mensual' ? 'mensual' : 'semanal';
+            currentWeekOffset = 0;
+            currentMonthOffset = 0;
+            actualizarEtiquetasPeriodo();
+            await cargarOpcionesPeriodo();
+            actualizarEstadoBotonesPeriodo();
+            cargarDashboard();
         };
     }
 
@@ -110,106 +117,286 @@ async function cargarEstablecimientos() {
     }
 }
 
-// ===== NAVEGACIÓN DE SEMANAS =====
-function cambiarSemana(offset) {
-    if (offset === 0) {
-        // Ir a la semana actual
-        currentWeekOffset = 0;
+// ===== NAVEGACIÓN DE PERÍODOS =====
+function cambiarPeriodoNavegacion(offset) {
+    if (currentPeriodType === 'mensual') {
+        currentMonthOffset = offset === 0 ? 0 : currentMonthOffset + offset;
     } else {
-        // Navegar a semanas anteriores o siguientes
-        currentWeekOffset += offset;
+        currentWeekOffset = offset === 0 ? 0 : currentWeekOffset + offset;
     }
 
-    actualizarEstadoBotonesSemana();
+    actualizarEstadoBotonesPeriodo();
+    actualizarPickerPeriodo();
     cargarDashboard();
 }
 
-function actualizarEstadoBotonesSemana() {
+function actualizarEstadoBotonesPeriodo() {
     const btnAnterior = document.getElementById('btn-anterior');
     const btnActual = document.getElementById('btn-actual');
     const btnSiguiente = document.getElementById('btn-siguiente');
-    const semanaSelect = document.getElementById('semana-select');
+    const offsetActual = currentPeriodType === 'mensual' ? currentMonthOffset : currentWeekOffset;
 
     if (btnSiguiente) {
-        if (currentWeekOffset >= 0) {
-            // Semana actual o futuras - deshabilitar siguiente
+        if (offsetActual >= 0) {
             btnSiguiente.disabled = true;
             btnSiguiente.classList.add('opacity-50', 'cursor-not-allowed');
         } else {
-            // Semanas pasadas - habilitar siguiente
             btnSiguiente.disabled = false;
             btnSiguiente.classList.remove('opacity-50', 'cursor-not-allowed');
         }
     }
 
     if (btnActual) {
-        if (currentWeekOffset === 0) {
-            // Estamos en la semana actual - destacar el botón
+        if (offsetActual === 0) {
             btnActual.classList.add('bg-green-600', 'shadow-lg');
             btnActual.classList.remove('bg-green-500', 'hover:bg-green-600');
         } else {
-            // No estamos en la semana actual - estado normal
             btnActual.classList.add('bg-green-500', 'hover:bg-green-600');
             btnActual.classList.remove('bg-green-600', 'shadow-lg');
         }
     }
+}
 
-    // Actualizar selector de semana
-    if (semanaSelect) {
-        semanaSelect.value = currentWeekOffset;
+function actualizarEtiquetasPeriodo() {
+    const subtitle = document.getElementById('dashboard-subtitle');
+    const rangoLabel = document.getElementById('periodo-rango-label');
+    const selectPeriodo = document.getElementById('periodo-tipo-select');
+
+    if (selectPeriodo) {
+        selectPeriodo.value = currentPeriodType;
     }
-}// ===== CARGA DE SEMANAS DISPONIBLES =====
-async function cargarSemanasDisponibles() {
-    const select = document.getElementById('semana-select');
-    if (!select) return;
 
-    try {
-        // Cargar semanas disponibles (últimas 12 semanas)
-        const semanas = [];
-        const hoy = new Date();
+    if (subtitle) {
+        subtitle.textContent = currentPeriodType === 'mensual' ? 'Consolidado Mensual' : 'Plan Semanal';
+    }
 
-        for (let i = -8; i <= 0; i++) {
-            const fecha = new Date(hoy);
-            fecha.setDate(fecha.getDate() + (i * 7));
+    if (rangoLabel) {
+        rangoLabel.textContent = currentPeriodType === 'mensual' ? 'Mes' : 'Semana';
+    }
+}
 
-            // Obtener el lunes de esa semana
-            const diaSemana = fecha.getDay();
-            const diff = fecha.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
-            const lunes = new Date(fecha.setDate(diff));
+function sumarMeses(fechaBase, offset) {
+    return new Date(fechaBase.getFullYear(), fechaBase.getMonth() + offset, 1);
+}
 
-            // Obtener el domingo de esa semana
-            const domingo = new Date(lunes);
-            domingo.setDate(domingo.getDate() + 6);
+function normalizarFecha(fecha) {
+    return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+}
 
-            const formatoFecha = (fecha) => {
-                const dia = fecha.getDate().toString().padStart(2, '0');
-                const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
-                return `${dia}/${mes}`;
-            };
+function sumarDias(fechaBase, dias) {
+    const fecha = new Date(fechaBase);
+    fecha.setDate(fecha.getDate() + dias);
+    return normalizarFecha(fecha);
+}
 
-            const etiqueta = `Semana ${formatoFecha(lunes)} - ${formatoFecha(domingo)}`;
-            semanas.push({
-                offset: i,
-                label: etiqueta,
-                value: i
-            });
+function obtenerInicioSemana(fecha) {
+    const base = normalizarFecha(fecha);
+    const diaSemana = base.getDay();
+    const diff = diaSemana === 0 ? -6 : 1 - diaSemana;
+    base.setDate(base.getDate() + diff);
+    return normalizarFecha(base);
+}
+
+function obtenerFinSemana(fecha) {
+    const fin = obtenerInicioSemana(fecha);
+    fin.setDate(fin.getDate() + 6);
+    return normalizarFecha(fin);
+}
+
+function obtenerInicioMes(fecha) {
+    return new Date(fecha.getFullYear(), fecha.getMonth(), 1);
+}
+
+function obtenerFinMes(fecha) {
+    return new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0);
+}
+
+function calcularDiferenciaSemanas(fechaBase, fechaObjetivo) {
+    const inicioBase = obtenerInicioSemana(fechaBase);
+    const inicioObjetivo = obtenerInicioSemana(fechaObjetivo);
+    const milisegundosSemana = 7 * 24 * 60 * 60 * 1000;
+    return Math.round((inicioObjetivo - inicioBase) / milisegundosSemana);
+}
+
+function calcularDiferenciaMeses(fechaBase, fechaObjetivo) {
+    const inicioBase = obtenerInicioMes(fechaBase);
+    const inicioObjetivo = obtenerInicioMes(fechaObjetivo);
+    return ((inicioObjetivo.getFullYear() - inicioBase.getFullYear()) * 12)
+        + (inicioObjetivo.getMonth() - inicioBase.getMonth());
+}
+
+function capitalizar(texto) {
+    if (!texto) return '';
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+function formatearMes(fecha) {
+    return capitalizar(new Intl.DateTimeFormat('es-PE', {
+        month: 'long',
+        year: 'numeric'
+    }).format(fecha));
+}
+
+function formatearFechaCorta(fecha) {
+    const dia = fecha.getDate().toString().padStart(2, '0');
+    const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+    return `${dia}/${mes}`;
+}
+
+async function cargarOpcionesPeriodo() {
+    actualizarEtiquetasPeriodo();
+    inicializarPickerPeriodo();
+}
+
+function obtenerFechaPeriodoActual() {
+    const hoy = normalizarFecha(new Date());
+
+    if (currentPeriodType === 'mensual') {
+        return obtenerInicioMes(sumarMeses(obtenerInicioMes(hoy), currentMonthOffset));
+    }
+
+    return obtenerInicioSemana(sumarDias(hoy, currentWeekOffset * 7));
+}
+
+function obtenerLimitesPickerPeriodo() {
+    const hoy = normalizarFecha(new Date());
+
+    if (currentPeriodType === 'mensual') {
+        return {
+            minDate: sumarMeses(obtenerInicioMes(hoy), -MESES_DISPONIBLES_PICKER),
+            maxDate: obtenerFinMes(hoy)
+        };
+    }
+
+    return {
+        minDate: sumarDias(obtenerInicioSemana(hoy), -(SEMANAS_DISPONIBLES_PICKER * 7)),
+        maxDate: obtenerFinSemana(hoy)
+    };
+}
+
+function obtenerTextoPeriodoPicker(fecha) {
+    if (!fecha) {
+        return '';
+    }
+
+    if (currentPeriodType === 'mensual') {
+        return formatearMes(obtenerInicioMes(fecha));
+    }
+
+    const inicioSemana = obtenerInicioSemana(fecha);
+    const finSemana = obtenerFinSemana(fecha);
+    return `Semana ${formatearFechaCorta(inicioSemana)} - ${formatearFechaCorta(finSemana)}`;
+}
+
+function actualizarTextoPickerPeriodo(instancia = periodoPicker) {
+    if (!instancia) {
+        return;
+    }
+
+    const campoVisible = instancia.altInput || instancia.input;
+    if (!campoVisible) {
+        return;
+    }
+
+    campoVisible.readOnly = true;
+    campoVisible.placeholder = currentPeriodType === 'mensual' ? 'Selecciona un mes' : 'Selecciona una semana';
+
+    if (instancia.selectedDates && instancia.selectedDates.length > 0) {
+        campoVisible.value = obtenerTextoPeriodoPicker(instancia.selectedDates[0]);
+    }
+}
+
+function destruirPickerPeriodo() {
+    if (periodoPicker) {
+        periodoPicker.destroy();
+        periodoPicker = null;
+    }
+}
+
+function manejarCambioPickerPeriodo(fechasSeleccionadas, instancia = periodoPicker) {
+    if (sincronizandoPeriodoPicker || !fechasSeleccionadas || fechasSeleccionadas.length === 0) {
+        return;
+    }
+
+    const fechaSeleccionada = normalizarFecha(fechasSeleccionadas[0]);
+
+    if (currentPeriodType === 'mensual') {
+        currentMonthOffset = calcularDiferenciaMeses(new Date(), fechaSeleccionada);
+    } else {
+        currentWeekOffset = calcularDiferenciaSemanas(new Date(), fechaSeleccionada);
+    }
+
+    actualizarEstadoBotonesPeriodo();
+    actualizarTextoPickerPeriodo(instancia);
+    cargarDashboard();
+}
+
+function inicializarPickerPeriodo() {
+    const input = document.getElementById('periodo-rango-picker');
+    if (!input) {
+        return;
+    }
+
+    if (typeof flatpickr === 'undefined') {
+        input.value = obtenerTextoPeriodoPicker(obtenerFechaPeriodoActual());
+        return;
+    }
+
+    destruirPickerPeriodo();
+
+    if (flatpickr.l10ns && flatpickr.l10ns.es) {
+        flatpickr.localize(flatpickr.l10ns.es);
+    }
+
+    const limites = obtenerLimitesPickerPeriodo();
+    const esMensual = currentPeriodType === 'mensual';
+    const plugins = [];
+
+    if (esMensual && typeof monthSelectPlugin === 'function') {
+        plugins.push(new monthSelectPlugin({
+            shorthand: false,
+            dateFormat: 'Y-m-d',
+            altFormat: 'F Y'
+        }));
+    }
+
+    periodoPicker = flatpickr(input, {
+        locale: flatpickr.l10ns?.es,
+        disableMobile: true,
+        allowInput: false,
+        clickOpens: true,
+        dateFormat: 'Y-m-d',
+        altInput: true,
+        altInputClass: 'w-full px-4 py-3 pr-11 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-white',
+        defaultDate: obtenerFechaPeriodoActual(),
+        minDate: limites.minDate,
+        maxDate: limites.maxDate,
+        plugins,
+        onReady: function(_selectedDates, _dateStr, instance) {
+            actualizarTextoPickerPeriodo(instance);
+        },
+        onChange: function(selectedDates, _dateStr, instance) {
+            manejarCambioPickerPeriodo(selectedDates, instance);
         }
+    });
 
-        // Limpiar y poblar el select
-        select.innerHTML = '<option value="">Cargando semanas...</option>';
+    actualizarPickerPeriodo();
+}
 
-        semanas.forEach(semana => {
-            const option = document.createElement('option');
-            option.value = semana.value;
-            option.textContent = semana.label;
-            if (semana.value === currentWeekOffset) {
-                option.selected = true;
-            }
-            select.appendChild(option);
-        });
-
-    } catch (error) {
+function actualizarPickerPeriodo() {
+    if (!periodoPicker) {
+        return;
     }
+
+    sincronizandoPeriodoPicker = true;
+
+    const limites = obtenerLimitesPickerPeriodo();
+    periodoPicker.set('minDate', limites.minDate);
+    periodoPicker.set('maxDate', limites.maxDate);
+    periodoPicker.setDate(obtenerFechaPeriodoActual(), false);
+    actualizarTextoPickerPeriodo(periodoPicker);
+
+    sincronizandoPeriodoPicker = false;
 }
 
 // ===== CAMBIO DE VISTA =====
@@ -269,8 +456,13 @@ async function cargarDashboard() {
         // Construir URL con parámetros
         let url = '/api/dashboard/plan-semanal';
         const params = new URLSearchParams();
+        params.append('periodo', currentPeriodType);
         
-        if (currentWeekOffset !== 0) {
+        if (currentPeriodType === 'mensual' && currentMonthOffset !== 0) {
+            params.append('mes_offset', currentMonthOffset);
+        }
+
+        if (currentPeriodType === 'semanal' && currentWeekOffset !== 0) {
             params.append('semana_offset', currentWeekOffset);
         }
         
@@ -291,7 +483,7 @@ async function cargarDashboard() {
         dashboardData = await response.json();
         
         // Actualizar interfaz
-        actualizarInfoSemana(dashboardData.semana);
+        actualizarInfoPeriodo(dashboardData.periodo || dashboardData.semana);
         actualizarResumenGeneral(dashboardData.resumen_general);
         actualizarVistaEstablecimientos(dashboardData.establecimientos);
         
@@ -304,21 +496,28 @@ async function cargarDashboard() {
 }
 
 // ===== ACTUALIZACIÓN DE INTERFAZ =====
-function actualizarInfoSemana(semana) {
-    const fechaInicio = document.getElementById('fecha-inicio');
-    const fechaFin = document.getElementById('fecha-fin');
-    
-    if (fechaInicio && fechaFin && semana) {
-        const inicio = semana.inicio.split('T')[0];
-        const fin = semana.fin.split('T')[0];
-        
-        const formatearFecha = (fechaStr) => {
-            const [year, month, day] = fechaStr.split('-');
-            return `${day}/${month}/${year}`;
-        };
-        
-        fechaInicio.textContent = formatearFecha(inicio);
-        fechaFin.textContent = formatearFecha(fin);
+function actualizarInfoPeriodo(periodo) {
+    const descripcion = document.getElementById('periodo-descripcion');
+    const rango = document.getElementById('periodo-rango-texto');
+
+    if (!periodo) return;
+
+    const inicio = periodo.inicio ? periodo.inicio.split('T')[0] : null;
+    const fin = periodo.fin ? periodo.fin.split('T')[0] : null;
+    const formatearFecha = (fechaStr) => {
+        if (!fechaStr) return '';
+        const [year, month, day] = fechaStr.split('-');
+        return `${day}/${month}/${year}`;
+    };
+
+    if (descripcion) {
+        descripcion.textContent = periodo.titulo || (periodo.tipo === 'mensual' ? 'Consolidado mensual' : 'Semana seleccionada');
+    }
+
+    if (rango) {
+        rango.textContent = inicio && fin
+            ? `${formatearFecha(inicio)} al ${formatearFecha(fin)}`
+            : 'Sin rango disponible';
     }
 }
 
@@ -388,6 +587,8 @@ function actualizarResumenGeneral(resumen) {
 function actualizarVistaEstablecimientos(establecimientos) {
     const container = document.getElementById('vista-tarjetas');
     if (!container || !establecimientos) return;
+    const esMensual = dashboardData?.periodo?.tipo === 'mensual';
+    const etiquetaPendiente = esMensual ? 'días restantes en el mes' : 'días restantes en la semana';
     
     const sanitizeTextSafe = (text) => {
         if (typeof sanitizeText === 'function') {
@@ -413,7 +614,7 @@ function actualizarVistaEstablecimientos(establecimientos) {
             <div class="space-y-3">
                 <div class="flex justify-between">
                     <span class="text-slate-600 dark:text-slate-400">Inspecciones realizadas:</span>
-                    <span class="font-semibold text-slate-800 dark:text-white">${est.inspecciones_realizadas}/${est.meta_semanal}</span>
+                    <span class="font-semibold text-slate-800 dark:text-white">${est.inspecciones_realizadas}/${est.meta_periodo ?? est.meta_semanal}</span>
                 </div>
                 
                 <div class="flex justify-between">
@@ -432,7 +633,7 @@ function actualizarVistaEstablecimientos(establecimientos) {
                 
                 ${est.dias_restantes > 0 ? `
                 <div class="text-sm text-slate-500 dark:text-slate-400">
-                    ${est.dias_restantes} días restantes en la semana
+                    ${est.dias_restantes} ${etiquetaPendiente}
                 </div>
                 ` : ''}
             </div>
@@ -547,11 +748,7 @@ if (typeof window !== 'undefined') {
             }
         }
 
-        const semanaSelect = document.getElementById('semana-select');
-        if (semanaSelect) {
-            for (let i = 0; i < semanaSelect.children.length; i++) {
-                const option = semanaSelect.children[i];
-            }
+        if (periodoPicker && periodoPicker.selectedDates && periodoPicker.selectedDates.length > 0) {
         }
     };
     

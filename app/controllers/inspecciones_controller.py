@@ -3670,88 +3670,87 @@ class InspeccionesController:
     @staticmethod
     def obtener_plan_semanal():
         """
-        Obtener estadísticas del plan semanal de inspecciones por establecimiento
+        Obtener estadísticas del dashboard por establecimiento.
         SEGURIDAD: Control de permisos por rol
         ZONA HORARIA: Lima, Perú (UTC-5)
-        SEMANA: Lunes a Domingo
+        PERÍODOS:
+        - semanal: Lunes a Domingo
+        - mensual: consolidado del mes calendario
         """
         try:
-
             user_id = session.get("user_id")
             user_role = session.get("user_role")
-
-
-            # CONTROL DE PERMISOS: Verificar rol autorizado
             if user_role not in ["Administrador", "Inspector", "Encargado", "Jefe de Establecimiento"]:
                 return jsonify({"error": "No autorizado"}), 403
 
-            # Obtener parámetros de filtro
-            from flask import request
+            periodo_tipo = (request.args.get("periodo", "semanal", type=str) or "semanal").lower()
+            if periodo_tipo not in ["semanal", "mensual"]:
+                periodo_tipo = "semanal"
 
-            semana_offset = request.args.get(
-                "semana_offset", 0, type=int
-            )  # 0=actual, -1=anterior, etc
+            semana_offset = request.args.get("semana_offset", 0, type=int)
+            mes_offset = request.args.get("mes_offset", 0, type=int)
             establecimiento_filtro = request.args.get("establecimiento_id", type=int)
 
-            # Importar modelos necesarios
-            from app.models.Usuario_models import Usuario
             from app.models.Inspecciones_models import EncargadoEstablecimiento
-            import pytz
 
-            # ZONA HORARIA LIMA, PERÚ
             lima_tz = pytz.timezone("America/Lima")
-
-            # Obtener fecha actual en Lima
             utc_now = datetime.utcnow().replace(tzinfo=pytz.utc)
             lima_now = utc_now.astimezone(lima_tz)
             hoy = lima_now.date()
 
+            if periodo_tipo == "mensual":
+                inicio_periodo = InspeccionesController._sumar_meses_fecha(
+                    date(hoy.year, hoy.month, 1), mes_offset
+                )
+                siguiente_mes = InspeccionesController._sumar_meses_fecha(inicio_periodo, 1)
+                fin_periodo = siguiente_mes - timedelta(days=1)
+                periodo_payload = {
+                    "tipo": "mensual",
+                    "inicio": inicio_periodo.isoformat(),
+                    "fin": fin_periodo.isoformat(),
+                    "offset": mes_offset,
+                    "es_actual": mes_offset == 0,
+                    "titulo": f"Consolidado mensual {inicio_periodo.strftime('%m/%Y')}",
+                }
+            else:
+                dias_hasta_lunes = hoy.weekday()
+                inicio_semana_actual = hoy - timedelta(days=dias_hasta_lunes)
+                inicio_periodo = inicio_semana_actual + timedelta(weeks=semana_offset)
+                fin_periodo = inicio_periodo + timedelta(days=6)
+                periodo_payload = {
+                    "tipo": "semanal",
+                    "inicio": inicio_periodo.isoformat(),
+                    "fin": fin_periodo.isoformat(),
+                    "offset": semana_offset,
+                    "es_actual": semana_offset == 0,
+                    "titulo": f"Semana del {inicio_periodo.strftime('%d/%m/%Y')} al {fin_periodo.strftime('%d/%m/%Y')}",
+                }
 
-            # Calcular semana (LUNES A DOMINGO) con offset para navegar semanas
-            # weekday(): 0=Lunes, 1=Martes, ..., 6=Domingo
-            dias_hasta_lunes = hoy.weekday()  # Días desde el lunes actual
-            inicio_semana_actual = hoy - timedelta(
-                days=dias_hasta_lunes
-            )  # Lunes actual
-            inicio_semana = inicio_semana_actual + timedelta(weeks=semana_offset)
-            fin_semana = inicio_semana + timedelta(days=6)  # Domingo
-
-
-            # FILTRADO POR ROL: Determinar establecimientos visibles
             establecimientos_permitidos = []
 
             if user_role == "Encargado":
-                # ENCARGADO: Solo su establecimiento asignado
                 encargos = EncargadoEstablecimiento.query.filter_by(
                     usuario_id=user_id, activo=True
                 ).all()
-
                 establecimientos_permitidos = [
                     encargo.establecimiento_id for encargo in encargos
                 ]
 
             elif user_role == "Jefe de Establecimiento":
-                # JEFE DE ESTABLECIMIENTO: Solo su establecimiento asignado
                 from sqlalchemy import text
-                
                 jefe_query = db.session.execute(text("""
                     SELECT establecimiento_id FROM jefes_establecimientos 
                     WHERE usuario_id = :user_id AND activo = 1
                 """), {'user_id': user_id}).fetchone()
-                
+
                 if jefe_query:
                     establecimientos_permitidos = [jefe_query[0]]
-                else:
-                    establecimientos_permitidos = []
-
-            elif user_role in ["Inspector", "Administrador"]:
-                # INSPECTOR/ADMIN: Todos los establecimientos
+            else:
                 establecimientos_query = Establecimiento.query.filter_by(
                     activo=True
                 ).all()
                 establecimientos_permitidos = [est.id for est in establecimientos_query]
 
-            # FILTRO ADICIONAL: Por establecimiento específico si se solicita
             if (
                 establecimiento_filtro
                 and establecimiento_filtro in establecimientos_permitidos
@@ -3761,127 +3760,146 @@ class InspeccionesController:
             if not establecimientos_permitidos:
                 return jsonify(
                     {
-                        "semana": {
-                            "inicio": inicio_semana.isoformat(),
-                            "fin": fin_semana.isoformat(),
-                        },
+                        "periodo": periodo_payload,
                         "establecimientos": [],
                         "resumen_general": {
                             "total_inspecciones": 0,
                             "promedio_cumplimiento": 0,
+                            "total_metas": 0,
+                            "establecimientos_completos": 0,
+                            "establecimientos_pendientes": 0,
+                        },
+                        "chart_data": {
+                            "labels": [],
+                            "realizadas": [],
+                            "pendientes": [],
+                            "promedios": [],
+                            "cumplimiento": [],
                         },
                     }
                 )
 
-            # Consultar inspecciones COMPLETADAS de la semana consultada
-            inspecciones_semana = (
+            inspecciones_periodo = (
                 db.session.query(Inspeccion)
                 .filter(
-                    func.date(Inspeccion.fecha) >= inicio_semana,
-                    func.date(Inspeccion.fecha) <= fin_semana,
+                    func.date(Inspeccion.fecha) >= inicio_periodo,
+                    func.date(Inspeccion.fecha) <= fin_periodo,
                     Inspeccion.establecimiento_id.in_(establecimientos_permitidos),
-                    Inspeccion.estado == 'completada'  # Solo contar inspecciones completadas
+                    Inspeccion.estado == "completada",
                 )
                 .all()
             )
 
-
-            # Agrupar por establecimiento
             estadisticas_por_establecimiento = {}
-
-            # Obtener información de establecimientos
             establecimientos = (
                 db.session.query(Establecimiento)
                 .filter(Establecimiento.id.in_(establecimientos_permitidos))
                 .all()
             )
 
+            meta_default = InspeccionesController._obtener_meta_semanal_default()
+            semanas_del_periodo = []
+            planes_por_semana = {}
+
+            if periodo_tipo == "mensual":
+                semanas_del_periodo = InspeccionesController._obtener_semanas_en_periodo(
+                    inicio_periodo, fin_periodo
+                )
+                if semanas_del_periodo:
+                    semanas_ids = [sem["semana"] for sem in semanas_del_periodo]
+                    anos_ids = [sem["ano"] for sem in semanas_del_periodo]
+                    planes = PlanSemanal.query.filter(
+                        PlanSemanal.establecimiento_id.in_(establecimientos_permitidos),
+                        PlanSemanal.semana.in_(semanas_ids),
+                        PlanSemanal.ano.in_(anos_ids),
+                    ).all()
+                    planes_por_semana = {
+                        (plan.establecimiento_id, plan.semana, plan.ano): plan
+                        for plan in planes
+                    }
+
+            cambios_plan_semanal = False
+
             for establecimiento in establecimientos:
-                # SEGURIDAD: Sanitizar nombre del establecimiento
                 nombre_sanitizado = (
                     establecimiento.nombre[:150]
                     if establecimiento.nombre
                     else "Sin nombre"
                 )
 
-                # Contar inspecciones del establecimiento esta semana
                 inspecciones_establecimiento = [
-                    insp
-                    for insp in inspecciones_semana
-                    if insp.establecimiento_id == establecimiento.id
+                    insp for insp in inspecciones_periodo if insp.establecimiento_id == establecimiento.id
                 ]
-
-                # ✅ ORM: Obtener o crear plan semanal para el establecimiento
-                # Usar la semana consultada (no siempre la actual)
-                semana_consultada = inicio_semana.isocalendar()[1]
-                ano_consultado = inicio_semana.year
-                
-                plan_semanal = InspeccionesController.obtener_o_crear_plan_semanal(
-                    establecimiento.id, semana_consultada, ano_consultado
-                )
-                
-                # ✅ CONFIGURACIÓN POR PLAN: Cada plan semanal mantiene su meta original
-                # NO actualizar planes existentes para preservar historial
-                # Solo usar la meta actual para nuevos planes semanales
-                meta_semanal = plan_semanal.evaluaciones_meta
-
-                # ✅ ORM: Actualizar evaluaciones realizadas en el plan
                 total_inspecciones = len(inspecciones_establecimiento)
-                plan_semanal.evaluaciones_realizadas = total_inspecciones
-                db.session.commit()
 
-                # Calcular estadísticas
-                total_inspecciones = len(inspecciones_establecimiento)
-                porcentaje_cumplimiento_meta = (
-                    min(100, (total_inspecciones / meta_semanal) * 100)
-                    if meta_semanal > 0
-                    else 0
-                )
-
-                # Promedio de calificaciones
                 calificaciones = [
                     insp.porcentaje_cumplimiento
                     for insp in inspecciones_establecimiento
                     if insp.porcentaje_cumplimiento
                 ]
+
                 promedio_calificacion = (
                     sum(calificaciones) / len(calificaciones) if calificaciones else 0
+                )
+
+                if periodo_tipo == "mensual":
+                    meta_periodo = 0
+                    for semana in semanas_del_periodo:
+                        plan = planes_por_semana.get(
+                            (establecimiento.id, semana["semana"], semana["ano"])
+                        )
+                        meta_periodo += int(plan.evaluaciones_meta) if plan else meta_default
+                    dias_restantes = (
+                        max(0, (fin_periodo - hoy).days + 1)
+                        if inicio_periodo <= hoy <= fin_periodo
+                        else 0
+                    )
+                else:
+                    semana_consultada = inicio_periodo.isocalendar()[1]
+                    ano_consultado = inicio_periodo.year
+                    plan_semanal = InspeccionesController.obtener_o_crear_plan_semanal(
+                        establecimiento.id, semana_consultada, ano_consultado
+                    )
+                    meta_periodo = int(plan_semanal.evaluaciones_meta)
+                    if plan_semanal.evaluaciones_realizadas != total_inspecciones:
+                        plan_semanal.evaluaciones_realizadas = total_inspecciones
+                        cambios_plan_semanal = True
+                    dias_restantes = max(0, (fin_periodo - hoy).days + 1)
+
+                porcentaje_cumplimiento_meta = (
+                    min(100, (total_inspecciones / meta_periodo) * 100)
+                    if meta_periodo > 0
+                    else 0
                 )
 
                 estadisticas_por_establecimiento[establecimiento.id] = {
                     "establecimiento_id": int(establecimiento.id),
                     "nombre": nombre_sanitizado,
-                    "meta_semanal": int(meta_semanal),
+                    "meta_semanal": int(meta_periodo),
+                    "meta_periodo": int(meta_periodo),
                     "inspecciones_realizadas": int(total_inspecciones),
                     "inspecciones_pendientes": max(
-                        0, int(meta_semanal - total_inspecciones)
+                        0, int(meta_periodo - total_inspecciones)
                     ),
-                    "porcentaje_cumplimiento_meta": int(
-                        porcentaje_cumplimiento_meta
-                    ),  # Sin decimales
-                    "promedio_calificacion": int(
-                        promedio_calificacion
-                    ),  # Sin decimales
+                    "porcentaje_cumplimiento_meta": int(porcentaje_cumplimiento_meta),
+                    "promedio_calificacion": int(promedio_calificacion),
                     "estado": (
                         "completo"
-                        if total_inspecciones >= meta_semanal
+                        if total_inspecciones >= meta_periodo
                         else "pendiente"
                     ),
-                    "dias_restantes": max(0, (fin_semana - hoy).days + 1),
+                    "dias_restantes": dias_restantes,
                 }
 
-            # Resumen general
+            if cambios_plan_semanal:
+                db.session.commit()
+
             total_inspecciones_general = sum(
-                [
-                    est["inspecciones_realizadas"]
-                    for est in estadisticas_por_establecimiento.values()
-                ]
+                est["inspecciones_realizadas"]
+                for est in estadisticas_por_establecimiento.values()
             )
             total_metas = sum(
-                [
-                    est["meta_semanal"]
-                    for est in estadisticas_por_establecimiento.values()
-                ]
+                est["meta_periodo"] for est in estadisticas_por_establecimiento.values()
             )
             promedio_cumplimiento_general = (
                 int((total_inspecciones_general / total_metas) * 100)
@@ -3889,11 +3907,8 @@ class InspeccionesController:
                 else 0
             )
 
-            # Preparar datos para Chart.js
             chart_data = {
-                "labels": [
-                    est["nombre"] for est in estadisticas_por_establecimiento.values()
-                ],
+                "labels": [est["nombre"] for est in estadisticas_por_establecimiento.values()],
                 "realizadas": [
                     est["inspecciones_realizadas"]
                     for est in estadisticas_por_establecimiento.values()
@@ -3913,12 +3928,7 @@ class InspeccionesController:
             }
 
             resultado = {
-                "semana": {
-                    "inicio": inicio_semana.isoformat(),
-                    "fin": fin_semana.isoformat(),
-                    "offset": semana_offset,
-                    "es_actual": semana_offset == 0,
-                },
+                "periodo": periodo_payload,
                 "establecimientos": list(estadisticas_por_establecimiento.values()),
                 "resumen_general": {
                     "total_inspecciones": total_inspecciones_general,
@@ -3942,12 +3952,53 @@ class InspeccionesController:
                 "chart_data": chart_data,
             }
 
+            if periodo_tipo == "semanal":
+                resultado["semana"] = {
+                    "inicio": inicio_periodo.isoformat(),
+                    "fin": fin_periodo.isoformat(),
+                    "offset": semana_offset,
+                    "es_actual": semana_offset == 0,
+                }
+
             return jsonify(resultado)
 
         except Exception as e:
-            import traceback
+            logging.exception("Error obteniendo plan del dashboard: %s", str(e))
+            return jsonify({"error": "Error obteniendo plan del dashboard"}), 500
 
-            return jsonify({"error": "Error obteniendo plan semanal"}), 500
+    @staticmethod
+    def _obtener_meta_semanal_default():
+        try:
+            config_meta = ConfiguracionEvaluacion.query.filter_by(
+                clave="meta_semanal_default"
+            ).first()
+            return int(config_meta.valor) if config_meta else 3
+        except Exception:
+            return 3
+
+    @staticmethod
+    def _sumar_meses_fecha(fecha_base, offset_meses):
+        total_meses = (fecha_base.year * 12) + fecha_base.month - 1 + offset_meses
+        ano = total_meses // 12
+        mes = (total_meses % 12) + 1
+        return date(ano, mes, 1)
+
+    @staticmethod
+    def _obtener_semanas_en_periodo(fecha_inicio, fecha_fin):
+        semanas = []
+        inicio_semana = fecha_inicio - timedelta(days=fecha_inicio.weekday())
+
+        while inicio_semana <= fecha_fin:
+            fin_semana = inicio_semana + timedelta(days=6)
+            semanas.append({
+                "inicio": inicio_semana,
+                "fin": fin_semana,
+                "semana": inicio_semana.isocalendar()[1],
+                "ano": inicio_semana.year,
+            })
+            inicio_semana += timedelta(days=7)
+
+        return semanas
 
     @staticmethod
     def obtener_configuracion_plan():
