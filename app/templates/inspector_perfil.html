@@ -68,37 +68,32 @@
                 </div>
             </div>
 
-            <!-- Formulario para Subir Nueva Firma -->
+            <!-- Formulario para Dibujar Nueva Firma -->
             <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                    {% if usuario.ruta_firma %}Actualizar Firma{% else %}Subir Firma{% endif %}
+                    {% if usuario.ruta_firma %}Actualizar Firma{% else %}Registrar Firma{% endif %}
                 </h3>
                 
-                <form id="formSubirFirma" enctype="multipart/form-data" class="space-y-4">
-                    <!-- Input File -->
+                <form id="formSubirFirma" class="space-y-4">
                     <div>
-                        <label for="inputFirma" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Seleccionar Imagen de Firma
+                        <label for="canvasFirmaInspector" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Firme dentro del recuadro
                         </label>
-                        <input 
-                            type="file" 
-                            id="inputFirma" 
-                            name="firma" 
-                            accept="image/png,image/jpeg,image/jpg" 
-                            class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
+                        <div class="rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700 bg-white shadow-inner overflow-hidden">
+                            <canvas id="canvasFirmaInspector" class="w-full h-48 block touch-none"></canvas>
+                        </div>
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Formatos permitidos: PNG, JPG, JPEG. Tamaño máximo: 2MB
+                            Puede firmar con mouse, touchpad o dedo desde el teléfono. La firma se guardará como imagen PNG.
                         </p>
                     </div>
 
-                    <!-- Preview -->
-                    <div id="preview-container" class="hidden">
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Vista Previa
-                        </label>
-                        <div class="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800 flex items-center justify-center min-h-[150px]">
-                            <img id="preview-imagen" src="" alt="Vista previa" class="max-h-[200px] object-contain">
-                        </div>
+                    <div class="flex justify-start">
+                        <button
+                            type="button"
+                            onclick="limpiarFirmaInspector()"
+                            class="px-4 py-2 text-sm font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 rounded-lg transition-colors duration-200">
+                            Limpiar firma
+                        </button>
                     </div>
 
                     <!-- Botones -->
@@ -147,45 +142,56 @@
 
 {% block scripts %}
 <script>
+let firmaInspectorPad = null;
+
 document.addEventListener('DOMContentLoaded', function() {
-    
-    // Preview de la imagen al seleccionar
-    document.getElementById('inputFirma').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            // Validar tamaño (2MB)
-            if (file.size > 2 * 1024 * 1024) {
-                mostrarNotificacion('El archivo es demasiado grande. Tamaño máximo: 2MB', 'error');
-                this.value = '';
-                return;
-            }
-
-            // Validar tipo
-            if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
-                mostrarNotificacion('Formato no válido. Use PNG, JPG o JPEG', 'error');
-                this.value = '';
-                return;
-            }
-
-            // Mostrar preview
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('preview-imagen').src = e.target.result;
-                document.getElementById('preview-container').classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
-        }
-    });
+    inicializarCanvasFirmaInspector();
 });
+
+function ajustarCanvasFirma(canvas, signaturePad) {
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const firmaActual = signaturePad && !signaturePad.isEmpty() ? signaturePad.toData() : null;
+
+    canvas.width = canvas.offsetWidth * ratio;
+    canvas.height = canvas.offsetHeight * ratio;
+    canvas.getContext('2d').scale(ratio, ratio);
+
+    if (firmaActual) {
+        signaturePad.fromData(firmaActual);
+    }
+}
+
+function inicializarCanvasFirmaInspector() {
+    const canvas = document.getElementById('canvasFirmaInspector');
+    if (!canvas) return;
+
+    if (typeof SignaturePad === 'undefined') {
+        mostrarNotificacion('No se pudo cargar el componente de firma. Recargue la página.', 'error');
+        return;
+    }
+
+    firmaInspectorPad = new SignaturePad(canvas, {
+        minWidth: 1.2,
+        maxWidth: 2.8,
+        penColor: 'rgb(17, 24, 39)',
+        backgroundColor: 'rgba(255, 255, 255, 0)'
+    });
+
+    ajustarCanvasFirma(canvas, firmaInspectorPad);
+    window.addEventListener('resize', () => ajustarCanvasFirma(canvas, firmaInspectorPad));
+}
+
+function limpiarFirmaInspector() {
+    if (firmaInspectorPad) {
+        firmaInspectorPad.clear();
+    }
+}
 
 // Función para guardar firma
 async function guardarFirma() {
 
-    const fileInput = document.getElementById('inputFirma');
-    const file = fileInput.files[0];
-
-    if (!file) {
-        mostrarNotificacion('Por favor, seleccione una imagen', 'error');
+    if (!firmaInspectorPad || firmaInspectorPad.isEmpty()) {
+        mostrarNotificacion('Por favor, dibuje su firma antes de guardarla', 'error');
         return;
     }
 
@@ -199,7 +205,7 @@ async function guardarFirma() {
 
         // Crear FormData
         const formData = new FormData();
-        formData.append('firma', file);
+        formData.append('firma_data', firmaInspectorPad.toDataURL('image/png'));
 
         // Enviar petición
         const response = await fetch('/inspector/guardar-firma', {

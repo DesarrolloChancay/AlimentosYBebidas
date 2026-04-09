@@ -4,8 +4,10 @@ from app.models.Usuario_models import Usuario, Rol
 from app.models.Inspecciones_models import Establecimiento, JefeEstablecimiento, EncargadoEstablecimiento, Inspeccion, FirmaEncargadoPorJefe
 from app.extensions import db
 from app.utils.auth_decorators import login_required
+from app.utils.signature_utils import delete_static_file, save_signature_data_url, sanitize_signature_segment
 from datetime import datetime, timedelta
 import base64
+import logging
 import os
 from io import BytesIO
 import uuid
@@ -190,6 +192,8 @@ def agregar_encargado():
 
             if encargado_existente:
                 return jsonify({'success': False, 'message': 'Este usuario ya es encargado de este establecimiento'}), 400
+        elif email and Usuario.query.filter_by(correo=email).first():
+            return jsonify({'success': False, 'message': 'Este correo ya está registrado'}), 400
         else:
             # Crear nuevo usuario con contraseña temporal robusta
             from app.utils.auth_utils import generar_contrasena_temporal
@@ -385,49 +389,66 @@ def eliminar_encargado():
 @login_required
 @jefe_required
 def guardar_firma():
-    """Guardar firma digital del jefe como archivo de imagen"""
+    """Guardar firma digital del jefe como imagen dibujada o archivo."""
     try:
-        # Verificar que se envió un archivo
-        if 'archivo' not in request.files:
-            return jsonify({'success': False, 'message': 'No se encontró archivo de firma'}), 400
+        user_id = session['user_id']
+        user = Usuario.query.get(user_id)
+        if not user:
+            return jsonify({'success': False, 'message': 'Usuario no encontrado'}), 404
 
-        archivo = request.files['archivo']
-        if archivo.filename == '':
-            return jsonify({'success': False, 'message': 'No se seleccionó archivo'}), 400
+        jefe_info = JefeEstablecimiento.query\
+            .options(joinedload(JefeEstablecimiento.establecimiento))\
+            .filter(
+                JefeEstablecimiento.usuario_id == user_id,
+                JefeEstablecimiento.activo == True
+            ).first()
 
-        # Obtener datos adicionales del formulario
+        if not jefe_info:
+            return jsonify({'success': False, 'message': 'Jefe no encontrado'}), 404
+
+        json_data = request.get_json(silent=True) if request.is_json else {}
+        firma_data = request.form.get('firma_data') or (json_data or {}).get('firma_data')
         tipo_firma = request.form.get('tipo', 'jefe')
         motivo = request.form.get('motivo', '')
-        establecimiento_nombre = request.form.get('establecimiento_nombre', '')
-
-        # Validar tipo de archivo
-        extensiones_permitidas = {'png', 'jpg', 'jpeg', 'gif'}
-        extension = archivo.filename.rsplit(
-            '.', 1)[1].lower() if '.' in archivo.filename else ''
-
-        if extension not in extensiones_permitidas:
-            return jsonify({'success': False, 'message': 'Formato de archivo no permitido. Use PNG, JPG o JPEG'}), 400
-
-        # Crear directorio basado en el nombre del establecimiento
-        nombre_limpio = "".join(
-            c for c in establecimiento_nombre if c.isalnum() or c in (' ', '-', '_')).rstrip()
-        nombre_limpio = nombre_limpio.replace(' ', '_')
+        establecimiento_nombre = jefe_info.establecimiento.nombre
+        nombre_limpio = sanitize_signature_segment(establecimiento_nombre, 'establecimiento')
 
         directorio_firmas = os.path.join(
             'app', 'static', 'img', 'firmas', nombre_limpio)
         os.makedirs(directorio_firmas, exist_ok=True)
 
-        # Generar nombre único para la firma
-        user_id = session['user_id']
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        nombre_archivo = f"firma_{tipo_firma}_{user_id}_{timestamp}.{extension}"
-        ruta_archivo = os.path.join(directorio_firmas, nombre_archivo)
+        if firma_data:
+            try:
+                ruta_relativa = save_signature_data_url(
+                    firma_data,
+                    directory_segments=[nombre_limpio],
+                    filename_prefix=f"firma_{tipo_firma}",
+                    subject_id=user_id
+                )
+            except ValueError as exc:
+                return jsonify({'success': False, 'message': str(exc)}), 400
+        else:
+            archivo = request.files.get('archivo') or request.files.get('firma')
+            if not archivo:
+                return jsonify({'success': False, 'message': 'No se encontró firma'}), 400
 
-        # Guardar archivo
-        archivo.save(ruta_archivo)
+            if archivo.filename == '':
+                return jsonify({'success': False, 'message': 'No se seleccionó archivo'}), 400
 
-        # Ruta relativa para guardar en base de datos
-        ruta_relativa = f"img/firmas/{nombre_limpio}/{nombre_archivo}"
+            extensiones_permitidas = {'png', 'jpg', 'jpeg', 'gif'}
+            extension = archivo.filename.rsplit(
+                '.', 1)[1].lower() if '.' in archivo.filename else ''
+
+            if extension not in extensiones_permitidas:
+                return jsonify({'success': False, 'message': 'Formato de archivo no permitido. Use PNG, JPG o JPEG'}), 400
+
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            nombre_archivo = f"firma_{tipo_firma}_{user_id}_{timestamp}.{extension}"
+            ruta_archivo = os.path.join(directorio_firmas, nombre_archivo)
+
+            archivo.save(ruta_archivo)
+
+            ruta_relativa = f"img/firmas/{nombre_limpio}/{nombre_archivo}"
 
         # Actualizar base de datos con la ruta de la firma
         db.session.execute(text("""
@@ -441,6 +462,7 @@ def guardar_firma():
             'motivo': motivo,
             'user_id': user_id
         })
+        user.ruta_firma = ruta_relativa
 
         db.session.commit()
 
@@ -762,18 +784,14 @@ def subir_firma():
         if not encargado_id:
             return jsonify({'success': False, 'message': 'ID de encargado requerido'}), 400
 
-        # Verificar que hay archivo
-        if 'firma' not in request.files:
-            return jsonify({'success': False, 'message': 'No se encontró archivo de firma'}), 400
+        firma_data = request.form.get('firma_data')
+        archivo = request.files.get('firma')
 
-        archivo = request.files['firma']
-        if archivo.filename == '':
+        if not firma_data and not archivo:
+            return jsonify({'success': False, 'message': 'No se encontró firma'}), 400
+
+        if archivo and archivo.filename == '':
             return jsonify({'success': False, 'message': 'No se seleccionó archivo'}), 400
-
-        # Verificar extensión de archivo
-        extensiones_permitidas = {'png', 'jpg', 'jpeg', 'gif'}
-        if not ('.' in archivo.filename and archivo.filename.rsplit('.', 1)[1].lower() in extensiones_permitidas):
-            return jsonify({'success': False, 'message': 'Tipo de archivo no permitido. Use PNG, JPG, JPEG o GIF'}), 400
 
         # ✅ ORM: Obtener información del jefe y establecimiento
         jefe_info = JefeEstablecimiento.query\
@@ -810,32 +828,46 @@ def subir_firma():
             FirmaEncargadoPorJefe.activa == True
         ).first()
 
-        # ✅ ELIMINAR ARCHIVO FÍSICO ANTERIOR SI EXISTE
-        if firma_existente and firma_existente.path_firma:
-            ruta_archivo_anterior = os.path.join('app', 'static', firma_existente.path_firma)
-            try:
-                if os.path.exists(ruta_archivo_anterior):
-                    os.remove(ruta_archivo_anterior)
-            except Exception as e:
-                pass
-
         # Crear directorio para las firmas
-        nombre_seguro = establecimiento_nombre.replace(' ', '_').replace('/', '_')
+        nombre_seguro = sanitize_signature_segment(establecimiento_nombre, 'establecimiento')
         directorio_firma = os.path.join('app', 'static', 'img', 'firmas', f"{nombre_seguro}")
 
         # Crear directorio si no existe
         os.makedirs(directorio_firma, exist_ok=True)
 
-        # Generar nombre único para el archivo
-        extension = archivo.filename.rsplit('.', 1)[1].lower()
-        nombre_archivo = f"firma_{encargado_verificacion.usuario_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{extension}"
-        ruta_archivo = os.path.join(directorio_firma, nombre_archivo)
+        if firma_data:
+            try:
+                ruta_relativa = save_signature_data_url(
+                    firma_data,
+                    directory_segments=[nombre_seguro],
+                    filename_prefix='firma_encargado',
+                    subject_id=encargado_verificacion.usuario_id
+                )
+            except ValueError as exc:
+                return jsonify({'success': False, 'message': str(exc)}), 400
+        else:
+            # Verificar extensión de archivo para compatibilidad con el flujo antiguo
+            extensiones_permitidas = {'png', 'jpg', 'jpeg', 'gif'}
+            if not ('.' in archivo.filename and archivo.filename.rsplit('.', 1)[1].lower() in extensiones_permitidas):
+                return jsonify({'success': False, 'message': 'Tipo de archivo no permitido. Use PNG, JPG, JPEG o GIF'}), 400
 
-        # Guardar archivo
-        archivo.save(ruta_archivo)
+            # Generar nombre único para el archivo
+            extension = archivo.filename.rsplit('.', 1)[1].lower()
+            nombre_archivo = f"firma_{encargado_verificacion.usuario_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{extension}"
+            ruta_archivo = os.path.join(directorio_firma, nombre_archivo)
 
-        # Ruta relativa para guardar en BD
-        ruta_relativa = f"img/firmas/{nombre_seguro}/{nombre_archivo}"
+            # Guardar archivo
+            archivo.save(ruta_archivo)
+
+            # Ruta relativa para guardar en BD
+            ruta_relativa = f"img/firmas/{nombre_seguro}/{nombre_archivo}"
+
+        # ✅ ELIMINAR ARCHIVO FÍSICO ANTERIOR SI LA NUEVA FIRMA YA SE GUARDÓ
+        if firma_existente and firma_existente.path_firma:
+            try:
+                delete_static_file(firma_existente.path_firma)
+            except Exception as e:
+                logging.warning(f"No se pudo eliminar archivo de firma: {str(e)}")
 
         # ✅ ORM: ACTUALIZAR O CREAR FIRMA
         if firma_existente:
@@ -918,11 +950,8 @@ def eliminar_firma():
 
         # Eliminar archivo físico
         try:
-            ruta_completa = os.path.join('app', 'static', firma_info[1])
-            if os.path.exists(ruta_completa):
-                os.remove(ruta_completa)
+            delete_static_file(firma_info[1])
         except Exception as e:
-            import logging
             logging.warning(f"No se pudo eliminar archivo de firma: {str(e)}")
 
         # Marcar como inactiva en BD

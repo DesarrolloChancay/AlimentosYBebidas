@@ -12,6 +12,7 @@ from sqlalchemy import and_
 import os
 from datetime import datetime
 from app.utils.auth_utils import generar_contrasena_temporal
+from app.utils.signature_utils import delete_static_file, save_signature_data_url
 
 
 class InspectorController:
@@ -74,9 +75,37 @@ class InspectorController:
                     'message': 'Solo inspectores y administradores pueden usar esta función'
                 }), 403
 
-            # Verificar que se envió el archivo
+            json_data = request.get_json(silent=True) if request.is_json else {}
+            firma_data = request.form.get('firma_data') or (json_data or {}).get('firma_data')
+
+            if firma_data:
+                try:
+                    ruta_firma = save_signature_data_url(
+                        firma_data,
+                        filename_prefix='firma_inspector',
+                        subject_id=usuario.id
+                    )
+                except ValueError as exc:
+                    return jsonify({'success': False, 'message': str(exc)}), 400
+
+                try:
+                    delete_static_file(usuario.ruta_firma)
+                except Exception as e:
+                    import logging
+                    logging.warning(f"No se pudo eliminar firma anterior: {str(e)}")
+
+                usuario.ruta_firma = ruta_firma
+                db.session.commit()
+
+                return jsonify({
+                    'success': True,
+                    'message': 'Firma guardada exitosamente',
+                    'ruta_firma': usuario.ruta_firma
+                })
+
+            # Mantener compatibilidad con carga de archivo existente
             if 'firma' not in request.files:
-                return jsonify({'success': False, 'message': 'No se envió ningún archivo'}), 400
+                return jsonify({'success': False, 'message': 'No se envió ninguna firma'}), 400
 
             file = request.files['firma']
             if file.filename == '':
@@ -104,13 +133,11 @@ class InspectorController:
             
             # Eliminar firma anterior si existe
             if usuario.ruta_firma:
-                old_path = os.path.join('app', 'static', usuario.ruta_firma)
-                if os.path.exists(old_path):
-                    try:
-                        os.remove(old_path)
-                    except Exception as e:
-                        import logging
-                        logging.warning(f"No se pudo eliminar firma anterior: {str(e)}")
+                try:
+                    delete_static_file(usuario.ruta_firma)
+                except Exception as e:
+                    import logging
+                    logging.warning(f"No se pudo eliminar firma anterior: {str(e)}")
 
             # Guardar archivo
             file.save(filepath)

@@ -318,40 +318,43 @@
 
 <!-- Modal para subir firma -->
 <div id="modal-firma" class="fixed inset-0 overflow-y-auto h-full w-full hidden" style="z-index: 9999; backdrop-filter: blur(4px); background-color: rgba(0,0,0,0.5);">
-    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-slate-800 overflow-y-auto max-h-[80vh]">
+    <div class="relative top-12 mx-auto p-5 border w-full max-w-xl shadow-lg rounded-md bg-white dark:bg-slate-800 overflow-y-auto max-h-[88vh]">
         <div class="mt-3">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white">
                     <i class="fas fa-signature mr-2 text-blue-500"></i>
-                    Subir Firma Digital
+                    Firma Digital
                 </h3>
                 <button onclick="cerrarModalFirma()" class="text-gray-400 hover:text-gray-600">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
-            <form id="form-subir-firma" enctype="multipart/form-data" class="space-y-4">
+            <form id="form-subir-firma" class="space-y-4">
                 <input type="hidden" id="encargado_id_firma" name="encargado_id">
 
                 <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                        Subiendo firma para: <span id="nombre-encargado-firma" class="font-medium"></span>
+                        Dibujando firma para: <span id="nombre-encargado-firma" class="font-medium"></span>
                     </p>
                 </div>
 
                 <div>
-                    <label for="firma" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Archivo de Firma *
+                    <label for="canvasFirmaGestionEncargado" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Firma del encargado *
                     </label>
-                    <input type="file"
-                           id="firma"
-                           name="firma"
-                           accept="image/*"
-                           required
-                           class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+                    <div class="rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 overflow-hidden">
+                        <canvas id="canvasFirmaGestionEncargado" class="w-full h-44 block touch-none"></canvas>
+                    </div>
                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        Formatos permitidos: PNG, JPG, JPEG, GIF
+                        Firme dentro del recuadro con el mouse, touchpad o dedo. La firma se guarda dentro del sistema.
                     </p>
+                    <button type="button"
+                            onclick="limpiarFirmaGestionEncargado()"
+                            class="mt-3 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-md hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
+                        <i class="fas fa-eraser mr-2"></i>
+                        Limpiar firma
+                    </button>
                 </div>
 
                 <div class="flex justify-end space-x-3 pt-4">
@@ -362,8 +365,8 @@
                     </button>
                     <button type="submit"
                             class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i class="fas fa-upload mr-2"></i>
-                        Subir Firma
+                        <i class="fas fa-save mr-2"></i>
+                        Guardar Firma
                     </button>
                 </div>
             </form>
@@ -611,6 +614,7 @@ let nombreEncargadoParaEliminar = null;
 let encargadoIdParaRestablecer = null;
 let nombreEncargadoParaRestablecer = null;
 let correoEncargadoParaRestablecer = null;
+let firmaGestionEncargadoPad = null;
 
 // Modal para agregar encargado
 function mostrarModalAgregar() {
@@ -625,18 +629,77 @@ function cerrarModal() {
 }
 
 // Modal para subir firma
+function ajustarCanvasFirmaGestion(canvas, signaturePad) {
+    if (!canvas) return;
+
+    const firmaActual = signaturePad && !signaturePad.isEmpty() ? signaturePad.toData() : null;
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const width = canvas.offsetWidth || 520;
+    const height = canvas.offsetHeight || 176;
+
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+    canvas.getContext('2d').scale(ratio, ratio);
+
+    if (signaturePad) {
+        signaturePad.clear();
+        if (firmaActual) {
+            signaturePad.fromData(firmaActual);
+        }
+    }
+}
+
+function inicializarFirmaGestionEncargado() {
+    const canvas = document.getElementById('canvasFirmaGestionEncargado');
+    if (!canvas) return null;
+
+    if (typeof SignaturePad === 'undefined') {
+        mostrarAlerta('error', 'No se pudo cargar el componente de firma. Recargue la página e intente nuevamente.');
+        return null;
+    }
+
+    if (!firmaGestionEncargadoPad) {
+        firmaGestionEncargadoPad = new SignaturePad(canvas, {
+            backgroundColor: 'rgb(255, 255, 255)',
+            penColor: 'rgb(17, 24, 39)'
+        });
+    }
+
+    ajustarCanvasFirmaGestion(canvas, firmaGestionEncargadoPad);
+    return firmaGestionEncargadoPad;
+}
+
+function limpiarFirmaGestionEncargado() {
+    if (firmaGestionEncargadoPad) {
+        firmaGestionEncargadoPad.clear();
+    }
+}
+
 function mostrarModalFirma(encargadoId, nombreEncargado) {
     document.getElementById('encargado_id_firma').value = encargadoId;
     document.getElementById('nombre-encargado-firma').textContent = nombreEncargado;
     document.getElementById('modal-firma').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => {
+        firmaGestionEncargadoPad = inicializarFirmaGestionEncargado();
+        limpiarFirmaGestionEncargado();
+    });
 }
 
 function cerrarModalFirma() {
     document.getElementById('modal-firma').classList.add('hidden');
     document.body.style.overflow = 'auto';
     document.getElementById('form-subir-firma').reset();
+    limpiarFirmaGestionEncargado();
 }
+
+window.addEventListener('resize', () => {
+    const modalFirma = document.getElementById('modal-firma');
+    const canvas = document.getElementById('canvasFirmaGestionEncargado');
+    if (modalFirma && !modalFirma.classList.contains('hidden') && canvas && firmaGestionEncargadoPad) {
+        ajustarCanvasFirmaGestion(canvas, firmaGestionEncargadoPad);
+    }
+});
 
 // Funciones para modal de confirmación habilitar
 function abrirModalConfirmarHabilitar() {
@@ -973,13 +1036,21 @@ document.getElementById('form-agregar-encargado').addEventListener('submit', asy
 document.getElementById('form-subir-firma').addEventListener('submit', async function(e) {
     e.preventDefault();
 
+    if (!firmaGestionEncargadoPad || firmaGestionEncargadoPad.isEmpty()) {
+        mostrarAlerta('error', 'Dibuje la firma antes de guardarla');
+        return;
+    }
+
     const submitButton = this.querySelector('button[type="submit"]');
     const originalText = submitButton.innerHTML;
     submitButton.disabled = true;
-    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Subiendo...';
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Guardando...';
 
     try {
-        const formData = new FormData(this);
+        const encargadoId = document.getElementById('encargado_id_firma').value;
+        const formData = new FormData();
+        formData.append('encargado_id', encargadoId);
+        formData.append('firma_data', firmaGestionEncargadoPad.toDataURL('image/png'));
 
         const response = await fetch('/jefe/firmas/subir', {
             method: 'POST',
