@@ -4,6 +4,7 @@ from app.models.Usuario_models import Usuario, Rol
 from app.models.Inspecciones_models import Establecimiento, JefeEstablecimiento, EncargadoEstablecimiento, Inspeccion, FirmaEncargadoPorJefe
 from app.extensions import db
 from app.utils.auth_decorators import login_required
+from app.utils.auth_utils import generar_contrasena_temporal
 from app.utils.signature_utils import delete_static_file, save_signature_data_url, sanitize_signature_segment
 from datetime import datetime, timedelta
 import base64
@@ -157,7 +158,7 @@ def agregar_encargado():
         apellido = data.get('apellido', '').strip()
         dni = data.get('dni', '').strip()
         telefono = data.get('telefono', '').strip()
-        email = data.get('email', '').strip()
+        correo = (data.get('correo') or data.get('email') or '').strip()
 
         # Validaciones básicas
         if not all([nombre, apellido, dni]):
@@ -192,12 +193,10 @@ def agregar_encargado():
 
             if encargado_existente:
                 return jsonify({'success': False, 'message': 'Este usuario ya es encargado de este establecimiento'}), 400
-        elif email and Usuario.query.filter_by(correo=email).first():
-            return jsonify({'success': False, 'message': 'Este correo ya está registrado'}), 400
         else:
+            nombre_usuario = Usuario.generar_nombre_usuario_unico(nombre, apellido)
+
             # Crear nuevo usuario con contraseña temporal robusta
-            from app.utils.auth_utils import generar_contrasena_temporal
-            
             contrasena_temporal = generar_contrasena_temporal()
             
             # Obtener rol de Encargado usando ORM
@@ -209,9 +208,10 @@ def agregar_encargado():
             nuevo_usuario = Usuario(
                 nombre=nombre,
                 apellido=apellido,
+                nombre_usuario=nombre_usuario,
                 dni=dni,
                 telefono=telefono,
-                correo=email,
+                correo=correo,
                 rol_id=rol_encargado.id,
                 activo=True,
                 cambiar_contrasena=True  # Marcar que debe cambiar contraseña
@@ -236,11 +236,14 @@ def agregar_encargado():
         db.session.add(nuevo_encargado)
         db.session.commit()
 
+        usuario_credenciales = Usuario.query.get(usuario_id)
+
         return jsonify({
             'success': True, 
             'message': 'Encargado agregado exitosamente',
             'usuario_id': usuario_id,
-            'correo': email,
+            'nombre_usuario': usuario_credenciales.nombre_usuario if usuario_credenciales else None,
+            'correo': usuario_credenciales.correo if usuario_credenciales else correo,
             'contrasena_temporal': contrasena_temporal
         })
 

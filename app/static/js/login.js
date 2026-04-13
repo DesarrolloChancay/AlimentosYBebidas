@@ -3,62 +3,53 @@
  * Sistema de autenticación con manejo de sesiones duplicadas
  */
 
-// ===== INICIALIZACIÓN =====
 document.addEventListener('DOMContentLoaded', function() {
     inicializarLogin();
 });
 
-// ===== FUNCIÓN PRINCIPAL DE INICIALIZACIÓN =====
 function inicializarLogin() {
     const form = document.getElementById('login-form');
     if (!form) {
         return;
     }
-    
+
     form.addEventListener('submit', manejarLogin);
 }
 
-// ===== MANEJO DEL LOGIN =====
 async function manejarLogin(e) {
     e.preventDefault();
-    
-    const email = document.getElementById('email').value;
+
+    const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value;
     const errorDiv = document.getElementById('error-message');
-    
-    // Limpiar errores previos
+
     errorDiv.classList.add('hidden');
-    
+
     try {
         const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ username, password })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
-            
-            // Verificar si necesita cambiar contraseña
             if (data.cambiar_contrasena) {
-                // Redirigir a página de cambio de contraseña
                 window.location.href = '/cambiar-contrasena';
                 return;
             }
 
-            // Redirect específico según el rol del usuario
             if (data.user && data.user.rol === 'Jefe de Establecimiento') {
                 window.location.href = '/jefe/dashboard';
             } else {
                 window.location.href = '/';
             }
         } else {
-            // Manejar diferentes tipos de errores
             if (data.codigo === 'SESION_DUPLICADA') {
-                mostrarDialogoSesionDuplicada(email, password);
+                mostrarDialogoSesionDuplicada(username, password);
             } else if (data.codigo === 'ENCARGADO_DESHABILITADO') {
                 mostrarDialogoEncargadoDeshabilitado(data);
             } else {
@@ -70,8 +61,7 @@ async function manejarLogin(e) {
     }
 }
 
-// ===== MANEJO DE SESIONES DUPLICADAS =====
-function mostrarDialogoSesionDuplicada(email, password) {
+function mostrarDialogoSesionDuplicada(username, password) {
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center';
     modal.innerHTML = `
@@ -90,14 +80,12 @@ function mostrarDialogoSesionDuplicada(email, password) {
             </div>
         </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
-    // Configurar eventos
-    document.getElementById('btn-forzar-login').onclick = () => forzarLogin(email, password, modal);
+
+    document.getElementById('btn-forzar-login').onclick = () => forzarLogin(username, password, modal);
     document.getElementById('btn-cancelar-login').onclick = () => cerrarModal(modal);
-    
-    // Cerrar con ESC
+
     document.addEventListener('keydown', function onEscape(e) {
         if (e.key === 'Escape') {
             cerrarModal(modal);
@@ -106,7 +94,6 @@ function mostrarDialogoSesionDuplicada(email, password) {
     });
 }
 
-// ===== MANEJO DE ENCARGADOS DESHABILITADOS =====
 function mostrarDialogoEncargadoDeshabilitado(data) {
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center';
@@ -142,13 +129,11 @@ function mostrarDialogoEncargadoDeshabilitado(data) {
             </div>
         </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
-    // Configurar eventos
+
     document.getElementById('btn-cerrar-deshabilitado').onclick = () => cerrarModal(modal);
-    
-    // Cerrar con ESC
+
     document.addEventListener('keydown', function onEscape(e) {
         if (e.key === 'Escape') {
             cerrarModal(modal);
@@ -157,29 +142,24 @@ function mostrarDialogoEncargadoDeshabilitado(data) {
     });
 }
 
-// ===== FORZAR LOGIN =====
-async function forzarLogin(email, password, modal) {
+async function forzarLogin(username, password, modal) {
     try {
         const response = await fetch('/api/auth/login-forzado', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ email, password, force: true })
+            body: JSON.stringify({ username, password, force: true })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
-            
-            // Verificar si necesita cambiar contraseña
             if (data.cambiar_contrasena) {
-                // Redirigir a página de cambio de contraseña
                 window.location.href = '/cambiar-contrasena';
                 return;
             }
 
-            // Redirect específico según el rol del usuario
             if (data.user && data.user.rol === 'Jefe de Establecimiento') {
                 window.location.href = '/jefe/dashboard';
             } else {
@@ -187,8 +167,7 @@ async function forzarLogin(email, password, modal) {
             }
         } else {
             cerrarModal(modal);
-            
-            // Manejar diferentes tipos de errores en login forzado
+
             if (data.codigo === 'ENCARGADO_DESHABILITADO') {
                 mostrarDialogoEncargadoDeshabilitado(data);
             } else {
@@ -201,7 +180,6 @@ async function forzarLogin(email, password, modal) {
     }
 }
 
-// ===== UTILIDADES =====
 function mostrarError(mensaje) {
     const errorDiv = document.getElementById('error-message');
     if (errorDiv) {
@@ -216,7 +194,6 @@ function cerrarModal(modal) {
     }
 }
 
-// ===== UTILIDADES GLOBALES =====
 window.LoginSystem = {
     mostrarError,
     cerrarModal
