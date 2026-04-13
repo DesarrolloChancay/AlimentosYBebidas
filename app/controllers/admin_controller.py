@@ -610,6 +610,7 @@ def gestionar_jefes_establecimiento():
             Usuario.id.label('usuario_id'),
             Usuario.nombre,
             Usuario.apellido,
+            Usuario.nombre_usuario,
             Usuario.correo,
             Usuario.telefono,
             Usuario.dni,
@@ -776,6 +777,7 @@ def gestionar_inspectores():
             Usuario.id,
             Usuario.nombre,
             Usuario.apellido,
+            Usuario.nombre_usuario,
             Usuario.correo,
             Usuario.telefono,
             Usuario.dni,
@@ -803,6 +805,7 @@ def gestionar_inspectores():
                 'id': insp.id,
                 'nombre': insp.nombre,
                 'apellido': insp.apellido,
+                'nombre_usuario': insp.nombre_usuario,
                 'correo': insp.correo,
                 'telefono': insp.telefono,
                 'dni': insp.dni,
@@ -1048,6 +1051,7 @@ def api_restablecer_contrasena_inspector(inspector_id):
         return jsonify({
             'success': True,
             'message': 'Contraseña restablecida exitosamente',
+            'nombre_usuario': inspector.nombre_usuario,
             'correo': inspector.correo,
             'contrasena_temporal': nueva_contrasena
         })

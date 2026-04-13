@@ -158,7 +158,7 @@
                                             class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button onclick="restablecerContrasena({{ jefe.id }}, '{{ jefe.correo }}')"
+                                    <button onclick='restablecerContrasena({{ jefe.id }}, {{ jefe.nombre_usuario|tojson }})'
                                             class="text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300 transition-colors"
                                             title="Restablecer contraseña">
                                         <i class="fas fa-key"></i>
@@ -1068,7 +1068,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.log('Cerrando modal y mostrando credenciales...');
                         cerrarModalCrearJefe();
                         setTimeout(() => {
-                            mostrarCredencialesUsuario(data.correo, data.contrasena_temporal);
+                            mostrarCredencialesUsuario(data.nombre_usuario, data.correo, data.contrasena_temporal);
                         }, 300);
                     } else {
                         console.log('No hay contrasena_temporal, mostrando alerta...');
@@ -1540,7 +1540,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button onclick="restablecerContrasena(${jefe.id}, '${jefe.correo}')"
+                            <button onclick='restablecerContrasena(${jefe.id}, ${JSON.stringify(jefe.nombre_usuario)})'
                                     class="text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300 transition-colors"
                                     title="Restablecer contraseña">
                                 <i class="fas fa-key"></i>
@@ -1705,8 +1705,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Mostrar credenciales del usuario creado
-    function mostrarCredencialesUsuario(correo, contrasena) {
-        console.log('Creando modal de credenciales para:', correo, contrasena);
+    function mostrarCredencialesUsuario(nombreUsuario, correo, contrasena) {
+        console.log('Creando modal de credenciales para:', nombreUsuario, correo, contrasena);
 
         // Deshabilitar scroll del body
         document.body.style.overflow = 'hidden';
@@ -1727,7 +1727,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-medium text-gray-900 dark:text-white">
                             <i class="fas fa-key mr-2 text-green-500"></i>
-                            Jefe de Establecimiento Creado Exitosamente
+                            Credenciales del Jefe de Establecimiento
                         </h3>
                         <button onclick="this.closest('.fixed').remove(); document.body.style.overflow = 'auto';" class="text-gray-400 hover:text-gray-600">
                             <i class="fas fa-times"></i>
@@ -1745,7 +1745,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         Credenciales Generadas
                                     </h4>
                                     <p class="text-sm text-green-700 dark:text-green-300 mt-1">
-                                        El jefe de establecimiento ha sido creado exitosamente. Comparta estas credenciales de forma segura.
+                                        Comparta estas credenciales de forma segura.
                                     </p>
                                 </div>
                             </div>
@@ -1760,7 +1760,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="relative">
                                 <textarea id="credenciales-texto" readonly
                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-sm font-mono"
-                                          rows="4">${`Correo: ${correo}\nContraseña temporal: ${contrasena}`}</textarea>
+                                          rows="4">${`Usuario: ${nombreUsuario}\nCorreo: ${correo}\nContraseña temporal: ${contrasena}`}</textarea>
                                 <button onclick="copiarTextoCompleto()"
                                         class="absolute top-2 right-2 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
                                         title="Copiar todo el texto">
@@ -1828,10 +1828,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Función para restablecer contraseña de un jefe
-    window.restablecerContrasena = function(jefeId, correoJefe) {
-        console.log('restablecerContrasena llamada con:', { jefeId, correoJefe });
+    window.restablecerContrasena = function(jefeId, nombreUsuarioJefe) {
+        console.log('restablecerContrasena llamada con:', { jefeId, nombreUsuarioJefe });
         jefeIdParaRestablecer = jefeId;
-        document.getElementById('correo-jefe-restablecer').textContent = `Usuario: ${correoJefe}`;
+        document.getElementById('correo-jefe-restablecer').textContent = `Usuario: ${nombreUsuarioJefe}`;
         abrirModalConfirmarRestablecer();
     };
 
@@ -1886,7 +1886,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (data.success) {
                 // Mostrar las nuevas credenciales
-                mostrarCredencialesUsuario(data.correo, data.contrasena_temporal);
+                mostrarCredencialesUsuario(data.nombre_usuario, data.correo, data.contrasena_temporal);
                 mostrarAlerta('success', 'Contraseña restablecida exitosamente');
             } else {
                 throw new Error(data.message || 'Error al restablecer la contraseña');
