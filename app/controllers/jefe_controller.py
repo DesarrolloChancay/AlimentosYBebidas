@@ -317,6 +317,7 @@ def restablecer_contrasena_encargado():
         return jsonify({
             'success': True,
             'message': 'Contraseña restablecida exitosamente',
+            'nombre_usuario': encargado.usuario.nombre_usuario,
             'correo': encargado.usuario.correo,
             'contrasena_temporal': nueva_contrasena
         })
@@ -663,6 +664,7 @@ def obtener_encargados_establecimiento(establecimiento_id):
                 'id': enc.id,
                 'nombre': enc.usuario.nombre,
                 'apellido': enc.usuario.apellido,
+                'nombre_usuario': enc.usuario.nombre_usuario,
                 'correo': enc.usuario.correo,
                 'activo': enc.activo,
                 'observaciones_jefe': enc.observaciones_jefe,
