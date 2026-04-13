@@ -93,6 +93,7 @@ def listar_usuarios():
                 'id': usuario.id,
                 'nombre': usuario.nombre,
                 'apellido': usuario.apellido,
+                'nombre_usuario': usuario.nombre_usuario,
                 'correo': usuario.correo,
                 'rol': usuario.rol.nombre,
                 'rol_id': usuario.rol_id,
@@ -152,9 +153,7 @@ def crear_usuario():
         if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', data['correo']):
             return jsonify({'success': False, 'error': 'Formato de correo inválido'}), 400
 
-        # Verificar que no exista el correo
-        if Usuario.query.filter_by(correo=data['correo']).first():
-            return jsonify({'success': False, 'error': 'Ya existe un usuario con este correo'}), 400
+        nombre_usuario = Usuario.generar_nombre_usuario_unico(data['nombre'], data['apellido'])
 
         # Generar contraseña temporal robusta y única
         contrasena_temporal = generar_contrasena_temporal()
@@ -163,6 +162,7 @@ def crear_usuario():
         nuevo_usuario = Usuario(
             nombre=data['nombre'],
             apellido=data['apellido'],
+            nombre_usuario=nombre_usuario,
             dni=data['dni'],
             correo=data['correo'],
             rol_id=data['rol_id'],
@@ -181,6 +181,7 @@ def crear_usuario():
             'success': True,
             'mensaje': 'Usuario creado exitosamente',
             'usuario_id': nuevo_usuario.id,
+            'nombre_usuario': nuevo_usuario.nombre_usuario,
             'contrasena_temporal': contrasena_temporal,
             'correo': data['correo']
         })
@@ -227,6 +228,7 @@ def resetear_contrasena(usuario_id):
         return jsonify({
             'success': True,
             'mensaje': 'Contraseña reseteada exitosamente',
+            'nombre_usuario': usuario.nombre_usuario,
             'contrasena_temporal': nueva_contrasena_temporal,
             'correo': usuario.correo
         })
@@ -308,6 +310,7 @@ def verificar_cambio_contrasena():
             'usuario': {
                 'id': usuario.id,
                 'nombre': f"{usuario.nombre} {usuario.apellido or ''}",
+                'nombre_usuario': usuario.nombre_usuario,
                 'correo': usuario.correo
             }
         })

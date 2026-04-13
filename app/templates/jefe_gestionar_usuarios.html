@@ -88,7 +88,7 @@
                     </label>
                     <input type="text"
                            id="busqueda"
-                           placeholder="Nombre, apellido o correo..."
+                           placeholder="Nombre, apellido, usuario o correo..."
                            class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
                 </div>
 
@@ -395,7 +395,7 @@ function aplicarFiltros() {
     // Filtrar por búsqueda
     if (busqueda) {
         encargadosFiltrados = encargadosFiltrados.filter(encargado =>
-            `${encargado.nombre} ${encargado.apellido} ${encargado.correo}`.toLowerCase().includes(busqueda)
+            `${encargado.nombre} ${encargado.apellido} ${encargado.nombre_usuario || ""} ${encargado.correo}`.toLowerCase().includes(busqueda)
         );
     }
 
@@ -543,7 +543,7 @@ async function resetearContrasenaDesdeModal(encargadoId, nombreEncargado, modalE
         const data = await response.json();
 
         if (data.success) {
-            mostrarCredencialesUsuario(data.correo, data.contrasena_temporal);
+            mostrarCredencialesUsuario(data.nombre_usuario, data.correo, data.contrasena_temporal);
         } else {
             mostrarError('Error al resetear contraseña: ' + data.error);
         }
@@ -566,7 +566,7 @@ async function resetearContrasena(encargadoId, nombreEncargado) {
         const data = await response.json();
 
         if (data.success) {
-            mostrarCredencialesUsuario(data.correo, data.contrasena_temporal);
+            mostrarCredencialesUsuario(data.nombre_usuario, data.correo, data.contrasena_temporal);
         } else {
             mostrarError('Error al resetear contraseña: ' + data.error);
         }
@@ -618,7 +618,7 @@ document.getElementById('form-crear-encargado').addEventListener('submit', async
         const data = await response.json();
 
         if (data.success) {
-            mostrarCredencialesUsuario(data.correo, data.contrasena_temporal);
+            mostrarCredencialesUsuario(data.nombre_usuario, data.correo, data.contrasena_temporal);
             cerrarModalCrearUsuario();
             cargarEncargados();
         } else {
@@ -651,8 +651,10 @@ function mostrarError(mensaje) {
 }
 
 // Mostrar credenciales del usuario creado
-function mostrarCredencialesUsuario(correo, contrasena) {
-    const textoCredenciales = `Correo: ${correo}\nContraseña temporal: ${contrasena}`;
+function mostrarCredencialesUsuario(nombreUsuario, correo, contrasena) {
+    const textoCredenciales = `Usuario: ${nombreUsuario}
+Correo: ${correo}
+Contraseña temporal: ${contrasena}`;
     
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50';

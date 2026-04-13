@@ -69,12 +69,12 @@ def create_app():
     @app.route('/api/auth/login', methods=['POST'])
     def login():
         data = request.get_json()
-        return AuthController.login(data.get('email'), data.get('password'))
+        return AuthController.login(data.get('username') or data.get('email'), data.get('password'))
 
     @app.route('/api/auth/login-forzado', methods=['POST'])
     def login_forzado():
         data = request.get_json()
-        return AuthController.login_forzado(data.get('email'), data.get('password'))
+        return AuthController.login_forzado(data.get('username') or data.get('email'), data.get('password'))
 
     @app.route('/api/auth/logout', methods=['POST'])
     def logout():

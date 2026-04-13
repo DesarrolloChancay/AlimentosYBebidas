@@ -304,10 +304,6 @@ class InspectorController:
                 if not data.get(field):
                     return jsonify({'success': False, 'message': f'El campo {field} es requerido'}), 400
 
-            # Verificar que el correo no exista
-            if Usuario.query.filter_by(correo=data['correo']).first():
-                return jsonify({'success': False, 'message': 'Ya existe un usuario con este correo electrónico'}), 400
-
             # Verificar que el DNI no exista
             if Usuario.query.filter_by(dni=data['dni']).first():
                 return jsonify({'success': False, 'message': 'Ya existe un usuario con este DNI'}), 400
@@ -325,6 +321,8 @@ class InspectorController:
             if not rol_jefe:
                 return jsonify({'success': False, 'message': 'Rol de Jefe de Establecimiento no encontrado'}), 500
 
+            nombre_usuario = Usuario.generar_nombre_usuario_unico(data['nombre'], data['apellido'])
+
             # Generar contraseña temporal robusta
             contrasena_temporal = generar_contrasena_temporal()
 
@@ -332,6 +330,7 @@ class InspectorController:
             nuevo_usuario = Usuario(
                 nombre=data['nombre'],
                 apellido=data['apellido'],
+                nombre_usuario=nombre_usuario,
                 correo=data['correo'],
                 telefono=data.get('telefono'),
                 dni=data['dni'],
@@ -359,9 +358,10 @@ class InspectorController:
 
             return jsonify({
                 'success': True,
-                'message': f'Jefe de establecimiento creado exitosamente. Usuario: {data["correo"]}, Contraseña temporal: {contrasena_temporal}',
+                'message': f'Jefe de establecimiento creado exitosamente. Usuario: {nuevo_usuario.nombre_usuario}, Contraseña temporal: {contrasena_temporal}',
                 'usuario_id': nuevo_usuario.id,
                 'jefe_id': nuevo_jefe.id,
+                'nombre_usuario': nuevo_usuario.nombre_usuario,
                 'correo': data['correo'],
                 'contrasena_temporal': contrasena_temporal
             })
@@ -456,6 +456,7 @@ class InspectorController:
             return jsonify({
                 'success': True,
                 'message': 'Contraseña restablecida exitosamente',
+                'nombre_usuario': usuario.nombre_usuario,
                 'correo': usuario.correo,
                 'contrasena_temporal': nueva_contrasena
             })
@@ -711,14 +712,6 @@ class InspectorController:
                 if not data.get(field):
                     return jsonify({'success': False, 'message': f'El campo {field} es requerido'}), 400
 
-            # Verificar que el correo no exista en otro usuario
-            usuario_existente = Usuario.query.filter(
-                Usuario.correo == data['correo'],
-                Usuario.id != usuario.id
-            ).first()
-            if usuario_existente:
-                return jsonify({'success': False, 'message': 'Ya existe otro usuario con este correo electrónico'}), 400
-
             # Verificar que el DNI no exista en otro usuario
             usuario_dni_existente = Usuario.query.filter(
                 Usuario.dni == data['dni'],
@@ -868,6 +861,7 @@ class InspectorController:
                     'id': jefe.id,
                     'nombre': jefe.nombre,
                     'apellido': jefe.apellido,
+                    'nombre_usuario': jefe.nombre_usuario,
                     'correo': jefe.correo,
                     'telefono': jefe.telefono,
                     'establecimiento_nombre': jefe.establecimiento_nombre,

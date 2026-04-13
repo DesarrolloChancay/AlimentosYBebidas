@@ -8,12 +8,13 @@ import json
 class AuthController:
 
     @staticmethod
-    def login(correo, contrasena):
+    def login(nombre_usuario, contrasena):
         try:
             from app.extensions import db
             from sqlalchemy import text
 
-            usuario = Usuario.query.filter_by(correo=correo, activo=True).first()
+            nombre_usuario = (nombre_usuario or '').strip().lower()
+            usuario = Usuario.query.filter_by(nombre_usuario=nombre_usuario, activo=True).first()
 
             if not usuario:
                 return (
@@ -116,6 +117,7 @@ class AuthController:
                         "id": usuario.id,
                         "nombre": usuario.nombre,
                         "apellido": usuario.apellido,
+                        "nombre_usuario": usuario.nombre_usuario,
                         "correo": usuario.correo,
                         "rol": usuario.rol.nombre,
                     },
@@ -138,6 +140,7 @@ class AuthController:
                         "id": usuario.id,
                         "nombre": usuario.nombre,
                         "apellido": usuario.apellido,
+                        "nombre_usuario": usuario.nombre_usuario,
                         "correo": usuario.correo,
                         "rol": usuario.rol.nombre,
                     },
@@ -153,13 +156,14 @@ class AuthController:
             )
 
     @staticmethod
-    def login_forzado(correo, contrasena):
+    def login_forzado(nombre_usuario, contrasena):
         """Login que permite forzar una nueva sesión cerrando la anterior"""
         try:
             from app.extensions import db
             from sqlalchemy import text
 
-            usuario = Usuario.query.filter_by(correo=correo, activo=True).first()
+            nombre_usuario = (nombre_usuario or '').strip().lower()
+            usuario = Usuario.query.filter_by(nombre_usuario=nombre_usuario, activo=True).first()
 
             if not usuario:
                 return (
@@ -249,6 +253,7 @@ class AuthController:
                         "id": usuario.id,
                         "nombre": usuario.nombre,
                         "apellido": usuario.apellido,
+                        "nombre_usuario": usuario.nombre_usuario,
                         "correo": usuario.correo,
                         "rol": usuario.rol.nombre,
                     },
@@ -272,6 +277,7 @@ class AuthController:
                         "id": usuario.id,
                         "nombre": usuario.nombre,
                         "apellido": usuario.apellido,
+                        "nombre_usuario": usuario.nombre_usuario,
                         "correo": usuario.correo,
                         "rol": usuario.rol.nombre,
                     },
@@ -442,6 +448,7 @@ class AuthController:
                     {
                         "user_id": usuario.id,
                         "usuario": f"{usuario.nombre} {usuario.apellido or ''}",
+                        "nombre_usuario": usuario.nombre_usuario,
                         "correo": usuario.correo,
                         "rol": usuario.rol.nombre,
                         "ultimo_acceso": (
@@ -492,18 +499,7 @@ class AuthController:
         try:
             from app.extensions import db
 
-            # Verificar que no exista el usuario
-            usuario_existente = Usuario.query.filter_by(correo=correo).first()
-            if usuario_existente:
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "error": "Ya existe un usuario con este correo",
-                        }
-                    ),
-                    400,
-                )
+            nombre_usuario = Usuario.generar_nombre_usuario_unico(nombre, apellido)
 
             # Generar contraseña temporal robusta y única
             contrasena_temporal = generar_contrasena_temporal()
@@ -512,6 +508,7 @@ class AuthController:
             nuevo_usuario = Usuario(
                 nombre=nombre,
                 apellido=apellido,
+                nombre_usuario=nombre_usuario,
                 dni=dni,
                 correo=correo,
                 rol_id=rol_id,
@@ -532,6 +529,7 @@ class AuthController:
                         "success": True,
                         "mensaje": "Usuario creado exitosamente",
                         "usuario_id": nuevo_usuario.id,
+                        "nombre_usuario": nuevo_usuario.nombre_usuario,
                         "contrasena_temporal": contrasena_temporal,
                         "correo": correo
                     }

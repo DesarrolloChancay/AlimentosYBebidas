@@ -102,7 +102,7 @@
                     </label>
                     <input type="text"
                            id="busqueda"
-                           placeholder="Nombre, apellido o correo..."
+                           placeholder="Nombre, apellido, usuario o correo..."
                            class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
                 </div>
 
@@ -279,7 +279,7 @@
                                 Contraseña Temporal
                             </h4>
                             <p class="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                                Se generará automáticamente una contraseña robusta y única.
+                                Se generará automáticamente el nombre de usuario y una contraseña robusta y única.
                                 El usuario deberá cambiarla en su primer inicio de sesión.
                             </p>
                         </div>
@@ -448,7 +448,7 @@ function aplicarFiltros() {
     // Filtrar por búsqueda
     if (busqueda) {
         usuariosFiltrados = usuariosFiltrados.filter(usuario =>
-            `${usuario.nombre} ${usuario.apellido} ${usuario.correo}`.toLowerCase().includes(busqueda)
+            `${usuario.nombre} ${usuario.apellido} ${usuario.nombre_usuario || ""} ${usuario.correo}`.toLowerCase().includes(busqueda)
         );
     }
 
@@ -609,7 +609,7 @@ async function resetearContrasenaDesdeModal(usuarioId, nombreUsuario, modalEleme
         const data = await response.json();
 
         if (data.success) {
-            mostrarCredencialesUsuario(data.correo, data.contrasena_temporal);
+            mostrarCredencialesUsuario(data.nombre_usuario, data.correo, data.contrasena_temporal);
         } else {
             mostrarError('Error al resetear contraseña: ' + data.error);
         }
@@ -632,7 +632,7 @@ async function resetearContrasena(usuarioId, nombreUsuario) {
         const data = await response.json();
 
         if (data.success) {
-            mostrarCredencialesUsuario(data.correo, data.contrasena_temporal);
+            mostrarCredencialesUsuario(data.nombre_usuario, data.correo, data.contrasena_temporal);
         } else {
             mostrarError('Error al resetear contraseña: ' + data.error);
         }
@@ -697,7 +697,7 @@ document.getElementById('form-crear-usuario').addEventListener('submit', async f
         const data = await response.json();
 
         if (data.success) {
-            mostrarCredencialesUsuario(data.correo, data.contrasena_temporal);
+            mostrarCredencialesUsuario(data.nombre_usuario, data.correo, data.contrasena_temporal);
             cerrarModalCrearUsuario();
             cargarUsuarios();
         } else {
@@ -721,7 +721,7 @@ document.getElementById('dni').addEventListener('input', function(e) {
 });
 
 // Mostrar credenciales del usuario creado
-function mostrarCredencialesUsuario(correo, contrasena) {
+function mostrarCredencialesUsuario(nombreUsuario, correo, contrasena) {
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50';
     modal.innerHTML = `
@@ -751,6 +751,25 @@ function mostrarCredencialesUsuario(correo, contrasena) {
                                     El usuario ha sido creado exitosamente. Comparta estas credenciales de forma segura.
                                 </p>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Nombre de usuario -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-user mr-1"></i>
+                            Nombre de Usuario
+                        </label>
+                        <div class="flex">
+                            <input type="text"
+                                   value="${nombreUsuario}"
+                                   readonly
+                                   class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-md shadow-sm bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-sm">
+                            <button onclick="copiarAlPortapapeles('${nombreUsuario}')"
+                                    class="px-3 py-2 border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600 rounded-r-md transition-colors"
+                                    title="Copiar usuario">
+                                <i class="fas fa-copy"></i>
+                            </button>
                         </div>
                     </div>
 
