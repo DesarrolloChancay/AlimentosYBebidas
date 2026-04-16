@@ -217,6 +217,15 @@ def get_items_establecimiento(establecimiento_id):
         return jsonify({"error": str(e)}), 500
 
 
+@inspeccion_bp.route("/api/establecimientos/<int:establecimiento_id>/firmantes")
+@login_required
+def obtener_firmantes_establecimiento(establecimiento_id):
+    """Obtener encargados y jefes habilitados para firmar en un establecimiento"""
+    return InspeccionesController.obtener_firmantes_establecimiento(
+        establecimiento_id
+    )
+
+
 @inspeccion_bp.route("/api/establecimientos/<int:establecimiento_id>/tiempo-real")
 @login_required
 def obtener_datos_tiempo_real(establecimiento_id):
