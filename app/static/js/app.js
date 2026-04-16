@@ -18,12 +18,17 @@ document.addEventListener('DOMContentLoaded', function () {
         window.inspeccionEstado = {
             inspeccion_id: null,
             firma_encargado: null,
+            firma_encargado_temporal: false,
             firma_inspector: null,
+            firmantes_establecimiento: [],
+            firmante_temporal_id: null,
+            firmante_temporal_rol: null,
             motivo_sin_firma_encargado: '',
             estado: 'borrador',
             encargado_aprobo: false,
             inspector_firmo: false,
             confirmada_por_encargado: false,
+            confirmador_id: null,
             confirmador_nombre: null,
             confirmador_rol: null,
             confirmacionesPorEstablecimiento: {} // Estado de confirmación por establecimiento
@@ -42,6 +47,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Configurar interfaz según rol
     configurarInterfazPorRol();
+    inicializarModalFirmaTemporalEncargado();
 
     // Inicializar Socket.IO
     inicializarSocketIO();
@@ -270,11 +276,16 @@ window.inspeccionEstado = {
     evidencias: [],
     firma_inspector: null,
     firma_encargado: null,
+    firma_encargado_temporal: false,
+    firmantes_establecimiento: [],
+    firmante_temporal_id: null,
+    firmante_temporal_rol: null,
     motivo_sin_firma_encargado: '',
     observaciones: '',
     encargado_aprobo: false,
     inspector_firmo: false,
     confirmacionesPorEstablecimiento: {}, // Nuevo: estado de confirmación por establecimiento
+    confirmador_id: null,
     confirmador_nombre: null,
     confirmador_rol: null,
     resumen: {
@@ -287,6 +298,10 @@ window.inspeccionEstado = {
 
 let guardadoInspeccionEnCurso = false;
 let accionGuardadoInspeccionEnCurso = null;
+let firmaTemporalEncargadoPad = null;
+let redimensionFirmaTemporalEncargado = null;
+let confirmacionEncargadoTemporalEnCurso = false;
+let suprimirSiguienteNotificacionEncargadoAprobo = false;
 
 // Funciones para persistir estado de confirmaciones en sessionStorage
 /**
@@ -374,10 +389,15 @@ function reiniciarContextoInspeccion(establecimientoId = null) {
         encargado_aprobo: false,
         inspector_firmo: false,
         confirmada_por_encargado: false,
+        confirmador_id: null,
         confirmador_nombre: null,
         confirmador_rol: null,
         firma_encargado: null,
+        firma_encargado_temporal: false,
         firma_encargado_id: null,
+        firmantes_establecimiento: [],
+        firmante_temporal_id: null,
+        firmante_temporal_rol: null,
         resumen: {
             puntaje_total: 0,
             puntaje_maximo_posible: 0,
@@ -871,16 +891,23 @@ function inicializarSocketIO() {
                 if (data.firma_data) {
                     const firmaEncargadoRuta = data.firma_data.ruta || data.firma_data;
                     window.inspeccionEstado.firma_encargado = firmaEncargadoRuta;
+                    window.inspeccionEstado.firma_encargado_temporal = Boolean(data.firma_temporal);
                     if (data.firma_data.id) {
                         window.inspeccionEstado.firma_encargado_id = data.firma_data.id;
+                    } else {
+                        window.inspeccionEstado.firma_encargado_id = null;
                     }
                 } else {
                     // No hay firma_data en notificacion_general
                     window.inspeccionEstado.firma_encargado = 'FIRMA_APROBADA';
+                    window.inspeccionEstado.firma_encargado_temporal = false;
                 }
 
                 actualizarInterfazFirmas();
-                mostrarNotificacion(data.mensaje, 'success');
+                if (!suprimirSiguienteNotificacionEncargadoAprobo) {
+                    mostrarNotificacion(data.mensaje, 'success');
+                }
+                suprimirSiguienteNotificacionEncargadoAprobo = false;
             }
         }
     });
@@ -919,10 +946,12 @@ function inicializarSocketIO() {
 
         // Para inspectores: actualizar estado y habilitar guardado
         if (esRolEditorChecklist()) {
-            mostrarNotificacion(
-                `Encargado confirmó la inspección`,
-                'success'
-            );
+            if (!suprimirSiguienteNotificacionEncargadoAprobo) {
+                mostrarNotificacion(
+                    `Encargado confirmó la inspección`,
+                    'success'
+                );
+            }
 
             window.inspeccionEstado.encargado_aprobo = true;
 
@@ -932,6 +961,7 @@ function inicializarSocketIO() {
             }
             window.inspeccionEstado.confirmacionesPorEstablecimiento[data.establecimiento_id] = {
                 confirmada_por_encargado: true,
+                confirmador_id: data.confirmador_id || data.encargado_id || null,
                 confirmador_nombre: data.confirmador_nombre || 'Encargado',
                 confirmador_rol: data.confirmador_rol || 'Encargado'
             };
@@ -941,6 +971,7 @@ function inicializarSocketIO() {
 
             if (window.inspeccionEstado.establecimiento_id === data.establecimiento_id) {
                 window.inspeccionEstado.confirmada_por_encargado = true;
+                window.inspeccionEstado.confirmador_id = data.confirmador_id || data.encargado_id || null;
                 window.inspeccionEstado.confirmador_nombre = data.confirmador_nombre || 'Encargado';
                 window.inspeccionEstado.confirmador_rol = data.confirmador_rol || 'Encargado';
             }
@@ -948,8 +979,11 @@ function inicializarSocketIO() {
             if (data.firma_data) {
                 const firmaEncargadoRuta = data.firma_data.ruta || data.firma_data;
                 window.inspeccionEstado.firma_encargado = firmaEncargadoRuta;
+                window.inspeccionEstado.firma_encargado_temporal = Boolean(data.firma_temporal);
                 if (data.firma_data.id) {
                     window.inspeccionEstado.firma_encargado_id = data.firma_data.id;
+                } else {
+                    window.inspeccionEstado.firma_encargado_id = null;
                 }
             }
 
@@ -957,6 +991,7 @@ function inicializarSocketIO() {
 
             // Habilitar botón de completar inspección
             deshabilitarBotonCompletarInspector();
+            suprimirSiguienteNotificacionEncargadoAprobo = false;
         }
     });
 }
@@ -1274,6 +1309,7 @@ function actualizarDatosTiempoRealCompletos(data) {
         window.inspeccionEstado.confirmacionesPorEstablecimiento[data.establecimiento_id] = {
             ...window.inspeccionEstado.confirmacionesPorEstablecimiento[data.establecimiento_id],
             confirmada_por_encargado: estadoNuevoConfirmacion,
+            confirmador_id: data.confirmador_id || data.encargado_id || null,
             confirmador_nombre: data.confirmador_nombre || null,
             confirmador_rol: data.confirmador_rol || null
         };
@@ -1947,6 +1983,7 @@ function configurarEventoEstablecimiento(selectElement) {
             if (!window.inspeccionEstado.confirmacionesPorEstablecimiento[establecimientoId]) {
                 window.inspeccionEstado.confirmacionesPorEstablecimiento[establecimientoId] = {
                     confirmada_por_encargado: false,
+                    confirmador_id: null,
                     confirmador_nombre: null,
                     confirmador_rol: null
                 };
@@ -2021,6 +2058,7 @@ function configurarEventoEstablecimiento(selectElement) {
             // debe comenzar con confirmación pendiente
             window.inspeccionEstado.confirmacionesPorEstablecimiento[establecimientoId] = {
                 confirmada_por_encargado: false,
+                confirmador_id: null,
                 confirmador_nombre: null,
                 confirmador_rol: null
             };
@@ -2494,7 +2532,14 @@ function restaurarEstado(estado) {
     const evidenciasExistentes = window.inspeccionEstado.evidencias || [];
     const estadoNormalizado = {
         ...estado,
-        inspeccion_id: normalizarInspeccionId(estado.inspeccion_id)
+        inspeccion_id: normalizarInspeccionId(estado.inspeccion_id),
+        encargado_aprobo: Boolean(
+            estado.encargado_aprobo ?? estado.confirmada_por_encargado
+        ),
+        confirmada_por_encargado: Boolean(estado.confirmada_por_encargado),
+        firma_encargado_temporal: Boolean(
+            estado.firma_encargado_temporal ?? estado.firma_temporal
+        )
     };
     window.inspeccionEstado = { ...window.inspeccionEstado, ...estadoNormalizado };
     // Preservar evidencias locales si no hay evidencias válidas en el estado restaurado
@@ -2809,6 +2854,10 @@ async function aplicarEstadoSincronizado(estado) {
                 }
             }
 
+            if (estado.firma_encargado) {
+                mostrarPreviewFirmaEncargado(estado.firma_encargado);
+            }
+
             // Aplicar evidencias si existen
             if (estado.evidencias && estado.evidencias.length > 0) {
                 mostrarEvidenciasSeleccionadas();
@@ -2840,6 +2889,18 @@ async function aplicarEstadoSincronizado(estado) {
 
         // Verificar estado de confirmación para inspectores
         if ((userRole === 'Inspector' || userRole === 'Administrador') && estado.confirmada_por_encargado) {
+            if (!window.inspeccionEstado.confirmacionesPorEstablecimiento) {
+                window.inspeccionEstado.confirmacionesPorEstablecimiento = {};
+            }
+
+            window.inspeccionEstado.confirmacionesPorEstablecimiento[estado.establecimiento_id] = {
+                confirmada_por_encargado: true,
+                confirmador_id: estado.confirmador_id || null,
+                confirmador_nombre: estado.confirmador_nombre || 'Encargado',
+                confirmador_rol: estado.confirmador_rol || 'Encargado'
+            };
+            guardarEstadoConfirmaciones();
+
             const btnCompletar = document.querySelector('button[value="completar"]');
             if (btnCompletar) {
                 btnCompletar.disabled = false;
@@ -2918,10 +2979,15 @@ async function limpiarDatosTemporalesCompleto() {
             evidencias: [],
             firma_inspector: null,
             firma_encargado: null,
+            firma_encargado_temporal: false,
+            firmantes_establecimiento: [],
+            firmante_temporal_id: null,
+            firmante_temporal_rol: null,
             observaciones: '',
             encargado_aprobo: false,
             inspector_firmo: false,
             confirmacionesPorEstablecimiento: {}, // Nuevo: estado de confirmación por establecimiento
+            confirmador_id: null,
             confirmador_nombre: null,
             confirmador_rol: null,
             resumen: { puntaje_total: 0, puntaje_maximo_posible: 0, porcentaje_cumplimiento: 0, puntos_criticos_perdidos: 0 }
@@ -3434,6 +3500,7 @@ async function guardarInspeccionFinal(completar = false) {
                     encargado_aprobo: window.inspeccionEstado.encargado_aprobo,
                     inspector_firmo: window.inspeccionEstado.inspector_firmo,
                     firma_encargado: window.inspeccionEstado.firma_encargado,
+                    firma_encargado_temporal: window.inspeccionEstado.firma_encargado_temporal,
                     firma_inspector: window.inspeccionEstado.firma_inspector
                 };
 
@@ -3446,6 +3513,7 @@ async function guardarInspeccionFinal(completar = false) {
                         window.inspeccionEstado.encargado_aprobo = estadoFirmasAntesLimpieza.encargado_aprobo;
                         window.inspeccionEstado.inspector_firmo = estadoFirmasAntesLimpieza.inspector_firmo;
                         window.inspeccionEstado.firma_encargado = estadoFirmasAntesLimpieza.firma_encargado;
+                        window.inspeccionEstado.firma_encargado_temporal = Boolean(estadoFirmasAntesLimpieza.firma_encargado_temporal);
                         window.inspeccionEstado.firma_inspector = estadoFirmasAntesLimpieza.firma_inspector;
                     }
                 }, 100);
@@ -3532,9 +3600,20 @@ function actualizarInterfazFirmas() {
     const btnCompletar = document.querySelector('button[value="completar"]');
     const btnGuardar = document.querySelector('button[value="guardar"]');
     const firmaEncargadoContainer = document.getElementById('firma-encargado-container');
+    const btnFirmaTemporalEncargado = document.getElementById('btn-firma-encargado-canvas');
+    const hayConfirmacionEncargado = tieneConfirmacionEncargadoActual();
 
     // Para inspectores
     if (esRolEditorChecklist()) {
+        if (btnFirmaTemporalEncargado) {
+            const hayEstablecimiento = Boolean(window.inspeccionEstado?.establecimiento_id);
+            btnFirmaTemporalEncargado.disabled = hayConfirmacionEncargado || !hayEstablecimiento;
+            btnFirmaTemporalEncargado.classList.toggle('opacity-60', hayConfirmacionEncargado || !hayEstablecimiento);
+            btnFirmaTemporalEncargado.classList.toggle('cursor-not-allowed', hayConfirmacionEncargado || !hayEstablecimiento);
+            btnFirmaTemporalEncargado.textContent = hayConfirmacionEncargado
+                ? 'Firma del encargado registrada'
+                : 'Firmar aquí con el encargado';
+        }
 
         // Actualizar área de firma del inspector
         if (firmaInspectorArea) {
@@ -3545,7 +3624,7 @@ function actualizarInterfazFirmas() {
                 if (inputFirma) inputFirma.style.display = 'none';
                 const h3 = firmaInspectorArea.querySelector('h3');
                 if (h3) h3.innerHTML = '<span class="text-green-600">✓ Inspector ha firmado</span>';
-            } else if (window.inspeccionEstado.encargado_aprobo) {
+            } else if (hayConfirmacionEncargado) {
                 // Mostrar mensaje que ahora puede firmar, pero solo si ya cargó su firma
                 let mensaje = firmaInspectorArea.querySelector('.mensaje-puede-firmar');
                 if (mensaje) {
@@ -3573,16 +3652,22 @@ function actualizarInterfazFirmas() {
 
         // Mostrar información sobre el estado del encargado
         if (firmaEncargadoArea) {
-            if (window.inspeccionEstado.encargado_aprobo) {
+            if (hayConfirmacionEncargado) {
                 const h3 = firmaEncargadoArea.querySelector('h3');
-                if (h3) h3.innerHTML = '<span class="text-green-600">✓ Encargado ha aprobado la inspección</span>';
+                if (h3) {
+                    const nombreFirmante = window.inspeccionEstado?.confirmador_nombre || 'Encargado';
+                    const rolFirmante = window.inspeccionEstado?.confirmador_rol || 'Encargado';
+                    h3.innerHTML = window.inspeccionEstado.firma_encargado_temporal
+                        ? `<span class="text-green-600">✓ Firma registrada por ${nombreFirmante} (${rolFirmante})</span>`
+                        : `<span class="text-green-600">✓ ${nombreFirmante} (${rolFirmante}) aprobó la inspección</span>`;
+                }
 
                 // Ocultar input del encargado
                 const inputEncargado = document.getElementById('firma-encargado');
                 if (inputEncargado) inputEncargado.style.display = 'none';
             } else {
                 const h3 = firmaEncargadoArea.querySelector('h3');
-                if (h3) h3.innerHTML = '<span class="text-orange-600">⏳ Esperando aprobación del encargado</span>';
+                if (h3) h3.innerHTML = '<span class="text-orange-600">⏳ Esperando firma o aprobación del encargado</span>';
             }
         }
 
@@ -3598,13 +3683,13 @@ function actualizarInterfazFirmas() {
 
     // Para encargados
     else if (userRole === 'Encargado' || userRole === 'Jefe de Establecimiento') {
-        if (firmaEncargadoContainer && window.inspeccionEstado.encargado_aprobo) {
+        if (firmaEncargadoContainer && hayConfirmacionEncargado) {
             firmaEncargadoContainer.innerHTML = '<p class="text-green-600 font-semibold">✓ Ha aprobado la inspección</p>';
 
             // Ocultar input de firma
             const inputEncargado = document.getElementById('firma-encargado');
             if (inputEncargado) inputEncargado.style.display = 'none';
-        } else if (firmaEncargadoContainer && !window.inspeccionEstado.encargado_aprobo) {
+        } else if (firmaEncargadoContainer && !hayConfirmacionEncargado) {
             // Solo mostrar botón de aprobar si ya tiene firma cargada
             if (window.inspeccionEstado.firma_encargado) {
                 firmaEncargadoContainer.innerHTML = `
@@ -3915,6 +4000,7 @@ function limpiarEstadoTemporal() {
         // Guardar las firmas actuales antes de limpiar
         const firmaInspectorActual = window.inspeccionEstado?.firma_inspector;
         const firmaEncargadoActual = window.inspeccionEstado?.firma_encargado;
+        const firmaEncargadoTemporalActual = window.inspeccionEstado?.firma_encargado_temporal;
         const firmaInspectorIdActual = window.inspeccionEstado?.firma_inspector_id;
         const firmaEncargadoIdActual = window.inspeccionEstado?.firma_encargado_id;
         const inspectorFirmoActual = window.inspeccionEstado?.inspector_firmo;
@@ -3931,14 +4017,19 @@ function limpiarEstadoTemporal() {
             observaciones: '',
             motivo_sin_firma_encargado: '',
             firma_encargado: firmaEncargadoActual, // Preservar firma del encargado
+            firma_encargado_temporal: Boolean(firmaEncargadoTemporalActual),
             firma_inspector: firmaInspectorActual, // Preservar firma del inspector
             firma_encargado_id: firmaEncargadoIdActual, // Preservar ID de firma del encargado
             firma_inspector_id: firmaInspectorIdActual, // Preservar ID de firma del inspector
+            firmantes_establecimiento: [],
+            firmante_temporal_id: null,
+            firmante_temporal_rol: null,
             estado: 'borrador',
             encargado_aprobo: encargadoAproboActual, // Preservar estado de aprobación
             inspector_firmo: inspectorFirmoActual, // Preservar estado de firma del inspector
             evidencias: [],
             confirmada_por_encargado: false,
+            confirmador_id: null,
             confirmador_nombre: null,
             confirmador_rol: null,
             confirmacionesPorEstablecimiento: confirmacionesPrevias // Mantener estado de confirmaciones por establecimiento
@@ -4208,6 +4299,7 @@ async function cargarFirmasEstablecimiento(establecimientoId) {
                     if (window.inspeccionEstado) {
                         window.inspeccionEstado.firma_encargado = data.firma_encargado.ruta;
                         window.inspeccionEstado.firma_encargado_id = data.firma_encargado.id;
+                        window.inspeccionEstado.firma_encargado_temporal = false;
                         // Tener una firma precargada no equivale a aprobar la inspección.
                         window.inspeccionEstado.encargado_aprobo = false;
                     }
@@ -4225,6 +4317,7 @@ async function cargarFirmasEstablecimiento(establecimientoId) {
                     // Asegurar que no esté marcado como aprobado
                     if (window.inspeccionEstado) {
                         window.inspeccionEstado.encargado_aprobo = false;
+                        window.inspeccionEstado.firma_encargado_temporal = false;
                     }
                 }
 
@@ -4268,6 +4361,7 @@ async function cargarFirmasEstablecimiento(establecimientoId) {
                     // Guardar en estado global
                     window.inspeccionEstado.firma_encargado = data.firma_encargado.ruta;
                     window.inspeccionEstado.firma_encargado_id = data.firma_encargado.id;
+                    window.inspeccionEstado.firma_encargado_temporal = false;
                     // Tener firma disponible no significa que ya aprobó.
                     window.inspeccionEstado.encargado_aprobo = false;
 
@@ -4563,6 +4657,7 @@ async function cargarInspeccionEnInterfaz(inspeccionData) {
             motivo_sin_firma_encargado: inspeccionData.motivo_sin_firma_encargado || '',
             firma_inspector: inspeccionData.firma_inspector,
             firma_encargado: inspeccionData.firma_encargado,
+            firma_encargado_temporal: Boolean(inspeccionData.firma_encargado_temporal),
             estado: inspeccionData.estado,
             // La aprobación real del encargado debe venir del estado de confirmación, no solo de la firma cargada.
             encargado_aprobo: esInspeccionBorrador ? false : Boolean(inspeccionData.confirmada_por_encargado),
@@ -4570,6 +4665,7 @@ async function cargarInspeccionEnInterfaz(inspeccionData) {
             inspector_firmo: inspeccionData.firma_inspector ? true : false,
             // Si es borrador, NO debe estar confirmada (aunque tenga firma del encargado)
             confirmada_por_encargado: esInspeccionBorrador ? false : Boolean(inspeccionData.confirmada_por_encargado),
+            confirmador_id: esInspeccionBorrador ? null : (inspeccionData.confirmador_id || null),
             confirmador_nombre: esInspeccionBorrador ? null : (inspeccionData.confirmador_nombre || null),
             confirmador_rol: esInspeccionBorrador ? null : (inspeccionData.confirmador_rol || null)
         };
@@ -4586,6 +4682,7 @@ async function cargarInspeccionEnInterfaz(inspeccionData) {
             if (window.inspeccionEstado.confirmacionesPorEstablecimiento[inspeccionData.establecimiento_id]) {
                 window.inspeccionEstado.confirmacionesPorEstablecimiento[inspeccionData.establecimiento_id] = {
                     confirmada_por_encargado: false,
+                    confirmador_id: null,
                     confirmador_nombre: null,
                     confirmador_rol: null
                 };
@@ -4824,6 +4921,516 @@ function mostrarPreviewFirmaInspector(pathFirma) {
     }, 1000);
 }
 
+function resolverSrcFirmaEncargado(firma) {
+    if (!firma || typeof firma !== 'string') {
+        return null;
+    }
+
+    if (
+        firma.startsWith('data:image/')
+        || firma.startsWith('/static/')
+        || firma.startsWith('http://')
+        || firma.startsWith('https://')
+        || firma.startsWith('blob:')
+    ) {
+        return firma;
+    }
+
+    return `/static/${firma.replace(/^\/+/, '')}`;
+}
+
+function mostrarEstadoFirmaTemporalEncargado(mensaje = '', tipo = 'error') {
+    const estado = document.getElementById('estado-firma-encargado-temporal');
+    if (!estado) {
+        return;
+    }
+
+    if (!mensaje) {
+        estado.classList.add('hidden');
+        estado.textContent = '';
+        return;
+    }
+
+    const estilosPorTipo = {
+        error: 'rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300',
+        success: 'rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300',
+        info: 'rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
+    };
+
+    estado.className = estilosPorTipo[tipo] || estilosPorTipo.error;
+    estado.textContent = mensaje;
+    estado.classList.remove('hidden');
+}
+
+function obtenerFechaInspeccionActual() {
+    const inputFecha = document.getElementById('fecha');
+    return inputFecha?.value || window.inspeccionEstado?.fecha || '';
+}
+
+function actualizarAyudaFirmanteTemporalEncargado(
+    mensaje = 'Debe elegir explícitamente qué encargado o jefe del establecimiento está autorizando esta inspección.',
+    tipo = 'info'
+) {
+    const ayuda = document.getElementById('ayuda-firmante-encargado-temporal');
+    if (!ayuda) {
+        return;
+    }
+
+    const clasesPorTipo = {
+        info: 'text-xs text-slate-500 dark:text-slate-400',
+        success: 'text-xs text-emerald-600 dark:text-emerald-300',
+        warning: 'text-xs text-amber-600 dark:text-amber-300',
+        error: 'text-xs text-red-600 dark:text-red-300'
+    };
+
+    ayuda.className = clasesPorTipo[tipo] || clasesPorTipo.info;
+    ayuda.textContent = mensaje;
+}
+
+function renderizarFirmantesTemporalesEncargado(firmantes = [], seleccionado = '') {
+    const selectFirmante = document.getElementById('select-firmante-encargado-temporal');
+    if (!selectFirmante) {
+        return;
+    }
+
+    const valorSeleccionado = String(seleccionado || '');
+    selectFirmante.innerHTML = '';
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Seleccione un encargado o jefe';
+    selectFirmante.appendChild(placeholder);
+
+    firmantes.forEach(firmante => {
+        const opcion = document.createElement('option');
+        opcion.value = String(firmante.usuario_id);
+        opcion.textContent = firmante.label || `${firmante.nombre} (${firmante.rol})`;
+        opcion.dataset.rol = firmante.rol || '';
+        selectFirmante.appendChild(opcion);
+    });
+
+    selectFirmante.value = valorSeleccionado;
+    selectFirmante.disabled = firmantes.length === 0 || confirmacionEncargadoTemporalEnCurso;
+
+    if (firmantes.length === 0) {
+        actualizarAyudaFirmanteTemporalEncargado(
+            'No hay encargados o jefes habilitados para firmar en este establecimiento y fecha.',
+            'warning'
+        );
+    } else if (valorSeleccionado && selectFirmante.value === valorSeleccionado) {
+        const opcionSeleccionada = selectFirmante.selectedOptions?.[0];
+        actualizarAyudaFirmanteTemporalEncargado(
+            `Firmará: ${opcionSeleccionada?.textContent || 'Firmante seleccionado'}.`,
+            'success'
+        );
+    } else {
+        actualizarAyudaFirmanteTemporalEncargado();
+    }
+}
+
+async function cargarFirmantesHabilitadosEstablecimiento(
+    establecimientoId,
+    { silencioso = false } = {}
+) {
+    if (!establecimientoId) {
+        renderizarFirmantesTemporalesEncargado([]);
+        return [];
+    }
+
+    const fecha = obtenerFechaInspeccionActual();
+    const query = fecha ? `?fecha=${encodeURIComponent(fecha)}` : '';
+
+    try {
+        const response = await fetch(`/api/establecimientos/${establecimientoId}/firmantes${query}`);
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(
+                data.error || 'No se pudo cargar la lista de encargados o jefes habilitados.'
+            );
+        }
+
+        const firmantes = Array.isArray(data.firmantes) ? data.firmantes : [];
+        window.inspeccionEstado.firmantes_establecimiento = firmantes;
+        renderizarFirmantesTemporalesEncargado(firmantes);
+        return firmantes;
+    } catch (error) {
+        window.inspeccionEstado.firmantes_establecimiento = [];
+        renderizarFirmantesTemporalesEncargado([]);
+
+        if (!silencioso) {
+            mostrarEstadoFirmaTemporalEncargado(
+                error.message || 'No se pudo cargar la lista de firmantes habilitados.',
+                'error'
+            );
+        }
+
+        return [];
+    }
+}
+
+function ajustarCanvasFirmaTemporalEncargado(canvas, signaturePad) {
+    if (!canvas) {
+        return;
+    }
+
+    const firmaActual = signaturePad && !signaturePad.isEmpty() ? signaturePad.toData() : null;
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const width = canvas.offsetWidth || 900;
+    const height = canvas.offsetHeight || 288;
+
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+
+    const context = canvas.getContext('2d');
+    context.scale(ratio, ratio);
+
+    if (signaturePad) {
+        signaturePad.clear();
+        if (firmaActual) {
+            signaturePad.fromData(firmaActual);
+        }
+    }
+}
+
+function actualizarEstadoBotonConfirmarFirmaTemporalEncargado() {
+    const btnConfirmar = document.getElementById('btn-confirmar-firma-encargado-temporal');
+    const checkConfirmo = document.getElementById('check-confirmo-firma-encargado');
+    const selectFirmante = document.getElementById('select-firmante-encargado-temporal');
+
+    if (!btnConfirmar) {
+        return;
+    }
+
+    const firmaVacia = !firmaTemporalEncargadoPad || firmaTemporalEncargadoPad.isEmpty();
+    const checkMarcado = Boolean(checkConfirmo?.checked);
+    const firmanteSeleccionado = Boolean(selectFirmante?.value);
+
+    btnConfirmar.disabled = (
+        confirmacionEncargadoTemporalEnCurso
+        || firmaVacia
+        || !checkMarcado
+        || !firmanteSeleccionado
+    );
+}
+
+function inicializarPadFirmaTemporalEncargado() {
+    const canvas = document.getElementById('canvas-firma-encargado-temporal');
+    if (!canvas) {
+        return null;
+    }
+
+    if (typeof SignaturePad === 'undefined') {
+        mostrarEstadoFirmaTemporalEncargado('La librería de firma no está disponible en este momento.', 'error');
+        return null;
+    }
+
+    if (!firmaTemporalEncargadoPad) {
+        firmaTemporalEncargadoPad = new SignaturePad(canvas, {
+            backgroundColor: 'rgb(255, 255, 255)',
+            penColor: 'rgb(15, 23, 42)',
+            minWidth: 0.8,
+            maxWidth: 2.2
+        });
+
+        firmaTemporalEncargadoPad.addEventListener('endStroke', () => {
+            mostrarEstadoFirmaTemporalEncargado('');
+            actualizarEstadoBotonConfirmarFirmaTemporalEncargado();
+        });
+    }
+
+    ajustarCanvasFirmaTemporalEncargado(canvas, firmaTemporalEncargadoPad);
+    actualizarEstadoBotonConfirmarFirmaTemporalEncargado();
+    return firmaTemporalEncargadoPad;
+}
+
+function limpiarFirmaTemporalEncargado({ resetFirmante = false } = {}) {
+    const checkConfirmo = document.getElementById('check-confirmo-firma-encargado');
+    const selectFirmante = document.getElementById('select-firmante-encargado-temporal');
+
+    if (firmaTemporalEncargadoPad) {
+        firmaTemporalEncargadoPad.clear();
+    }
+
+    if (checkConfirmo) {
+        checkConfirmo.checked = false;
+    }
+
+    if (resetFirmante && selectFirmante) {
+        selectFirmante.value = '';
+    }
+
+    mostrarEstadoFirmaTemporalEncargado('');
+    if (resetFirmante) {
+        renderizarFirmantesTemporalesEncargado(
+            window.inspeccionEstado?.firmantes_establecimiento || [],
+            ''
+        );
+    }
+    actualizarEstadoBotonConfirmarFirmaTemporalEncargado();
+}
+
+async function abrirModalFirmaTemporalEncargado() {
+    if (!esRolEditorChecklist()) {
+        mostrarNotificacion('Solo el inspector o administrador puede registrar esta firma desde esta pantalla.', 'warning');
+        return;
+    }
+
+    const establecimientoId = window.inspeccionEstado?.establecimiento_id;
+    if (!establecimientoId) {
+        mostrarNotificacion('Seleccione primero un establecimiento antes de solicitar la firma del encargado.', 'warning');
+        return;
+    }
+
+    const modal = document.getElementById('modal-firma-encargado-temporal');
+    if (!modal) {
+        return;
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('overflow-hidden');
+
+    setTimeout(() => {
+        inicializarPadFirmaTemporalEncargado();
+        limpiarFirmaTemporalEncargado({ resetFirmante: true });
+    }, 0);
+
+    const firmantes = await cargarFirmantesHabilitadosEstablecimiento(
+        establecimientoId,
+        { silencioso: false }
+    );
+
+    if (!firmantes.length) {
+        mostrarEstadoFirmaTemporalEncargado(
+            'No hay encargados o jefes habilitados para firmar en este establecimiento y fecha.',
+            'error'
+        );
+    }
+}
+
+function cerrarModalFirmaTemporalEncargado() {
+    const modal = document.getElementById('modal-firma-encargado-temporal');
+    if (!modal) {
+        return;
+    }
+
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('overflow-hidden');
+    limpiarFirmaTemporalEncargado({ resetFirmante: true });
+}
+
+async function confirmarFirmaTemporalEncargadoDesdeInspector() {
+    if (!esRolEditorChecklist()) {
+        mostrarNotificacion('Solo el inspector o administrador puede registrar esta firma desde esta pantalla.', 'warning');
+        return;
+    }
+
+    const establecimientoId = window.inspeccionEstado?.establecimiento_id;
+    const checkConfirmo = document.getElementById('check-confirmo-firma-encargado');
+    const btnConfirmar = document.getElementById('btn-confirmar-firma-encargado-temporal');
+    const selectFirmante = document.getElementById('select-firmante-encargado-temporal');
+
+    if (!establecimientoId) {
+        mostrarEstadoFirmaTemporalEncargado('Seleccione primero un establecimiento.', 'error');
+        return;
+    }
+
+    if (!inicializarPadFirmaTemporalEncargado()) {
+        return;
+    }
+
+    if (firmaTemporalEncargadoPad.isEmpty()) {
+        mostrarEstadoFirmaTemporalEncargado('La firma del encargado es obligatoria antes de registrar la aprobación.', 'error');
+        actualizarEstadoBotonConfirmarFirmaTemporalEncargado();
+        return;
+    }
+
+    if (!selectFirmante?.value) {
+        mostrarEstadoFirmaTemporalEncargado(
+            'Debe seleccionar qué encargado o jefe está firmando esta inspección.',
+            'error'
+        );
+        actualizarEstadoBotonConfirmarFirmaTemporalEncargado();
+        return;
+    }
+
+    if (!checkConfirmo?.checked) {
+        mostrarEstadoFirmaTemporalEncargado('Debe confirmar que el encargado está firmando desde esta pantalla.', 'error');
+        actualizarEstadoBotonConfirmarFirmaTemporalEncargado();
+        return;
+    }
+
+    let solicitudExitosa = false;
+    const htmlOriginal = btnConfirmar?.innerHTML;
+
+    try {
+        confirmacionEncargadoTemporalEnCurso = true;
+        suprimirSiguienteNotificacionEncargadoAprobo = true;
+        actualizarEstadoBotonConfirmarFirmaTemporalEncargado();
+        mostrarEstadoFirmaTemporalEncargado('');
+
+        if (btnConfirmar) {
+            btnConfirmar.innerHTML = obtenerMarkupBotonGuardando('Registrando firma...');
+        }
+
+        const firmaTemporalData = firmaTemporalEncargadoPad.toDataURL('image/png');
+        const opcionFirmante = selectFirmante.selectedOptions?.[0];
+        const firmanteUsuarioId = Number.parseInt(selectFirmante.value, 10);
+        const firmanteRol = opcionFirmante?.dataset?.rol || '';
+        const fechaInspeccion = obtenerFechaInspeccionActual();
+
+        const response = await fetch('/api/inspecciones/confirmar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                establecimiento_id: establecimientoId,
+                firma_temporal_data: firmaTemporalData,
+                confirmo_firma_encargado: true,
+                firmante_usuario_id: Number.isInteger(firmanteUsuarioId) ? firmanteUsuarioId : null,
+                firmante_rol: firmanteRol || null,
+                fecha: fechaInspeccion || null
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'No se pudo registrar la firma temporal del encargado.');
+        }
+
+        solicitudExitosa = true;
+
+        const firmaConfirmada = data.firma_data?.ruta || data.firma_data || firmaTemporalData;
+
+        window.inspeccionEstado.firma_encargado = firmaConfirmada;
+        window.inspeccionEstado.firma_encargado_id = data.firma_data?.id || null;
+        window.inspeccionEstado.firma_encargado_temporal = Boolean(data.firma_temporal ?? !data.firma_data?.id);
+        window.inspeccionEstado.firmante_temporal_id = data.confirmador_id || firmanteUsuarioId || null;
+        window.inspeccionEstado.firmante_temporal_rol = data.confirmador_rol || firmanteRol || null;
+        window.inspeccionEstado.encargado_aprobo = true;
+        window.inspeccionEstado.confirmada_por_encargado = true;
+        window.inspeccionEstado.confirmador_id = data.confirmador_id || firmanteUsuarioId || null;
+        window.inspeccionEstado.confirmador_nombre = data.confirmador || data.confirmador_nombre || 'Encargado';
+        window.inspeccionEstado.confirmador_rol = data.confirmador_rol || 'Encargado';
+
+        if (!window.inspeccionEstado.confirmacionesPorEstablecimiento) {
+            window.inspeccionEstado.confirmacionesPorEstablecimiento = {};
+        }
+
+        window.inspeccionEstado.confirmacionesPorEstablecimiento[establecimientoId] = {
+            confirmada_por_encargado: true,
+            confirmador_id: window.inspeccionEstado.confirmador_id,
+            confirmador_nombre: window.inspeccionEstado.confirmador_nombre,
+            confirmador_rol: window.inspeccionEstado.confirmador_rol
+        };
+
+        guardarEstadoConfirmaciones();
+        const hiddenInputFirmaEncargado = document.getElementById('firma-encargado-hidden');
+        if (hiddenInputFirmaEncargado) {
+            hiddenInputFirmaEncargado.value = '';
+        }
+        mostrarPreviewFirmaEncargado(firmaConfirmada);
+        actualizarInterfazFirmas();
+        deshabilitarBotonCompletarInspector();
+        cerrarModalFirmaTemporalEncargado();
+        mostrarNotificacion(data.message || 'Firma del encargado registrada desde esta pantalla.', 'success');
+    } catch (error) {
+        suprimirSiguienteNotificacionEncargadoAprobo = false;
+        mostrarEstadoFirmaTemporalEncargado(error.message || 'No se pudo registrar la firma temporal del encargado.', 'error');
+    } finally {
+        confirmacionEncargadoTemporalEnCurso = false;
+        if (btnConfirmar && htmlOriginal) {
+            btnConfirmar.innerHTML = htmlOriginal;
+        }
+        actualizarEstadoBotonConfirmarFirmaTemporalEncargado();
+
+        if (!solicitudExitosa) {
+            suprimirSiguienteNotificacionEncargadoAprobo = false;
+        }
+    }
+}
+
+function inicializarModalFirmaTemporalEncargado() {
+    const modal = document.getElementById('modal-firma-encargado-temporal');
+    if (!modal || modal.dataset.initialized === 'true') {
+        return;
+    }
+
+    const btnAbrir = document.getElementById('btn-firma-encargado-canvas');
+    const btnCerrar = document.getElementById('btn-cerrar-modal-firma-encargado');
+    const btnCancelar = document.getElementById('btn-cancelar-firma-encargado-temporal');
+    const btnLimpiar = document.getElementById('btn-limpiar-firma-encargado-temporal');
+    const btnConfirmar = document.getElementById('btn-confirmar-firma-encargado-temporal');
+    const checkConfirmo = document.getElementById('check-confirmo-firma-encargado');
+    const selectFirmante = document.getElementById('select-firmante-encargado-temporal');
+
+    if (btnAbrir) {
+        btnAbrir.addEventListener('click', abrirModalFirmaTemporalEncargado);
+    }
+
+    [btnCerrar, btnCancelar].forEach(boton => {
+        if (boton) {
+            boton.addEventListener('click', cerrarModalFirmaTemporalEncargado);
+        }
+    });
+
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', limpiarFirmaTemporalEncargado);
+    }
+
+    if (btnConfirmar) {
+        btnConfirmar.addEventListener('click', confirmarFirmaTemporalEncargadoDesdeInspector);
+    }
+
+    if (checkConfirmo) {
+        checkConfirmo.addEventListener('change', actualizarEstadoBotonConfirmarFirmaTemporalEncargado);
+    }
+
+    if (selectFirmante) {
+        selectFirmante.addEventListener('change', function () {
+            renderizarFirmantesTemporalesEncargado(
+                window.inspeccionEstado?.firmantes_establecimiento || [],
+                this.value
+            );
+            actualizarEstadoBotonConfirmarFirmaTemporalEncargado();
+        });
+    }
+
+    modal.querySelectorAll('[data-cerrar-modal-firma-encargado="true"]').forEach(elemento => {
+        elemento.addEventListener('click', cerrarModalFirmaTemporalEncargado);
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+            cerrarModalFirmaTemporalEncargado();
+        }
+    });
+
+    if (redimensionFirmaTemporalEncargado) {
+        window.removeEventListener('resize', redimensionFirmaTemporalEncargado);
+    }
+
+    redimensionFirmaTemporalEncargado = function () {
+        const canvas = document.getElementById('canvas-firma-encargado-temporal');
+        if (!canvas || modal.classList.contains('hidden')) {
+            return;
+        }
+        ajustarCanvasFirmaTemporalEncargado(canvas, firmaTemporalEncargadoPad);
+    };
+
+    window.addEventListener('resize', redimensionFirmaTemporalEncargado);
+    modal.dataset.initialized = 'true';
+    actualizarEstadoBotonConfirmarFirmaTemporalEncargado();
+}
+
+window.abrirModalFirmaTemporalEncargado = abrirModalFirmaTemporalEncargado;
+
 /**
  * Mostrar preview de firma del encargado
  */
@@ -4831,11 +5438,24 @@ function mostrarPreviewFirmaEncargado(pathFirma) {
     const preview = document.getElementById('preview-firma-encargado');
     if (!preview) return;
 
+    const srcFirma = resolverSrcFirmaEncargado(pathFirma);
+    if (!srcFirma) {
+        limpiarPreviewFirmaEncargado();
+        return;
+    }
+
+    const etiquetaFirma = window.inspeccionEstado?.firma_encargado_temporal
+        ? '<span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">Firma temporal tomada en esta pantalla</span>'
+        : '<span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">Firma disponible para esta inspección</span>';
+
     preview.innerHTML = `
-        <img src="/static/${pathFirma}" 
-             alt="Firma del encargado" 
-             class="max-w-full max-h-[200px] object-contain rounded-lg"
-             onerror="this.src='/static/img/placeholder-firma.png'">
+        <div class="flex w-full flex-col items-center gap-3 p-4">
+            ${etiquetaFirma}
+            <img src="${srcFirma}" 
+                 alt="Firma del encargado" 
+                 class="max-w-full max-h-[200px] object-contain rounded-lg"
+                 onerror="this.src='/static/img/placeholder-firma.png'">
+        </div>
     `;
 }
 
@@ -4851,7 +5471,10 @@ function limpiarPreviewFirmaEncargado() {
     // Limpiar estado global
     if (window.inspeccionEstado) {
         window.inspeccionEstado.firma_encargado = null;
+        window.inspeccionEstado.firma_encargado_temporal = false;
         window.inspeccionEstado.firma_encargado_id = null;
+        window.inspeccionEstado.firmante_temporal_id = null;
+        window.inspeccionEstado.firmante_temporal_rol = null;
     }
 
     // Limpiar campo oculto
@@ -5000,13 +5623,21 @@ function reiniciarConfirmacionEncargadoPorCambio() {
 
     window.inspeccionEstado.confirmacionesPorEstablecimiento[establecimientoId] = {
         confirmada_por_encargado: false,
+        confirmador_id: null,
         confirmador_nombre: null,
         confirmador_rol: null
     };
 
     window.inspeccionEstado.confirmada_por_encargado = false;
+    window.inspeccionEstado.confirmador_id = null;
     window.inspeccionEstado.confirmador_nombre = null;
     window.inspeccionEstado.confirmador_rol = null;
+    window.inspeccionEstado.firmante_temporal_id = null;
+    window.inspeccionEstado.firmante_temporal_rol = null;
+
+    if (window.inspeccionEstado.firma_encargado_temporal) {
+        limpiarPreviewFirmaEncargado();
+    }
 
     const yaPendiente = estadoPrevio
         && estadoPrevio.confirmada_por_encargado === false
@@ -5046,14 +5677,29 @@ function actualizarEstadoTiempoRealInspector(data) {
 
     window.inspeccionEstado.confirmacionesPorEstablecimiento[establecimientoId] = {
         confirmada_por_encargado: Boolean(data.confirmada_por_encargado),
+        confirmador_id: data.confirmador_id || null,
         confirmador_nombre: data.confirmador_nombre || null,
         confirmador_rol: data.confirmador_rol || null
     };
 
     if (window.inspeccionEstado.establecimiento_id === establecimientoId) {
         window.inspeccionEstado.confirmada_por_encargado = Boolean(data.confirmada_por_encargado);
+        window.inspeccionEstado.confirmador_id = data.confirmador_id || null;
         window.inspeccionEstado.confirmador_nombre = data.confirmador_nombre || null;
         window.inspeccionEstado.confirmador_rol = data.confirmador_rol || null;
+
+        if (data.confirmada_por_encargado && data.firma_data) {
+            const firmaEncargado = data.firma_data.ruta || data.firma_data;
+            window.inspeccionEstado.firma_encargado = firmaEncargado;
+            window.inspeccionEstado.firma_encargado_temporal = Boolean(data.firma_temporal);
+            window.inspeccionEstado.firma_encargado_id = data.firma_data.id || null;
+            mostrarPreviewFirmaEncargado(firmaEncargado);
+        } else if (!data.confirmada_por_encargado && window.inspeccionEstado.firma_encargado_temporal) {
+            limpiarPreviewFirmaEncargado();
+        }
+
+        window.inspeccionEstado.encargado_aprobo = Boolean(data.confirmada_por_encargado);
+        actualizarInterfazFirmas();
         deshabilitarBotonCompletarInspector();
     }
 

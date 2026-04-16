@@ -31,3 +31,4 @@ venv.bak/
 .venv/
 
 app/static/evidencias/
+app/static/img/firmas/

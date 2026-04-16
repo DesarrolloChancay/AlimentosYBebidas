@@ -18,6 +18,7 @@ from app.models.Inspecciones_models import (
     EvidenciaInspeccion,
     Establecimiento,
     EncargadoEstablecimiento,
+    JefeEstablecimiento,
 )
 from app.models.Usuario_models import Usuario
 
@@ -123,6 +124,183 @@ class InspeccionesController:
             rf"{re.escape(InspeccionesController.MOTIVO_SIN_FIRMA_INICIO)}\s*(.*?)\s*{re.escape(InspeccionesController.MOTIVO_SIN_FIRMA_FIN)}",
             re.DOTALL,
         )
+
+    @staticmethod
+    def _es_firma_base64_valida(firma):
+        return isinstance(firma, str) and firma.startswith("data:image/")
+
+    @staticmethod
+    def _nombre_mostrable_usuario(usuario):
+        if not usuario:
+            return None
+
+        nombre = f"{getattr(usuario, 'nombre', '')} {getattr(usuario, 'apellido', '')}".strip()
+        return nombre or getattr(usuario, "username", None) or f"Usuario {getattr(usuario, 'id', '')}".strip()
+
+    @staticmethod
+    def _obtener_encargado_activo_establecimiento(establecimiento_id, fecha_referencia=None):
+        fecha_obj = fecha_referencia or datetime.now().date()
+        return EncargadoEstablecimiento.query.filter(
+            EncargadoEstablecimiento.establecimiento_id == establecimiento_id,
+            EncargadoEstablecimiento.activo == True,
+            EncargadoEstablecimiento.fecha_inicio <= fecha_obj,
+            (
+                EncargadoEstablecimiento.fecha_fin.is_(None)
+                | (EncargadoEstablecimiento.fecha_fin >= fecha_obj)
+            ),
+        ).order_by(EncargadoEstablecimiento.es_principal.desc(), EncargadoEstablecimiento.id.asc()).first()
+
+    @staticmethod
+    def _parsear_fecha_referencia(fecha_referencia=None):
+        if isinstance(fecha_referencia, datetime):
+            return fecha_referencia.date()
+        if isinstance(fecha_referencia, date):
+            return fecha_referencia
+        if isinstance(fecha_referencia, str):
+            fecha_texto = fecha_referencia.strip()
+            if fecha_texto:
+                for formato in ("%Y-%m-%d", "%d/%m/%Y"):
+                    try:
+                        return datetime.strptime(fecha_texto, formato).date()
+                    except ValueError:
+                        continue
+        return datetime.now().date()
+
+    @staticmethod
+    def _obtener_firmantes_habilitados_establecimiento(
+        establecimiento_id, fecha_referencia=None
+    ):
+        fecha_obj = InspeccionesController._parsear_fecha_referencia(
+            fecha_referencia
+        )
+
+        firmantes = []
+        firmantes_vistos = set()
+
+        encargados = (
+            EncargadoEstablecimiento.query.join(
+                Usuario, EncargadoEstablecimiento.usuario_id == Usuario.id
+            )
+            .filter(
+                EncargadoEstablecimiento.establecimiento_id == establecimiento_id,
+                EncargadoEstablecimiento.activo == True,
+                Usuario.activo == True,
+                EncargadoEstablecimiento.fecha_inicio <= fecha_obj,
+                (
+                    EncargadoEstablecimiento.fecha_fin.is_(None)
+                    | (EncargadoEstablecimiento.fecha_fin >= fecha_obj)
+                ),
+            )
+            .order_by(
+                EncargadoEstablecimiento.es_principal.desc(),
+                EncargadoEstablecimiento.fecha_inicio.desc(),
+                EncargadoEstablecimiento.id.asc(),
+            )
+            .all()
+        )
+
+        for asignacion in encargados:
+            usuario = asignacion.usuario
+            if not usuario:
+                continue
+
+            clave = (usuario.id, "Encargado")
+            if clave in firmantes_vistos:
+                continue
+
+            nombre = (
+                InspeccionesController._nombre_mostrable_usuario(usuario)
+                or f"Usuario {usuario.id}"
+            )
+            es_principal = bool(asignacion.es_principal)
+            firmantes.append(
+                {
+                    "usuario_id": usuario.id,
+                    "nombre": nombre,
+                    "rol": "Encargado",
+                    "es_principal": es_principal,
+                    "label": (
+                        f"{nombre} (Encargado principal)"
+                        if es_principal
+                        else f"{nombre} (Encargado)"
+                    ),
+                }
+            )
+            firmantes_vistos.add(clave)
+
+        jefes = (
+            JefeEstablecimiento.query.join(
+                Usuario, JefeEstablecimiento.usuario_id == Usuario.id
+            )
+            .filter(
+                JefeEstablecimiento.establecimiento_id == establecimiento_id,
+                JefeEstablecimiento.activo == True,
+                Usuario.activo == True,
+                JefeEstablecimiento.fecha_inicio <= fecha_obj,
+                (
+                    JefeEstablecimiento.fecha_fin.is_(None)
+                    | (JefeEstablecimiento.fecha_fin >= fecha_obj)
+                ),
+            )
+            .order_by(
+                JefeEstablecimiento.es_principal.desc(),
+                JefeEstablecimiento.fecha_inicio.desc(),
+                JefeEstablecimiento.id.asc(),
+            )
+            .all()
+        )
+
+        for asignacion in jefes:
+            usuario = asignacion.usuario
+            if not usuario:
+                continue
+
+            clave = (usuario.id, "Jefe de Establecimiento")
+            if clave in firmantes_vistos:
+                continue
+
+            nombre = (
+                InspeccionesController._nombre_mostrable_usuario(usuario)
+                or f"Usuario {usuario.id}"
+            )
+            es_principal = bool(asignacion.es_principal)
+            firmantes.append(
+                {
+                    "usuario_id": usuario.id,
+                    "nombre": nombre,
+                    "rol": "Jefe de Establecimiento",
+                    "es_principal": es_principal,
+                    "label": (
+                        f"{nombre} (Jefe principal)"
+                        if es_principal
+                        else f"{nombre} (Jefe)"
+                    ),
+                }
+            )
+            firmantes_vistos.add(clave)
+
+        return firmantes
+
+    @staticmethod
+    def _obtener_firmante_habilitado_establecimiento(
+        establecimiento_id, usuario_id, rol=None, fecha_referencia=None
+    ):
+        try:
+            usuario_id = int(usuario_id)
+        except (TypeError, ValueError):
+            return None
+
+        rol_normalizado = (rol or "").strip()
+        for firmante in InspeccionesController._obtener_firmantes_habilitados_establecimiento(
+            establecimiento_id, fecha_referencia=fecha_referencia
+        ):
+            if firmante["usuario_id"] != usuario_id:
+                continue
+            if rol_normalizado and firmante["rol"] != rol_normalizado:
+                continue
+            return firmante
+
+        return None
 
     @staticmethod
     def _extraer_motivo_sin_firma_desde_observaciones(observaciones):
@@ -1137,6 +1315,8 @@ class InspeccionesController:
                         estado_actual_tiempo_real["confirmador_rol"] = None
                         estado_actual_tiempo_real["fecha_confirmacion"] = None
                         estado_actual_tiempo_real["firma_encargado_id"] = None
+                        estado_actual_tiempo_real["firma_encargado"] = None
+                        estado_actual_tiempo_real["firma_temporal"] = False
 
                     # Calcular resumen automáticamente basado en los items
                     resumen_calculado = {}
@@ -1255,6 +1435,8 @@ class InspeccionesController:
                                 "confirmada_por_encargado": estado_actual_tiempo_real.get("confirmada_por_encargado", False),
                                 "confirmador_nombre": estado_actual_tiempo_real.get("confirmador_nombre"),
                                 "confirmador_rol": estado_actual_tiempo_real.get("confirmador_rol"),
+                                "firma_data": estado_actual_tiempo_real.get("firma_encargado"),
+                                "firma_temporal": bool(estado_actual_tiempo_real.get("firma_temporal")),
                                 "timestamp": safe_timestamp(),
                             },
                             to=room,
@@ -1594,6 +1776,26 @@ class InspeccionesController:
             confirmada_por_encargado_tiempo_real = bool(
                 estado_tiempo_real_actual.get("confirmada_por_encargado")
             ) if estado_tiempo_real_actual else False
+            confirmador_id_tiempo_real = (
+                estado_tiempo_real_actual.get("confirmador_id")
+                if estado_tiempo_real_actual
+                else None
+            )
+            confirmador_rol_tiempo_real = (
+                estado_tiempo_real_actual.get("confirmador_rol")
+                if estado_tiempo_real_actual
+                else None
+            )
+
+            if (
+                accion == "completar"
+                and not firma_encargado
+                and estado_tiempo_real_actual
+                and confirmada_por_encargado_tiempo_real
+                and estado_tiempo_real_actual.get("firma_encargado")
+            ):
+                firma_encargado = estado_tiempo_real_actual.get("firma_encargado")
+                logging.info("Usando firma temporal/confirmada del encargado desde el estado en tiempo real")
 
             if (
                 accion == "completar"
@@ -1667,6 +1869,20 @@ class InspeccionesController:
             else:
                 encargado_id = None
                 logging.info("No se encontró encargado")
+
+            if confirmada_por_encargado_tiempo_real and confirmador_id_tiempo_real:
+                try:
+                    encargado_id = int(confirmador_id_tiempo_real)
+                    logging.info(
+                        "Usando firmante confirmado en tiempo real como encargado de la inspección: %s (%s)",
+                        encargado_id,
+                        confirmador_rol_tiempo_real or "Sin rol",
+                    )
+                except (TypeError, ValueError):
+                    logging.warning(
+                        "confirmador_id_tiempo_real inválido al guardar inspección: %s",
+                        confirmador_id_tiempo_real,
+                    )
 
             # Crear o actualizar la inspección
             inspeccion_id_raw = data.get("inspeccion_id")
@@ -1789,6 +2005,10 @@ class InspeccionesController:
 
             # Actualizar datos básicos
             inspeccion.observaciones = observaciones_limpias
+            if confirmada_por_encargado_tiempo_real and encargado_id:
+                inspeccion.encargado_id = encargado_id
+            elif inspeccion.encargado_id is None:
+                inspeccion.encargado_id = encargado_id
 
             firma_encargado_existente = inspeccion.firma_encargado
             firma_inspector_existente = inspeccion.firma_inspector
@@ -1817,13 +2037,15 @@ class InspeccionesController:
                     if firma_encargado_base64:
                         # Firma en base64 - guardar como archivo
                         firmante_encargado_id = (
-                            encargado.usuario_id if encargado else inspeccion.encargado_id
+                            inspeccion.encargado_id
+                            or encargado_id
+                            or inspector_id
                         )
                         ruta_firma_encargado = guardar_firma_como_archivo(
                             firma_encargado_base64,
                             "encargado",
                             inspeccion.id,
-                            firmante_encargado_id or encargado_id or inspector_id,
+                            firmante_encargado_id,
                         )
                         logging.info(f"Procesando firma_encargado_base64, ruta resultante: {ruta_firma_encargado}")
                         if ruta_firma_encargado:
@@ -2453,6 +2675,42 @@ class InspeccionesController:
 
         except Exception as e:
             return jsonify({"error": f"Error al obtener encargado: {str(e)}"}), 500
+
+    @staticmethod
+    def obtener_firmantes_establecimiento(establecimiento_id):
+        try:
+            user_id = session.get("user_id")
+            user_role = session.get("user_role")
+            fecha_referencia = request.args.get("fecha")
+
+            if not user_id:
+                return jsonify({"error": "Sesión no válida"}), 401
+
+            if not InspeccionesController._usuario_tiene_acceso_establecimiento(
+                user_id, user_role, establecimiento_id
+            ):
+                return jsonify({"error": "Sin acceso a este establecimiento"}), 403
+
+            firmantes = (
+                InspeccionesController._obtener_firmantes_habilitados_establecimiento(
+                    establecimiento_id,
+                    fecha_referencia=fecha_referencia,
+                )
+            )
+
+            return jsonify(
+                {
+                    "success": True,
+                    "firmantes": firmantes,
+                    "fecha_referencia": InspeccionesController._parsear_fecha_referencia(
+                        fecha_referencia
+                    ).isoformat(),
+                }
+            )
+        except Exception as e:
+            return jsonify(
+                {"error": f"Error al obtener firmantes habilitados: {str(e)}"}
+            ), 500
 
     @staticmethod
     def filtrar_inspecciones(
@@ -4324,15 +4582,22 @@ class InspeccionesController:
         try:
             user_id = session.get("user_id")
             user_role = session.get("user_role")
-            
-            # Verificar que sea encargado o jefe
-            if user_role not in ["Encargado", "Jefe de Establecimiento"]:
-                return jsonify({"error": "Solo encargados o jefes pueden confirmar inspecciones"}), 403
-            
-            data = request.get_json()
+
+            if user_role not in ["Encargado", "Jefe de Establecimiento", "Inspector", "Administrador"]:
+                return jsonify({"error": "No autorizado para confirmar inspecciones"}), 403
+
+            data = request.get_json(silent=True) or {}
             establecimiento_id = data.get("establecimiento_id")
             firma_id = data.get("firma_id")
-            
+            firma_temporal_data = data.get("firma_temporal_data")
+            firmante_usuario_id = data.get("firmante_usuario_id")
+            firmante_rol = data.get("firmante_rol")
+            fecha_referencia = data.get("fecha")
+            confirmo_firma_encargado = str(
+                data.get("confirmo_firma_encargado", "")
+            ).strip().lower() in {"1", "true", "t", "yes", "si", "sí"}
+            confirmacion_desde_editor = user_role in ["Inspector", "Administrador"]
+
             if not establecimiento_id:
                 return jsonify({"error": "Establecimiento requerido"}), 400
 
@@ -4340,6 +4605,26 @@ class InspeccionesController:
                 user_id, user_role, establecimiento_id
             ):
                 return jsonify({"error": "Sin acceso a este establecimiento"}), 403
+
+            if confirmacion_desde_editor:
+                if not InspeccionesController._es_firma_base64_valida(firma_temporal_data):
+                    return jsonify({
+                        "error": "La firma temporal del encargado es obligatoria y debe enviarse desde el canvas."
+                    }), 400
+
+                if not confirmo_firma_encargado:
+                    return jsonify({
+                        "error": "Debe confirmar que el encargado está firmando desde esta pantalla."
+                    }), 400
+
+                if not firmante_usuario_id:
+                    return jsonify({
+                        "error": "Debe seleccionar qué encargado o jefe está firmando esta inspección."
+                    }), 400
+            elif firma_temporal_data:
+                return jsonify({
+                    "error": "La firma temporal desde pantalla solo puede registrarla el inspector o administrador."
+                }), 403
 
             firma = None
             if firma_id:
@@ -4376,48 +4661,83 @@ class InspeccionesController:
                     "confirmada": True,
                     "confirmador": confirmador
                 }), 409  # Conflict
-            
-            # Obtener nombre del usuario que confirma
-            from app.models.Usuario_models import Usuario
+
             usuario = Usuario.query.get(user_id)
-            nombre_confirmador = usuario.nombre if usuario else f"Usuario {user_id}"
-            
+            firma_temporal = False
+            firma_encargado_data = None
+
+            if confirmacion_desde_editor:
+                firmante_seleccionado = (
+                    InspeccionesController._obtener_firmante_habilitado_establecimiento(
+                        establecimiento_id,
+                        firmante_usuario_id,
+                        rol=firmante_rol,
+                        fecha_referencia=fecha_referencia,
+                    )
+                )
+
+                if not firmante_seleccionado:
+                    return jsonify({
+                        "error": "El firmante seleccionado ya no está habilitado para este establecimiento."
+                    }), 400
+
+                nombre_confirmador = firmante_seleccionado["nombre"]
+                confirmador_id = firmante_seleccionado["usuario_id"]
+                confirmador_rol = firmante_seleccionado["rol"]
+                firma_temporal = True
+                firma_encargado_data = firma_temporal_data
+                firma_id = None
+            else:
+                nombre_confirmador = (
+                    InspeccionesController._nombre_mostrable_usuario(usuario)
+                    or f"Usuario {user_id}"
+                )
+                confirmador_id = user_id
+                confirmador_rol = user_role
+                if firma:
+                    firma_encargado_data = {
+                        "id": firma.id,
+                        "ruta": firma.path_firma,
+                        "encargado_id": firma.encargado_id,
+                        "encargado_nombre": nombre_confirmador,
+                    }
+
             # Marcar como confirmada
             estado["confirmada_por_encargado"] = True
-            estado["confirmador_id"] = user_id
+            estado["confirmador_id"] = confirmador_id
             estado["confirmador_nombre"] = nombre_confirmador
-            estado["confirmador_rol"] = user_role
+            estado["confirmador_rol"] = confirmador_rol
             estado["firma_encargado_id"] = firma_id
+            estado["firma_encargado"] = firma_encargado_data
+            estado["firma_temporal"] = firma_temporal
             estado["fecha_confirmacion"] = safe_timestamp()
             
             
             # Notificar vía WebSocket a todos los conectados
             from app.socket_events import socketio
-             
-            # Obtener información de la firma del encargado
-            firma_encargado_data = None
-            if firma:
-                if firma:
-                    firma_encargado_data = {
-                        'id': firma.id,
-                        'ruta': firma.path_firma,
-                        'encargado_id': firma.encargado_id,
-                        'encargado_nombre': nombre_confirmador
-                    }
-            
+
             socketio.emit('encargado_aprobo', {
                 'establecimiento_id': establecimiento_id,
-                'encargado_id': user_id,
+                'encargado_id': confirmador_id,
                 'encargado_nombre': nombre_confirmador,
                 'mensaje': f'{nombre_confirmador} ha confirmado la inspección',
                 'firma_data': firma_encargado_data,
+                'firma_temporal': firma_temporal,
+                'confirmador_nombre': nombre_confirmador,
+                'confirmador_rol': confirmador_rol,
+                'confirmacion_desde_editor': confirmacion_desde_editor,
                 'timestamp': estado["fecha_confirmacion"]
             }, room=f'establecimiento_{establecimiento_id}')
             
             return jsonify({
                 "success": True,
                 "message": f"Inspección confirmada por {nombre_confirmador}",
-                "confirmador": nombre_confirmador
+                "confirmador": nombre_confirmador,
+                "confirmador_id": confirmador_id,
+                "confirmador_nombre": nombre_confirmador,
+                "confirmador_rol": confirmador_rol,
+                "firma_data": firma_encargado_data,
+                "firma_temporal": firma_temporal,
             })
             
         except Exception as e:
