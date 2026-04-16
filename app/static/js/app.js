@@ -285,6 +285,9 @@ window.inspeccionEstado = {
     }
 };
 
+let guardadoInspeccionEnCurso = false;
+let accionGuardadoInspeccionEnCurso = null;
+
 // Funciones para persistir estado de confirmaciones en sessionStorage
 /**
  * Carga el estado de confirmaciones desde sessionStorage al inicializar la aplicación.
@@ -3164,7 +3167,78 @@ function configurarInterfazPorRol() {
     }
 }
 
+function obtenerBotonesGuardadoInspeccion() {
+    return {
+        btnGuardar: document.getElementById('btn-guardar-borrador') || document.querySelector('button[value="guardar"]'),
+        btnCompletar: document.getElementById('btn-completar-inspeccion') || document.querySelector('button[value="completar"]')
+    };
+}
+
+function asegurarEstadoOriginalBotonGuardado(btn) {
+    if (btn && !btn.dataset.originalHtmlGuardado) {
+        btn.dataset.originalHtmlGuardado = btn.innerHTML;
+    }
+}
+
+function obtenerMarkupBotonGuardando(texto) {
+    return `
+        <svg class="w-5 h-5 mr-2 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+        ${texto}
+    `;
+}
+
+function actualizarEstadoBotonesGuardado(enCurso, accion = 'guardar') {
+    const { btnGuardar, btnCompletar } = obtenerBotonesGuardadoInspeccion();
+    const botones = [btnGuardar, btnCompletar].filter(Boolean);
+
+    botones.forEach(btn => {
+        asegurarEstadoOriginalBotonGuardado(btn);
+        if (enCurso) {
+            btn.dataset.disabledAntesGuardado = btn.disabled ? '1' : '0';
+            btn.disabled = true;
+            btn.classList.add('opacity-60', 'cursor-not-allowed');
+            btn.setAttribute('aria-busy', 'true');
+            return;
+        }
+
+        btn.disabled = btn.dataset.disabledAntesGuardado === '1';
+        btn.classList.remove('opacity-60');
+        if (!btn.disabled) {
+            btn.classList.remove('cursor-not-allowed');
+        }
+        btn.setAttribute('aria-busy', 'false');
+    });
+
+    if (!enCurso) {
+        botones.forEach(btn => {
+            if (btn.dataset.originalHtmlGuardado) {
+                btn.innerHTML = btn.dataset.originalHtmlGuardado;
+            }
+        });
+        return;
+    }
+
+    const botonActivo = accion === 'completar' ? btnCompletar : btnGuardar;
+    if (botonActivo) {
+        botonActivo.innerHTML = obtenerMarkupBotonGuardando(
+            accion === 'completar' ? 'Guardando inspección...' : 'Guardando borrador...'
+        );
+    }
+}
+
 async function guardarInspeccionFinal(completar = false) {
+    if (guardadoInspeccionEnCurso) {
+        mostrarNotificacion('Ya se está guardando la inspección. Espere un momento.', 'info');
+        return;
+    }
+
+    guardadoInspeccionEnCurso = true;
+    accionGuardadoInspeccionEnCurso = completar ? 'completar' : 'guardar';
+    actualizarEstadoBotonesGuardado(true, accionGuardadoInspeccionEnCurso);
+
     try {
 
         // NUEVO FLUJO DE FIRMAS:
@@ -3240,6 +3314,9 @@ async function guardarInspeccionFinal(completar = false) {
         if (!confirmado) {
             return; // Usuario canceló
         }
+
+        accionGuardadoInspeccionEnCurso = accionReal;
+        actualizarEstadoBotonesGuardado(true, accionGuardadoInspeccionEnCurso);
 
         // Preparar datos para enviar
         const datosEnvio = {
@@ -3321,7 +3398,9 @@ async function guardarInspeccionFinal(completar = false) {
 
             // Subir evidencias si las hay
             let evidenciasResultado = { success: true, mensaje: "No hay evidencias para subir" };
-            if (inspeccionIdGuardada && window.inspeccionEstado.evidencias && window.inspeccionEstado.evidencias.length > 0) {
+            if (result.duplicado_omitido) {
+                evidenciasResultado = { success: true, mensaje: "Guardado duplicado omitido" };
+            } else if (inspeccionIdGuardada && window.inspeccionEstado.evidencias && window.inspeccionEstado.evidencias.length > 0) {
                 evidenciasResultado = await subirEvidencias(
                     inspeccionIdGuardada,
                     datosEnvio.establecimiento_id,
@@ -3392,6 +3471,11 @@ async function guardarInspeccionFinal(completar = false) {
 
     } catch (error) {
         mostrarNotificacion(error.message || 'Error al guardar inspección', 'error');
+    } finally {
+        guardadoInspeccionEnCurso = false;
+        accionGuardadoInspeccionEnCurso = null;
+        actualizarEstadoBotonesGuardado(false);
+        actualizarInterfazFirmas();
     }
 }
 
@@ -3542,6 +3626,10 @@ function actualizarInterfazFirmas() {
                 `;
             }
         }
+    }
+
+    if (guardadoInspeccionEnCurso) {
+        actualizarEstadoBotonesGuardado(true, accionGuardadoInspeccionEnCurso || 'guardar');
     }
 }
 

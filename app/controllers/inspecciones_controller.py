@@ -182,6 +182,51 @@ class InspeccionesController:
         )
 
     @staticmethod
+    def _construir_resultado_guardado(
+        inspeccion,
+        mensaje="Inspección guardada exitosamente",
+        puntajes=None,
+        evidencias_guardadas_count=None,
+        limpiar_temporal=True,
+        resetear_formulario=True,
+        actualizar_plan_semanal=True,
+        duplicado_omitido=False,
+    ):
+        observaciones_resultado, motivo_resultado = (
+            InspeccionesController._obtener_observaciones_y_motivo(inspeccion)
+        )
+
+        if puntajes is None and inspeccion.estado == "completada":
+            try:
+                puntajes = InspeccionesController.calcular_puntajes_inspeccion(
+                    inspeccion.id
+                )
+            except Exception:
+                puntajes = None
+
+        if evidencias_guardadas_count is None:
+            evidencias_guardadas_count = EvidenciaInspeccion.query.filter_by(
+                inspeccion_id=inspeccion.id
+            ).count()
+
+        return {
+            "mensaje": mensaje,
+            "inspeccion_id": inspeccion.id,
+            "estado": inspeccion.estado,
+            "puntajes": puntajes,
+            "observaciones": observaciones_resultado,
+            "motivo_sin_firma_encargado": motivo_resultado,
+            "finalizada_sin_firma_encargado": bool(
+                motivo_resultado and not inspeccion.firma_encargado
+            ),
+            "evidencias_guardadas": evidencias_guardadas_count,
+            "limpiar_temporal": limpiar_temporal,
+            "resetear_formulario": resetear_formulario,
+            "actualizar_plan_semanal": actualizar_plan_semanal,
+            "duplicado_omitido": duplicado_omitido,
+        }
+
+    @staticmethod
     def _obtener_configuracion_calificacion(riesgo):
         riesgo_normalizado = (riesgo or "").strip()
         if riesgo_normalizado == "Crítico":
@@ -1708,6 +1753,22 @@ class InspeccionesController:
                     inspeccion = None
                     inspeccion_id = None
                 elif inspeccion.estado == "completada":
+                    if accion == "completar":
+                        logging.warning(
+                            "Inspeccion %s ya estaba completada. Se omitira el guardado duplicado.",
+                            inspeccion_id,
+                        )
+                        return jsonify(
+                            InspeccionesController._construir_resultado_guardado(
+                                inspeccion,
+                                mensaje="La inspección ya había sido completada previamente. Se omitió el guardado duplicado.",
+                                limpiar_temporal=True,
+                                resetear_formulario=True,
+                                actualizar_plan_semanal=False,
+                                duplicado_omitido=True,
+                            )
+                        )
+
                     logging.warning(
                         "Inspeccion %s ya estaba completada. Se creara una nueva.",
                         inspeccion_id,
@@ -2141,15 +2202,6 @@ class InspeccionesController:
                     logging.warning(f"No se pudo emitir cambio de estado: {str(e)}")
             db.session.commit()
             logging.info(f"DEBUG - Inspección guardada con estado: {inspeccion.estado}")
-            observaciones_resultado, motivo_resultado = (
-                InspeccionesController._obtener_observaciones_y_motivo(inspeccion)
-            )
-
-            # Verificar que las evidencias se hayan guardado en la BD
-            if evidencias_guardadas:
-                evidencias_en_bd = EvidenciaInspeccion.query.filter_by(
-                    inspeccion_id=inspeccion.id
-                ).count()
 
             # Limpiar datos temporales completamente después de guardar exitosamente
             try:
@@ -2183,21 +2235,15 @@ class InspeccionesController:
                 import logging
                 logging.warning(f"No se pudo emitir señal de reseteo: {str(e)}")
 
-            resultado = {
-                "mensaje": "Inspección guardada exitosamente",
-                "inspeccion_id": inspeccion.id,
-                "estado": inspeccion.estado,
-                "puntajes": puntajes,
-                "observaciones": observaciones_resultado,
-                "motivo_sin_firma_encargado": motivo_resultado,
-                "finalizada_sin_firma_encargado": bool(
-                    motivo_resultado and not inspeccion.firma_encargado
-                ),
-                "evidencias_guardadas": len(evidencias_guardadas),
-                "limpiar_temporal": True,  # Señal para el frontend
-                "resetear_formulario": True,  # Señal para resetear completamente
-                "actualizar_plan_semanal": True,  # Señal para actualizar plan semanal
-            }
+            resultado = InspeccionesController._construir_resultado_guardado(
+                inspeccion,
+                mensaje="Inspección guardada exitosamente",
+                puntajes=puntajes,
+                evidencias_guardadas_count=len(evidencias_guardadas),
+                limpiar_temporal=True,
+                resetear_formulario=True,
+                actualizar_plan_semanal=True,
+            )
             return jsonify(resultado)
 
         except Exception as e:
