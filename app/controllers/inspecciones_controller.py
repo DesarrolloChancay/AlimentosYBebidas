@@ -1027,6 +1027,7 @@ class InspeccionesController:
                         "id": e.id,
                         "nombre": e.nombre,
                         "direccion": e.direccion,
+                        "tipo_establecimiento_id": e.tipo_establecimiento_id,
                         "tipo_establecimiento": tipo_establecimiento_nombre,
                         "encargado_actual": (
                             {
