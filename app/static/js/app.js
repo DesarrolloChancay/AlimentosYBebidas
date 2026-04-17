@@ -1,5 +1,5 @@
 // Event listener principal
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
     // NO ejecutar en página de login
     if (window.location.pathname === '/login') {
         return;
@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // await cargarEstablecimientos();
     // cargarEstablecimientos();
 
-    inicializarIndexSelect()
+    await inicializarIndexSelect();
 
     // Limpiar cookies viejas automáticamente al cargar la aplicación
     if (window.FormCookieManager) {
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Recuperar estado temporal
     // await recuperarEstadoTemporal();
-    recuperarEstadoTemporal();
+    await recuperarEstadoTemporal();
 
     // Verificar si hay datos de cookie para cargar al inicio
     const establecimientoSelectElement = document.getElementById('establecimiento');
@@ -218,40 +218,294 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 // ===== FUNCIÓN PRINCIPAL DE INICIALIZACIÓN =====
-async function inicializarIndexSelect() {
-    try {
+function normalizarNombreTipoEstablecimiento(nombre) {
+    return String(nombre || '').trim().toLowerCase();
+}
 
-        // Buscar el select específico de index
-        const establecimientoSelect = document.getElementById('establecimiento');
-        if (!establecimientoSelect) {
-            return;
-        }
-
-        // Verificar el rol del usuario
-        const userRole = establecimientoSelect.closest('#vista-app')?.dataset.userRole || window.userRole;
-
-        // Para encargados, cargar su establecimiento específico
-        if (userRole === 'Encargado') {
-            await cargarEstablecimientoEncargado();
-            return;
-        }
-
-        // Para Inspector/Admin, poblar todos los establecimientos usando la API
-        if (typeof EstablecimientosAPI !== 'undefined') {
-
-            const exito = await EstablecimientosAPI.poblarSelect(establecimientoSelect, 'Seleccione un establecimiento');
-            if (exito) {
-                // Configurar evento de cambio para cargar items cuando se seleccione un establecimiento
-                configurarEventoEstablecimiento(establecimientoSelect);
-            } else {
-                mostrarNotificacion('Error al cargar establecimientos', 'error');
-            }
-        } else {
-            mostrarNotificacion('EstablecimientosAPI no disponible', 'error');
-        }
-
-    } catch (error) {
+function obtenerTipoSeleccionadoActual() {
+    const selectTipo = document.getElementById('tipo-establecimiento');
+    if (!selectTipo || !selectTipo.value) {
+        return null;
     }
+    return catalogoTiposEstablecimiento.find(
+        tipo => String(tipo.id) === String(selectTipo.value)
+    ) || null;
+}
+
+function actualizarAyudaEstablecimiento(mensaje) {
+    const ayuda = document.getElementById('ayuda-establecimiento');
+    if (ayuda) {
+        ayuda.textContent = mensaje;
+    }
+}
+
+function actualizarMensajeCategoriasSinSeleccion() {
+    const categoriasContainer = document.getElementById('categorias-container');
+    if (!categoriasContainer) {
+        return;
+    }
+
+    const tipoSeleccionado = obtenerTipoSeleccionadoActual();
+    categoriasContainer.innerHTML = tipoSeleccionado
+        ? '<p class="text-gray-500">Seleccione un establecimiento para ver los items de evaluación</p>'
+        : '<p class="text-gray-500">Seleccione un tipo de establecimiento y luego un establecimiento para ver los items de evaluación</p>';
+}
+
+async function cargarTiposEstablecimientoDisponibles() {
+    if (typeof API !== 'undefined' && typeof API.get === 'function') {
+        const data = await API.get('/api/tipos-establecimiento');
+        return Array.isArray(data) ? data : [];
+    }
+
+    const response = await fetch('/api/tipos-establecimiento');
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+}
+
+async function cargarCatalogoEstablecimientosDisponibles() {
+    if (typeof EstablecimientosAPI !== 'undefined' && typeof EstablecimientosAPI.cargar === 'function') {
+        const data = await EstablecimientosAPI.cargar();
+        if (Array.isArray(data)) {
+            return data;
+        }
+        if (data?.success && Array.isArray(data.establecimientos)) {
+            return data.establecimientos;
+        }
+    }
+
+    const response = await fetch('/api/establecimientos');
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (Array.isArray(data)) {
+        return data;
+    }
+    if (data?.success && Array.isArray(data.establecimientos)) {
+        return data.establecimientos;
+    }
+    return [];
+}
+
+function poblarSelectTiposEstablecimiento(selectTipo, tipos, establecimientos) {
+    if (!selectTipo) {
+        return;
+    }
+
+    const tipoSeleccionadoPrevio = selectTipo.value;
+    const tiposVisibles = Array.isArray(tipos) ? tipos : [];
+
+    selectTipo.innerHTML = '';
+
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Seleccione un tipo de establecimiento';
+    selectTipo.appendChild(defaultOption);
+
+    tiposVisibles.forEach(tipo => {
+        const option = document.createElement('option');
+        option.value = String(tipo.id);
+        option.textContent = tipo.nombre;
+        selectTipo.appendChild(option);
+    });
+
+    if (tipoSeleccionadoPrevio && tiposVisibles.some(tipo => String(tipo.id) === String(tipoSeleccionadoPrevio))) {
+        selectTipo.value = String(tipoSeleccionadoPrevio);
+    } else {
+        selectTipo.value = '';
+    }
+}
+
+function poblarSelectEstablecimientosPorTipo(tipoId, establecimientoSeleccionadoId = '') {
+    const establecimientoSelect = document.getElementById('establecimiento');
+    if (!establecimientoSelect) {
+        return null;
+    }
+
+    const tipoSeleccionado = catalogoTiposEstablecimiento.find(
+        tipo => String(tipo.id) === String(tipoId)
+    );
+    const tipoSeleccionadoId = tipoSeleccionado ? String(tipoSeleccionado.id) : '';
+    const nombreTipo = normalizarNombreTipoEstablecimiento(tipoSeleccionado?.nombre);
+
+    const establecimientosFiltrados = tipoSeleccionadoId
+        ? catalogoEstablecimientosIndex.filter(
+            est =>
+                String(est.tipo_establecimiento_id || '') === tipoSeleccionadoId
+                || (
+                    !est.tipo_establecimiento_id
+                    && (
+                        normalizarNombreTipoEstablecimiento(est.tipo_establecimiento) === nombreTipo
+                        || normalizarNombreTipoEstablecimiento(est.tipo) === nombreTipo
+                    )
+                )
+        )
+        : [];
+
+    establecimientoSelect.innerHTML = '';
+
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+
+    if (!nombreTipo) {
+        defaultOption.textContent = 'Seleccione primero un tipo de establecimiento';
+        establecimientoSelect.disabled = true;
+        actualizarAyudaEstablecimiento('Primero seleccione el tipo de establecimiento y luego el establecimiento.');
+    } else if (establecimientosFiltrados.length === 0) {
+        defaultOption.textContent = 'No hay establecimientos disponibles para este tipo';
+        establecimientoSelect.disabled = true;
+        actualizarAyudaEstablecimiento('No hay establecimientos disponibles para el tipo seleccionado.');
+    } else {
+        defaultOption.textContent = 'Seleccione un establecimiento';
+        establecimientoSelect.disabled = false;
+        actualizarAyudaEstablecimiento('Seleccione el establecimiento que desea inspeccionar.');
+    }
+
+    establecimientoSelect.appendChild(defaultOption);
+
+    establecimientosFiltrados.forEach(establecimiento => {
+        const option = document.createElement('option');
+        option.value = String(establecimiento.id);
+        option.textContent = sanitizeText(establecimiento.nombre);
+        establecimientoSelect.appendChild(option);
+    });
+
+    const selectActualizado = configurarEventoEstablecimiento(establecimientoSelect);
+
+    if (
+        establecimientoSeleccionadoId &&
+        establecimientosFiltrados.some(est => String(est.id) === String(establecimientoSeleccionadoId))
+    ) {
+        selectActualizado.value = String(establecimientoSeleccionadoId);
+    } else {
+        selectActualizado.value = '';
+    }
+
+    return selectActualizado;
+}
+
+function configurarEventoTipoEstablecimiento(selectTipo) {
+    if (!selectTipo) {
+        return null;
+    }
+
+    const nuevoSelect = selectTipo.cloneNode(true);
+    selectTipo.parentNode.replaceChild(nuevoSelect, selectTipo);
+
+    nuevoSelect.addEventListener('change', function () {
+        const establecimientoSelect = poblarSelectEstablecimientosPorTipo(this.value);
+        actualizarMensajeCategoriasSinSeleccion();
+
+        if (establecimientoSelect) {
+            establecimientoSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
+
+    return nuevoSelect;
+}
+
+function sincronizarTipoConEstablecimiento(establecimientoId) {
+    if (!establecimientoId) {
+        return false;
+    }
+
+    const establecimiento = catalogoEstablecimientosIndex.find(
+        est => String(est.id) === String(establecimientoId)
+    );
+    if (!establecimiento) {
+        return false;
+    }
+
+    const selectTipo = document.getElementById('tipo-establecimiento');
+    if (!selectTipo) {
+        return false;
+    }
+
+    const tipo = catalogoTiposEstablecimiento.find(
+        item => String(item.id) === String(establecimiento.tipo_establecimiento_id)
+    );
+
+    const tipoFinal = tipo || catalogoTiposEstablecimiento.find(
+        item =>
+            normalizarNombreTipoEstablecimiento(item.nombre) ===
+            (
+                normalizarNombreTipoEstablecimiento(establecimiento.tipo_establecimiento)
+                || normalizarNombreTipoEstablecimiento(establecimiento.tipo)
+            )
+    );
+
+    if (!tipoFinal) {
+        return false;
+    }
+
+    selectTipo.value = String(tipoFinal.id);
+    poblarSelectEstablecimientosPorTipo(tipoFinal.id, establecimientoId);
+    return true;
+}
+
+async function inicializarIndexSelect() {
+    if (inicializacionIndexSelectPromise) {
+        return inicializacionIndexSelectPromise;
+    }
+
+    inicializacionIndexSelectPromise = (async () => {
+        try {
+            const establecimientoSelect = document.getElementById('establecimiento');
+            const tipoSelect = document.getElementById('tipo-establecimiento');
+            if (!establecimientoSelect) {
+                return false;
+            }
+
+            const userRoleActual = establecimientoSelect.closest('#vista-app')?.dataset.userRole || window.userRole;
+
+            if (userRoleActual === 'Encargado') {
+                if (tipoSelect) {
+                    tipoSelect.disabled = true;
+                }
+                await cargarEstablecimientoEncargado();
+                return true;
+            }
+
+            const [tipos, establecimientos] = await Promise.all([
+                cargarTiposEstablecimientoDisponibles(),
+                cargarCatalogoEstablecimientosDisponibles()
+            ]);
+
+            catalogoTiposEstablecimiento = Array.isArray(tipos) ? tipos : [];
+            catalogoEstablecimientosIndex = Array.isArray(establecimientos) ? establecimientos : [];
+
+            if (tipoSelect) {
+                poblarSelectTiposEstablecimiento(tipoSelect, catalogoTiposEstablecimiento, catalogoEstablecimientosIndex);
+                configurarEventoTipoEstablecimiento(tipoSelect);
+            }
+
+            poblarSelectEstablecimientosPorTipo('');
+            actualizarMensajeCategoriasSinSeleccion();
+
+            return true;
+        } catch (error) {
+            const tipoSelect = document.getElementById('tipo-establecimiento');
+            const establecimientoSelect = document.getElementById('establecimiento');
+
+            if (tipoSelect) {
+                tipoSelect.innerHTML = '<option value="">Error al cargar tipos</option>';
+                tipoSelect.disabled = true;
+            }
+            if (establecimientoSelect) {
+                establecimientoSelect.innerHTML = '<option value="">Error al cargar establecimientos</option>';
+                establecimientoSelect.disabled = true;
+            }
+            actualizarAyudaEstablecimiento('No se pudieron cargar los tipos y establecimientos disponibles.');
+            actualizarMensajeCategoriasSinSeleccion();
+            return false;
+        }
+    })();
+
+    return inicializacionIndexSelectPromise;
 }
 
 // Hacer la función disponible globalmente
@@ -339,6 +593,9 @@ let inspeccionActualId = null;
 let userRole = null;
 let userId = null;
 let autoSaveInterval = null;
+let inicializacionIndexSelectPromise = null;
+let catalogoTiposEstablecimiento = [];
+let catalogoEstablecimientosIndex = [];
 
 function esRolEditorChecklist(rol = userRole) {
     return rol === 'Inspector' || rol === 'Administrador';
@@ -1895,79 +2152,15 @@ function recalcularResumenEncargado() {
 }
 
 async function cargarEstablecimientos() {
-    try {
-
-        // Buscar el select específico de index
-        const establecimientoSelect = document.getElementById('establecimiento');
-        if (!establecimientoSelect) {
-            return true;
-        }
-
-
-        // Verificar el rol del usuario
-        const userRole = establecimientoSelect.closest('#vista-app')?.dataset.userRole || window.userRole;
-
-        // Para encargados, cargar su establecimiento específico
-        if (userRole === 'Encargado') {
-            await cargarEstablecimientoEncargado();
-            return true;
-        }
-
-        // Para Inspector/Admin, poblar todos los establecimientos
-        if (typeof EstablecimientosAPI !== 'undefined') {
-
-            const exito = await EstablecimientosAPI.poblarSelect(establecimientoSelect, 'Seleccione un establecimiento');
-            if (exito) {
-
-                // Configurar evento de cambio para cargar items cuando se seleccione un establecimiento
-                configurarEventoEstablecimiento(establecimientoSelect);
-
-                return true;
-            } else {
-            }
-        } else {
-        }
-
-        // Método alternativo directo
-        const response = await fetch('/api/establecimientos');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        // Limpiar y poblar el select
-        establecimientoSelect.innerHTML = '<option value="">Seleccione un establecimiento</option>';
-
-        if (data.success && Array.isArray(data.establecimientos)) {
-            data.establecimientos.forEach(establecimiento => {
-                const option = document.createElement('option');
-                option.value = establecimiento.id;
-                option.textContent = establecimiento.nombre;
-                establecimientoSelect.appendChild(option);
-            });
-
-            // Configurar evento de cambio para cargar items cuando se seleccione un establecimiento
-            configurarEventoEstablecimiento(establecimientoSelect);
-
-            return true;
-        } else {
-            return false;
-        }
-
-    } catch (error) {
-
-        // Buscar select para mostrar mensaje de error
-        const select = document.getElementById('establecimiento');
-        if (select) {
-            select.innerHTML = '<option value="">Error al cargar establecimientos</option>';
-        }
-        return false;
-    }
+    return await inicializarIndexSelect();
 }
 
 // Función auxiliar para configurar el evento de cambio del establecimiento
 function configurarEventoEstablecimiento(selectElement) {
+    if (!selectElement || !selectElement.parentNode) {
+        return selectElement;
+    }
+
     // Remover listener anterior si existe
     const nuevoSelect = selectElement.cloneNode(true);
     selectElement.parentNode.replaceChild(nuevoSelect, selectElement);
@@ -2067,6 +2260,7 @@ function configurarEventoEstablecimiento(selectElement) {
             deshabilitarBotonCompletarInspector();
         } else {
             reiniciarContextoInspeccion(null);
+            actualizarMensajeCategoriasSinSeleccion();
 
             // Limpiar interfaz cuando no hay establecimiento seleccionado
 
@@ -2090,13 +2284,15 @@ function configurarEventoEstablecimiento(selectElement) {
             }
         }
     });
+
+    return nuevoSelect;
 }
 
 async function cargarItemsEstablecimiento(establecimientoId) {
     try {
         // Solo cargar items cuando se selecciona un establecimiento
         if (!establecimientoId) {
-            document.getElementById('categorias-container').innerHTML = '<p class="text-gray-500">Seleccione un establecimiento para ver los items de evaluación</p>';
+            actualizarMensajeCategoriasSinSeleccion();
             return;
         }
 
@@ -2269,8 +2465,10 @@ async function cargarEstablecimientoEncargado() {
         if (establecimientos && establecimientos.length > 0) {
             // Seleccionar automáticamente el primer establecimiento del encargado
             const select = document.getElementById('establecimiento');
+            const selectTipo = document.getElementById('tipo-establecimiento');
             if (select && establecimientos[0]) {
                 const establecimientoId = Number(establecimientos[0].id);
+                const tipoNombre = establecimientos[0].tipo_establecimiento || '';
 
                 // Limpiar y agregar solo el establecimiento del encargado
                 select.innerHTML = '';
@@ -2279,6 +2477,20 @@ async function cargarEstablecimientoEncargado() {
                 option.textContent = establecimientos[0].nombre;
                 option.selected = true;
                 select.appendChild(option);
+                select.disabled = true;
+
+                if (selectTipo) {
+                    selectTipo.innerHTML = '';
+                    const optionTipo = document.createElement('option');
+                    optionTipo.value = tipoNombre || 'auto';
+                    optionTipo.textContent = tipoNombre || 'Tipo no definido';
+                    optionTipo.selected = true;
+                    selectTipo.appendChild(optionTipo);
+                    selectTipo.disabled = true;
+                }
+
+                actualizarAyudaEstablecimiento('Su establecimiento fue asignado automáticamente.');
+                actualizarMensajeCategoriasSinSeleccion();
 
                 window.inspeccionEstado = {
                     ...window.inspeccionEstado,
@@ -2310,13 +2522,27 @@ async function cargarEstablecimientoEncargado() {
             const select = document.getElementById('establecimiento');
             if (select) {
                 select.innerHTML = '<option value="">No tiene establecimientos asignados</option>';
+                select.disabled = true;
             }
+            const selectTipo = document.getElementById('tipo-establecimiento');
+            if (selectTipo) {
+                selectTipo.innerHTML = '<option value="">No tiene tipos disponibles</option>';
+                selectTipo.disabled = true;
+            }
+            actualizarAyudaEstablecimiento('No tiene establecimientos asignados actualmente.');
         }
     } catch (error) {
         const select = document.getElementById('establecimiento');
         if (select) {
             select.innerHTML = '<option value="">Error al cargar establecimiento</option>';
+            select.disabled = true;
         }
+        const selectTipo = document.getElementById('tipo-establecimiento');
+        if (selectTipo) {
+            selectTipo.innerHTML = '<option value="">Error al cargar tipo</option>';
+            selectTipo.disabled = true;
+        }
+        actualizarAyudaEstablecimiento('No se pudo cargar el establecimiento asignado.');
     }
 }
 
@@ -2513,10 +2739,14 @@ function restaurarEstado(estado) {
 
     // Restaurar establecimiento
     if (estado.establecimiento_id) {
+        const establecimientoId = String(estado.establecimiento_id);
+        const sincronizado = sincronizarTipoConEstablecimiento(establecimientoId);
         const select = document.getElementById('establecimiento');
         if (select) {
-            select.value = estado.establecimiento_id;
-            cargarItemsEstablecimiento(estado.establecimiento_id);
+            if (!sincronizado) {
+                select.value = establecimientoId;
+            }
+            cargarItemsEstablecimiento(establecimientoId);
         }
     }
 
@@ -2672,11 +2902,21 @@ function actualizarInterfazResumen() {
 
 // Función para cargar establecimiento y sus items si no están cargados
 async function cargarEstablecimientoYItems(establecimientoId) {
-    const select = document.getElementById('establecimiento');
-    if (select && select.value !== establecimientoId.toString()) {
-        select.value = establecimientoId;
-        await cargarItemsEstablecimiento(establecimientoId);
+    if (!establecimientoId) {
+        return;
     }
+
+    await inicializarIndexSelect();
+
+    const establecimientoIdTexto = establecimientoId.toString();
+    sincronizarTipoConEstablecimiento(establecimientoIdTexto);
+
+    const select = document.getElementById('establecimiento');
+    if (select && select.value !== establecimientoIdTexto) {
+        select.value = establecimientoIdTexto;
+    }
+
+    await cargarItemsEstablecimiento(establecimientoIdTexto);
 }
 
 async function guardarEstadoTemporal(forzarEmision = false) {
@@ -3001,7 +3241,7 @@ async function limpiarDatosTemporalesCompleto() {
 
         const categoriasContainer = document.getElementById('categorias-container');
         if (categoriasContainer) {
-            categoriasContainer.innerHTML = '<p class="text-gray-500">Seleccione un establecimiento para ver los items de evaluación</p>';
+            actualizarMensajeCategoriasSinSeleccion();
         }
 
         const observacionesTextarea = document.getElementById('observaciones-generales');
@@ -4616,8 +4856,10 @@ async function cargarInspeccionEnInterfaz(inspeccionData) {
         console.log('=== Iniciando carga de inspección ===');
         console.log('Datos recibidos:', inspeccionData);
 
+        await inicializarIndexSelect();
+
         // Establecer el establecimiento
-        const selectEstablecimiento = document.getElementById('establecimiento');
+        let selectEstablecimiento = document.getElementById('establecimiento');
         if (!selectEstablecimiento) {
             console.error('No se encontró el select de establecimiento');
             mostrarNotificacion('Error: No se encontró el formulario', 'error');
@@ -4625,6 +4867,8 @@ async function cargarInspeccionEnInterfaz(inspeccionData) {
         }
 
         console.log('Estableciendo establecimiento_id:', inspeccionData.establecimiento_id);
+        sincronizarTipoConEstablecimiento(inspeccionData.establecimiento_id);
+        selectEstablecimiento = document.getElementById('establecimiento');
         selectEstablecimiento.value = inspeccionData.establecimiento_id;
 
         // Disparar evento de cambio para cargar items (esto es asíncrono)
