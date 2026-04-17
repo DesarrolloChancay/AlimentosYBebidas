@@ -41,9 +41,9 @@
                 <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">La reunión quedó cerrada. Los valores guardados son el snapshot histórico de esa semana.</p>
                 {% else %}
                 <span class="inline-flex rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">PENDIENTE</span>
-                <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">Aquí puedes ajustar puntaje por reunión, deshabilitar items para esta semana y agregar nuevos items del reglamento.</p>
+                <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">Aquí puedes ajustar el reglamento base de la reunión y registrar acuerdos específicos con el establecimiento sin mezclarlos con las infracciones oficiales.</p>
                 <button id="btnAbrirModalAgregarItem" type="button" class="mt-4 inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-blue-600 dark:hover:bg-blue-500">
-                    Agregar item a la reunión
+                    Agregar acuerdo con el establecimiento
                 </button>
                 {% endif %}
             </div>
@@ -57,8 +57,8 @@
         <div class="w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
             <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4 dark:border-slate-800">
                 <div>
-                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Agregar item de reglamento</h3>
-                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Puedes reusar una plantilla existente o crear un item nuevo desde esta reunión.</p>
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Agregar acuerdo con el establecimiento</h3>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Puedes reusar una plantilla existente o crear un acuerdo nuevo desde esta reunión. Los acuerdos se evaluarán aparte del reglamento base.</p>
                 </div>
                 <button id="btnCerrarModalAgregarItem" type="button" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                     Cerrar
@@ -73,15 +73,15 @@
                         <span class="block text-sm font-semibold text-slate-900 dark:text-white">Seleccionar plantilla existente</span>
                         <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">
                             {% if items_reutilizables %}
-                            Reutiliza un item global o del establecimiento y ajusta solo la fecha de vigencia para esta reunión.
+                            Reutiliza una plantilla global o del establecimiento y ajusta solo la fecha de vigencia para este acuerdo de reunión.
                             {% else %}
                             No hay plantillas pendientes por agregar. Las plantillas aplicables ya suelen cargarse automáticamente en esta reunión.
                             {% endif %}
                         </span>
                     </button>
                     <button id="selectorModoNuevo" type="button" data-modo="nuevo" class="selector-modo-item rounded-2xl border px-4 py-4 text-left transition">
-                        <span class="block text-sm font-semibold text-slate-900 dark:text-white">Crear item nuevo</span>
-                        <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">Genera un item nuevo desde esta reunión y decide si será solo temporal, de establecimiento o plantilla global.</span>
+                        <span class="block text-sm font-semibold text-slate-900 dark:text-white">Crear acuerdo nuevo</span>
+                        <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">Genera un acuerdo nuevo desde esta reunión y decide si será solo temporal, de establecimiento o plantilla global.</span>
                     </button>
                 </div>
 
@@ -177,7 +177,7 @@
                             {% endfor %}
                         </select>
                         <p id="nuevoAlcanceAyuda" class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                            Se guardará como plantilla reutilizable para este establecimiento.
+                            Se guardará como plantilla reutilizable de acuerdo para este establecimiento.
                         </p>
                     </div>
                     <div>
@@ -228,7 +228,7 @@
                         Cancelar
                     </button>
                     <button id="btnGuardarAgregarItem" type="submit" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 dark:bg-blue-600 dark:hover:bg-blue-500">
-                        Agregar item a la reunión
+                        Agregar acuerdo a la reunión
                     </button>
                 </div>
             </form>
@@ -239,8 +239,8 @@
         <div class="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
             <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4 dark:border-slate-800">
                 <div>
-                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Editar item agregado</h3>
-                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Ajusta este item sin salir de la reunión. Si nació aquí como plantilla reutilizable, también se actualizará para futuras reuniones según el alcance y la vigencia que indiques.</p>
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Editar acuerdo de la reunión</h3>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Ajusta este acuerdo sin salir de la reunión. Si nació aquí como plantilla reutilizable, también se actualizará para futuras reuniones según el alcance y la vigencia que indiques.</p>
                 </div>
                 <button id="btnCerrarModalEditarItem" type="button" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                     Cerrar
@@ -300,7 +300,7 @@
                 </div>
 
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300">
-                    Si este item fue creado en esta reunión como plantilla global o de establecimiento, el cambio también quedará listo para futuras reuniones. Si lo dejas como solo reunión, el ajuste se guarda únicamente aquí.
+                    Si este acuerdo fue creado en esta reunión como plantilla global o de establecimiento, el cambio también quedará listo para futuras reuniones. Si lo dejas como solo reunión, el ajuste se guarda únicamente aquí.
                 </div>
 
                 <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 dark:border-slate-800 sm:flex-row sm:justify-end">
@@ -308,7 +308,7 @@
                         Cancelar
                     </button>
                     <button id="btnGuardarEditarItem" type="submit" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700">
-                        Guardar cambios del item
+                        Guardar cambios del acuerdo
                     </button>
                 </div>
             </form>
@@ -318,8 +318,8 @@
 
     <div class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div class="border-b border-slate-200 px-6 py-4 dark:border-slate-800">
-            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Items del reglamento de la reunión</h2>
-            <p class="text-sm text-slate-500 dark:text-slate-400">Cada fila usa el snapshot de esta reunión. Puedes deshabilitarla o ajustar su puntaje sin tocar el histórico ni la plantilla base. Estos items del reglamento no comparten relación con el checklist de inspecciones.</p>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Reglamento base de la reunión</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Aquí se evalúan solo las infracciones oficiales del reglamento aplicables a este establecimiento. Los acuerdos creados durante la reunión se muestran aparte.</p>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
@@ -356,17 +356,7 @@
                                     {% if item.tipo_vigencia == 'temporal' and item.fecha_fin_vigencia %}
                                     <span class="rounded-full bg-rose-100 px-2 py-1 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">Hasta {{ item.fecha_fin_vigencia.strftime('%d/%m/%Y') }}</span>
                                     {% endif %}
-                                    {% if item.es_adicional %}
-                                    <span class="rounded-full bg-fuchsia-100 px-2 py-1 text-fuchsia-800 dark:bg-fuchsia-950/40 dark:text-fuchsia-200">Agregado en reunión</span>
-                                    {% endif %}
                                 </div>
-                                {% if item.es_adicional and not solo_lectura %}
-                                <div class="pt-1">
-                                    <button type="button" class="btn-editar-item-reunion inline-flex items-center rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100 dark:border-indigo-900/40 dark:bg-indigo-950/30 dark:text-indigo-200" data-item-id="{{ item.id }}">
-                                        Editar item agregado
-                                    </button>
-                                </div>
-                                {% endif %}
                             </div>
                         </td>
                         <td class="px-4 py-4 align-top text-center">
@@ -400,6 +390,99 @@
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <div class="mt-6 overflow-hidden rounded-2xl border border-indigo-200 bg-white shadow-sm dark:border-indigo-900/40 dark:bg-slate-900">
+        <div class="border-b border-indigo-100 px-6 py-4 dark:border-indigo-900/40">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Acuerdos con el establecimiento</h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Estos acuerdos nacen en esta reunión o se reusan como plantillas de acuerdos. Se evalúan aquí, pero no forman parte del reglamento base.</p>
+                </div>
+                <span class="inline-flex self-start rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-200">{{ acuerdos_reunion|length }} acuerdo(s)</span>
+            </div>
+        </div>
+        {% if acuerdos_reunion %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-indigo-50 text-slate-600 dark:bg-indigo-950/20 dark:text-slate-300">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-semibold">Código</th>
+                        <th class="px-4 py-3 text-left font-semibold">Acuerdo</th>
+                        <th class="px-4 py-3 text-center font-semibold">Puntaje reunión</th>
+                        <th class="px-4 py-3 text-center font-semibold">Activo</th>
+                        <th class="px-4 py-3 text-center font-semibold">Evaluación</th>
+                        <th class="px-4 py-3 text-center font-semibold">Infracciones</th>
+                        <th class="px-4 py-3 text-left font-semibold">Observación</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                    {% for item in acuerdos_reunion %}
+                    {% set eval_data = evaluaciones.get(item.id) %}
+                    {% set alcance_label = 'Plantilla global' if item.alcance == 'global' else 'Solo establecimiento' if item.alcance == 'establecimiento' else 'Solo esta reunión' %}
+                    <tr data-item-row="{{ item.id }}" data-item-code="{{ item.codigo }}" data-tipo="{{ item.tipo_validacion or 'si_no' }}" data-logica-inversa="{{ 'true' if item.logica_inversa_efectiva else 'false' }}" class="reglamento-row-pending bg-indigo-50/40 dark:bg-indigo-950/10">
+                        <td class="px-4 py-4 align-top">
+                            <div class="font-semibold text-slate-900 dark:text-white">{{ item.codigo }}</div>
+                        </td>
+                        <td class="px-4 py-4 align-top">
+                            <div class="space-y-2">
+                                <p class="text-slate-900 dark:text-slate-100" data-item-descripcion="{{ item.id }}">{{ item.descripcion }}</p>
+                                <div class="flex flex-wrap gap-2 text-xs" data-item-badges="{{ item.id }}">
+                                    <span class="rounded-full bg-fuchsia-100 px-2 py-1 text-fuchsia-800 dark:bg-fuchsia-950/40 dark:text-fuchsia-200">Acuerdo de reunión</span>
+                                    <span class="rounded-full bg-slate-100 px-2 py-1 text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ item.riesgo }}</span>
+                                    <span class="rounded-full bg-emerald-100 px-2 py-1 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200">{{ item.categoria }}</span>
+                                    <span class="rounded-full bg-blue-100 px-2 py-1 text-blue-700 dark:bg-blue-950/40 dark:text-blue-200">{{ alcance_label }}</span>
+                                    <span class="rounded-full bg-amber-100 px-2 py-1 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{{ item.tipo_vigencia|capitalize }}</span>
+                                    {% if item.tipo_vigencia == 'temporal' and item.fecha_fin_vigencia %}
+                                    <span class="rounded-full bg-rose-100 px-2 py-1 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">Hasta {{ item.fecha_fin_vigencia.strftime('%d/%m/%Y') }}</span>
+                                    {% endif %}
+                                </div>
+                                {% if not solo_lectura %}
+                                <div class="pt-1">
+                                    <button type="button" class="btn-editar-item-reunion inline-flex items-center rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100 dark:border-indigo-900/40 dark:bg-indigo-950/30 dark:text-indigo-200" data-item-id="{{ item.id }}">
+                                        Editar acuerdo
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 align-top text-center">
+                            <input type="number" min="0" step="1" class="input-puntaje w-24 rounded-lg border border-slate-300 px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-item-id="{{ item.id }}" value="{{ item.puntaje }}" {% if solo_lectura %}disabled{% endif %}>
+                        </td>
+                        <td class="px-4 py-4 align-top text-center">
+                            <input type="checkbox" class="toggle-item-activo h-4 w-4 rounded border-slate-300 text-blue-600" data-item-id="{{ item.id }}" {% if item.activo %}checked{% endif %} {% if solo_lectura %}disabled{% endif %}>
+                        </td>
+                        <td class="px-4 py-4 align-top text-center">
+                            {% if item.tipo_validacion in ['numerico', 'porcentaje'] %}
+                            <div class="flex flex-col items-center gap-2">
+                                <input type="number" step="0.01" class="input-valor-medido w-28 rounded-lg border border-slate-300 px-3 py-2 text-center font-semibold dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-item-id="{{ item.id }}" data-logica-inversa="{{ 'true' if item.logica_inversa_efectiva else 'false' }}" data-umbral="{{ item.valor_umbral }}" data-operador="{{ item.operador_comparacion }}" value="{{ eval_data.valor_medido if eval_data and eval_data.valor_medido is not none else '' }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>
+                                <span class="text-xs text-slate-500 dark:text-slate-400">{{ item.operador_comparacion }} {{ item.valor_umbral }}{% if item.tipo_validacion == 'porcentaje' %}%{% endif %}</span>
+                            </div>
+                            {% else %}
+                            <div class="flex justify-center gap-2">
+                                <button type="button" class="btn-estado reglamento-btn rounded-lg px-4 py-2 font-semibold transition-colors" data-item-id="{{ item.id }}" data-estado="cumple" data-selected="{{ 'true' if eval_data and eval_data.estado == 'cumple' else 'false' }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>SI</button>
+                                <button type="button" class="btn-estado reglamento-btn rounded-lg px-4 py-2 font-semibold transition-colors" data-item-id="{{ item.id }}" data-estado="no_cumple" data-selected="{{ 'true' if eval_data and eval_data.estado == 'no_cumple' else 'false' }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>NO</button>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-4 align-top text-center">
+                            <input type="number" min="0" step="1" class="input-infracciones w-20 rounded-lg border border-slate-300 px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-item-id="{{ item.id }}" value="{{ eval_data.numero_infracciones if eval_data and eval_data.numero_infracciones is not none else 0 }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>
+                        </td>
+                        <td class="px-4 py-4 align-top">
+                            <input type="text" class="input-observacion w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-item-id="{{ item.id }}" value="{{ eval_data.observacion if eval_data else '' }}" placeholder="Detalle adicional..." {% if solo_lectura or not item.activo %}disabled{% endif %}>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="px-6 py-8">
+            <div class="rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/70 px-5 py-6 text-sm text-slate-600 dark:border-indigo-900/40 dark:bg-indigo-950/10 dark:text-slate-300">
+                Todavía no hay acuerdos registrados para esta reunión. Usa <span class="font-semibold">Agregar acuerdo con el establecimiento</span> para dejar compromisos o ajustes puntuales sin mezclarlos con el reglamento base.
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <div class="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -806,7 +889,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function construirBadgesItemReunion(item) {
         const badges = [
+            '<span class="rounded-full bg-fuchsia-100 px-2 py-1 text-fuchsia-800 dark:bg-fuchsia-950/40 dark:text-fuchsia-200">Acuerdo de reunión</span>',
             `<span class="rounded-full bg-slate-100 px-2 py-1 text-slate-700 dark:bg-slate-800 dark:text-slate-200">${item.riesgo || '-'}</span>`,
+            `<span class="rounded-full bg-emerald-100 px-2 py-1 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200">${item.categoria || 'Sin categoría'}</span>`,
             `<span class="rounded-full bg-blue-100 px-2 py-1 text-blue-700 dark:bg-blue-950/40 dark:text-blue-200">${describirAlcanceItemReunion(item.alcance)}</span>`,
             `<span class="rounded-full bg-amber-100 px-2 py-1 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">${capitalizarTexto(item.tipo_vigencia || 'permanente')}</span>`,
         ];
@@ -814,11 +899,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (item.tipo_vigencia === 'temporal' && item.fecha_fin_vigencia_label) {
             badges.push(
                 `<span class="rounded-full bg-rose-100 px-2 py-1 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">Hasta ${item.fecha_fin_vigencia_label}</span>`
-            );
-        }
-        if (item.es_adicional) {
-            badges.push(
-                '<span class="rounded-full bg-fuchsia-100 px-2 py-1 text-fuchsia-800 dark:bg-fuchsia-950/40 dark:text-fuchsia-200">Agregado en reunión</span>'
             );
         }
         return badges.join('');
@@ -868,7 +948,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (editarItemFechaFinVigencia) editarItemFechaFinVigencia.value = item.fecha_fin_vigencia || '';
         if (btnGuardarEditarItem) {
             btnGuardarEditarItem.disabled = false;
-            btnGuardarEditarItem.textContent = 'Guardar cambios del item';
+            btnGuardarEditarItem.textContent = 'Guardar cambios del acuerdo';
         }
 
         actualizarBloqueFechaEditarItem();
@@ -909,16 +989,16 @@ document.addEventListener('DOMContentLoaded', function () {
     function actualizarAyudaAlcanceNuevo() {
         if (!nuevoAlcanceAyuda || !nuevoAlcance) return;
         if (nuevoAlcance.value === 'reunion') {
-            nuevoAlcanceAyuda.textContent = 'Este item solo existirá en esta reunión. No aparecerá como plantilla reutilizable en futuras reuniones.';
+            nuevoAlcanceAyuda.textContent = 'Este acuerdo solo existirá en esta reunión. No aparecerá como plantilla reutilizable en futuras reuniones.';
             nuevoAlcanceAyuda.className = 'mt-2 text-xs text-amber-600 dark:text-amber-300';
             return;
         }
         if (nuevoAlcance.value === 'global') {
-            nuevoAlcanceAyuda.textContent = 'Se guardará como plantilla global y podrá reutilizarse en reuniones de cualquier establecimiento autorizado.';
+            nuevoAlcanceAyuda.textContent = 'Se guardará como plantilla global de acuerdos y podrá reutilizarse en reuniones de cualquier establecimiento autorizado.';
             nuevoAlcanceAyuda.className = 'mt-2 text-xs text-slate-500 dark:text-slate-400';
             return;
         }
-        nuevoAlcanceAyuda.textContent = 'Se guardará como plantilla reutilizable para este establecimiento.';
+        nuevoAlcanceAyuda.textContent = 'Se guardará como plantilla reutilizable de acuerdo para este establecimiento.';
         nuevoAlcanceAyuda.className = 'mt-2 text-xs text-slate-500 dark:text-slate-400';
     }
 
@@ -1038,8 +1118,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (btnGuardarAgregarItem) {
             btnGuardarAgregarItem.disabled = modoFinal === 'existente' && !hayItemsReutilizables;
             btnGuardarAgregarItem.textContent = modoFinal === 'existente'
-                ? (hayItemsReutilizables ? 'Agregar plantilla a la reunión' : 'No hay plantillas disponibles')
-                : 'Crear y agregar item';
+                ? (hayItemsReutilizables ? 'Agregar plantilla como acuerdo' : 'No hay plantillas disponibles')
+                : 'Crear y agregar acuerdo';
         }
 
         if (modoFinal === 'existente') {
@@ -1158,12 +1238,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: JSON.stringify(payload),
             });
             const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'No se pudo agregar el item.');
-            mostrarMensaje('success', 'Item agregado correctamente. Recargando reunión...');
+            if (!response.ok) throw new Error(data.error || 'No se pudo agregar el acuerdo.');
+            mostrarMensaje('success', 'Acuerdo agregado correctamente. Recargando reunión...');
             cerrarModalAgregarItem();
             setTimeout(() => window.location.reload(), 700);
         } catch (error) {
-            mostrarMensaje('error', error.message || 'Error de conexión al agregar el item.');
+            mostrarMensaje('error', error.message || 'Error de conexión al agregar el acuerdo.');
             btnGuardarAgregarItem.disabled = false;
             actualizarModoAgregarItem(modoActual);
         }
@@ -1201,9 +1281,9 @@ document.addEventListener('DOMContentLoaded', function () {
             cerrarModalEditarItem();
             mostrarMensaje('success', data.message || 'Item actualizado correctamente dentro de la reunión.');
         } catch (error) {
-            mostrarMensaje('error', error.message || 'Error de conexión al editar el item.');
+            mostrarMensaje('error', error.message || 'Error de conexión al editar el acuerdo.');
             btnGuardarEditarItem.disabled = false;
-            btnGuardarEditarItem.textContent = 'Guardar cambios del item';
+            btnGuardarEditarItem.textContent = 'Guardar cambios del acuerdo';
         }
     });
 });

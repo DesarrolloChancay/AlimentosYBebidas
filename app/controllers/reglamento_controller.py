@@ -866,12 +866,24 @@ def ver_reunion(reunion_id):
             }
 
         items_por_tipo = {}
+        acuerdos_reunion = []
         for item in items_reunion:
             item.logica_inversa_efectiva = _item_logica_inversa(item)
             item.categoria = _normalizar_categoria_reglamento(item.categoria, permitir_desconocida=True) or item.categoria
+            if item.es_adicional:
+                acuerdos_reunion.append(item)
+                continue
             if item.categoria not in items_por_tipo:
                 items_por_tipo[item.categoria] = []
             items_por_tipo[item.categoria].append(item)
+
+        acuerdos_reunion.sort(
+            key=lambda item: (
+                (item.orden or 0),
+                (item.codigo or ""),
+                (item.descripcion or ""),
+            )
+        )
 
         items_reutilizables = [
             _serializar_item_catalogo(item)
@@ -879,9 +891,7 @@ def ver_reunion(reunion_id):
         ]
         items_reunion_editables = {
             item.id: _serializar_item_reunion(item)
-            for categoria_items in items_por_tipo.values()
-            for item in categoria_items
-            if item.es_adicional
+            for item in acuerdos_reunion
         }
         resumen_actual = _calcular_resumen_reunion_desde_evaluaciones(
             reunion.evaluaciones
@@ -891,6 +901,7 @@ def ver_reunion(reunion_id):
             "reglamento/reunion_detalle.html",
             reunion=reunion,
             items_por_tipo=items_por_tipo,
+            acuerdos_reunion=acuerdos_reunion,
             evaluaciones=evaluaciones,
             resumen_actual=resumen_actual,
             observaciones_reunion=reunion.observaciones or "",
