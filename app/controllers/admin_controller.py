@@ -27,6 +27,11 @@ from app.models.ConfiguracionPermisos_models import (
     PermisosHelper, inicializar_configuraciones_basicas, inicializar_permisos_basicos
 )
 from app.utils.auth_utils import generar_contrasena_temporal
+from app.utils.roles import (
+    ROL_ADMINISTRADOR,
+    ROL_AYUDANTE_INSPECTOR,
+    ROL_INSPECTOR,
+)
 
 # Blueprint para rutas de administrador
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -50,6 +55,28 @@ def admin_required(f):
             # Para requests normales, usar abort para activar error handler personalizado
             abort(403)
         return f(*args, **kwargs)
+    return decorated_function
+
+
+def inspector_staff_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user_role = session.get('user_role')
+        if not session.get('user_id') or user_role not in [ROL_ADMINISTRADOR, ROL_INSPECTOR]:
+            is_ajax = (
+                request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
+                request.headers.get('Content-Type') == 'application/json' or
+                request.is_json or
+                'application/json' in request.headers.get('Accept', '') or
+                request.path.startswith('/admin/api/')
+            )
+
+            if is_ajax:
+                return jsonify({'error': 'Acceso denegado. Se requieren permisos de administrador o inspector.'}), 403
+
+            abort(403)
+        return f(*args, **kwargs)
+
     return decorated_function
 
 class AdminController:
@@ -768,12 +795,11 @@ def api_establecimientos_disponibles():
 # =================== GESTIÓN DE INSPECTORES ===================
 
 @admin_bp.route('/inspectores')
-@admin_required
+@inspector_staff_required
 def gestionar_inspectores():
-    """Vista para gestionar inspectores"""
+    """Vista para gestionar inspectores y ayudantes de inspector"""
     try:
-        # Obtener inspectores con estadísticas
-        inspectores = db.session.query(
+        personal_inspeccion = db.session.query(
             Usuario.id,
             Usuario.nombre,
             Usuario.apellido,
@@ -784,14 +810,14 @@ def gestionar_inspectores():
             Usuario.activo,
             Usuario.en_linea,
             Usuario.ultimo_acceso,
-            Usuario.created_at
+            Usuario.created_at,
+            Rol.nombre.label('rol_nombre'),
         ).join(Rol, Usuario.rol_id == Rol.id
-        ).filter(Rol.nombre == 'Inspector'
+        ).filter(Rol.nombre.in_([ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR])
         ).order_by(Usuario.nombre).all()
 
         inspectores_data = []
-        for insp in inspectores:
-            # Contar inspecciones realizadas por el inspector
+        for insp in personal_inspeccion:
             total_inspecciones = Inspeccion.query.filter_by(inspector_id=insp.id).count()
             
             # Contar inspecciones del mes actual
@@ -809,6 +835,7 @@ def gestionar_inspectores():
                 'correo': insp.correo,
                 'telefono': insp.telefono,
                 'dni': insp.dni,
+                'rol_nombre': insp.rol_nombre,
                 'activo': insp.activo,
                 'en_linea': insp.en_linea,
                 'ultimo_acceso': insp.ultimo_acceso.strftime('%Y-%m-%d %H:%M') if insp.ultimo_acceso else None,
@@ -817,7 +844,14 @@ def gestionar_inspectores():
                 'inspecciones_mes': inspecciones_mes
             })
 
-        return render_template('admin/inspectores.html', inspectores=inspectores_data)
+        return render_template(
+            'admin/inspectores.html',
+            inspectores=inspectores_data,
+            puede_crear_personal=session.get('user_role') == ROL_ADMINISTRADOR,
+            puede_restablecer_credenciales=session.get('user_role') == ROL_ADMINISTRADOR,
+            puede_cambiar_estado=session.get('user_role') == ROL_ADMINISTRADOR,
+            puede_cambiar_rol=session.get('user_role') in [ROL_ADMINISTRADOR, ROL_INSPECTOR],
+        )
 
     except Exception as e:
         flash('Error al cargar la gestión de inspectores', 'error')
@@ -827,7 +861,7 @@ def gestionar_inspectores():
 @admin_bp.route('/api/inspectores', methods=['POST'])
 @admin_required
 def api_crear_inspector():
-    """API para crear un nuevo inspector"""
+    """API para crear personal de inspección"""
     try:
         data = request.get_json()
 
@@ -841,10 +875,13 @@ def api_crear_inspector():
         if Usuario.query.filter_by(dni=data['dni']).first():
             return jsonify({'success': False, 'message': 'Ya existe un usuario con este DNI'}), 400
 
-        # Obtener rol de Inspector
-        rol_inspector = Rol.query.filter_by(nombre='Inspector').first()
+        rol_objetivo = (data.get('rol_objetivo') or ROL_INSPECTOR).strip()
+        if rol_objetivo not in [ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR]:
+            return jsonify({'success': False, 'message': 'Rol objetivo no válido'}), 400
+
+        rol_inspector = Rol.query.filter_by(nombre=rol_objetivo).first()
         if not rol_inspector:
-            return jsonify({'success': False, 'message': 'Rol de Inspector no encontrado'}), 500
+            return jsonify({'success': False, 'message': f'Rol "{rol_objetivo}" no encontrado. Ejecute la migración del nuevo rol antes de crear usuarios.'}), 500
 
         nombre_usuario = Usuario.generar_nombre_usuario_unico(data['nombre'], data['apellido'])
 
@@ -870,11 +907,12 @@ def api_crear_inspector():
 
         return jsonify({
             'success': True,
-            'message': f'Inspector creado exitosamente. Usuario: {nuevo_usuario.nombre_usuario}, Contraseña temporal: {contrasena_temporal}',
+            'message': f'{rol_objetivo} creado exitosamente. Usuario: {nuevo_usuario.nombre_usuario}, Contraseña temporal: {contrasena_temporal}',
             'usuario_id': nuevo_usuario.id,
             'nombre_usuario': nuevo_usuario.nombre_usuario,
             'correo': data['correo'],
-            'contrasena_temporal': contrasena_temporal
+            'contrasena_temporal': contrasena_temporal,
+            'rol_nombre': rol_objetivo,
         })
 
     except Exception as e:
@@ -882,7 +920,7 @@ def api_crear_inspector():
         return jsonify({'success': False, 'message': 'Error interno del servidor'}), 500
 
 @admin_bp.route('/api/inspectores/<int:inspector_id>', methods=['GET'])
-@admin_required
+@inspector_staff_required
 def api_obtener_detalles_inspector(inspector_id):
     """
     API para obtener detalles completos de un inspector
@@ -898,6 +936,7 @@ def api_obtener_detalles_inspector(inspector_id):
             Usuario.id,
             Usuario.nombre,
             Usuario.apellido,
+            Usuario.nombre_usuario,
             Usuario.correo,
             Usuario.telefono,
             Usuario.dni,
@@ -908,11 +947,11 @@ def api_obtener_detalles_inspector(inspector_id):
             Usuario.updated_at,
             Rol.nombre.label('rol_nombre')
         ).join(Rol, Usuario.rol_id == Rol.id
-        ).filter(Usuario.id == inspector_id, Rol.nombre == 'Inspector'
+        ).filter(Usuario.id == inspector_id, Rol.nombre.in_([ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR])
         ).first()
 
         if not inspector:
-            return jsonify({'success': False, 'message': 'Inspector no encontrado o no tiene rol de Inspector'}), 404
+            return jsonify({'success': False, 'message': 'Usuario no encontrado o no pertenece al personal de inspección'}), 404
 
         # Función auxiliar para formatear fechas de forma segura
         def formatear_fecha(fecha, formato='%Y-%m-%d %H:%M'):
@@ -986,10 +1025,11 @@ def api_obtener_detalles_inspector(inspector_id):
             'nombre': inspector.nombre or '',
             'apellido': inspector.apellido or '',
             'nombre_completo': f"{inspector.nombre or ''} {inspector.apellido or ''}".strip(),
+            'nombre_usuario': getattr(inspector, 'nombre_usuario', None),
             'correo': inspector.correo or '',
             'telefono': inspector.telefono,
             'dni': inspector.dni or '',
-            'rol': inspector.rol_nombre or 'Inspector',
+            'rol': inspector.rol_nombre or ROL_INSPECTOR,
             'activo': inspector.activo if inspector.activo is not None else True,
             'en_linea': inspector.en_linea if inspector.en_linea is not None else False,
             'ultimo_acceso': formatear_fecha(inspector.ultimo_acceso, '%Y-%m-%d %H:%M'),
@@ -1026,17 +1066,17 @@ def api_obtener_detalles_inspector(inspector_id):
 @admin_bp.route('/api/inspectores/<int:inspector_id>/restablecer-contrasena', methods=['POST'])
 @admin_required
 def api_restablecer_contrasena_inspector(inspector_id):
-    """API para restablecer la contraseña de un inspector"""
+    """API para restablecer la contraseña del personal de inspección"""
     try:
-        # Verificar que el inspector existe y es un inspector
+        # Verificar que el usuario existe y pertenece al personal de inspección
         inspector = db.session.query(Usuario).join(Rol).filter(
             Usuario.id == inspector_id,
-            Rol.nombre == 'Inspector',
+            Rol.nombre.in_([ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR]),
             Usuario.activo == True
         ).first()
 
         if not inspector:
-            return jsonify({'success': False, 'message': 'Inspector no encontrado'}), 404
+            return jsonify({'success': False, 'message': 'Usuario de inspección no encontrado'}), 404
 
         # Generar nueva contraseña temporal
         nueva_contrasena = generar_contrasena_temporal()
@@ -1044,7 +1084,7 @@ def api_restablecer_contrasena_inspector(inspector_id):
         # Actualizar contraseña del usuario
         inspector.set_password(nueva_contrasena)
         inspector.cambiar_contrasena = True  # Forzar cambio de contraseña
-        inspector.fecha_actualizacion = datetime.now()
+        inspector.updated_at = datetime.utcnow()
 
         db.session.commit()
 
@@ -1053,9 +1093,90 @@ def api_restablecer_contrasena_inspector(inspector_id):
             'message': 'Contraseña restablecida exitosamente',
             'nombre_usuario': inspector.nombre_usuario,
             'correo': inspector.correo,
-            'contrasena_temporal': nueva_contrasena
+            'contrasena_temporal': nueva_contrasena,
+            'rol_nombre': inspector.rol.nombre,
         })
 
     except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Error interno del servidor'}), 500
+
+
+@admin_bp.route('/api/inspectores/<int:inspector_id>/toggle-rol', methods=['POST'])
+@inspector_staff_required
+def api_toggle_rol_inspector(inspector_id):
+    """Alterna un usuario entre Inspector y Ayudante de Inspector."""
+    try:
+        if session.get('user_id') == inspector_id:
+            return jsonify({
+                'success': False,
+                'message': 'No puede cambiar su propio rol desde esta pantalla'
+            }), 400
+
+        usuario = db.session.query(Usuario).join(Rol).filter(
+            Usuario.id == inspector_id,
+            Rol.nombre.in_([ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR])
+        ).first()
+
+        if not usuario:
+            return jsonify({
+                'success': False,
+                'message': 'Usuario no encontrado o no pertenece al personal de inspección'
+            }), 404
+
+        rol_actual = usuario.rol.nombre
+        nuevo_rol_nombre = (
+            ROL_AYUDANTE_INSPECTOR if rol_actual == ROL_INSPECTOR else ROL_INSPECTOR
+        )
+        nuevo_rol = Rol.query.filter_by(nombre=nuevo_rol_nombre).first()
+        if not nuevo_rol:
+            return jsonify({
+                'success': False,
+                'message': f'El rol "{nuevo_rol_nombre}" no existe en la base de datos. Ejecute la migración correspondiente.'
+            }), 500
+
+        usuario.rol_id = nuevo_rol.id
+        usuario.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'Rol actualizado de {rol_actual} a {nuevo_rol_nombre}',
+            'rol_anterior': rol_actual,
+            'nuevo_rol': nuevo_rol_nombre,
+        })
+
+    except Exception:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Error interno del servidor'}), 500
+
+
+@admin_bp.route('/api/inspectores/<int:inspector_id>/toggle-activo', methods=['POST'])
+@admin_required
+def api_toggle_estado_inspector(inspector_id):
+    """Activa o desactiva un usuario del personal de inspección."""
+    try:
+        usuario = db.session.query(Usuario).join(Rol).filter(
+            Usuario.id == inspector_id,
+            Rol.nombre.in_([ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR])
+        ).first()
+
+        if not usuario:
+            return jsonify({
+                'success': False,
+                'message': 'Usuario no encontrado o no pertenece al personal de inspección'
+            }), 404
+
+        usuario.activo = not usuario.activo
+        usuario.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Usuario activado exitosamente' if usuario.activo else 'Usuario desactivado exitosamente',
+            'activo': usuario.activo,
+        })
+
+    except Exception:
         db.session.rollback()
         return jsonify({'success': False, 'message': 'Error interno del servidor'}), 500

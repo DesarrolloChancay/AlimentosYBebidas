@@ -6,6 +6,13 @@ Extensión de modelos para gestión de permisos granulares (sin duplicar configu
 from app.extensions import db
 from datetime import datetime
 import json
+from app.utils.roles import (
+    ROL_ADMINISTRADOR,
+    ROL_AYUDANTE_INSPECTOR,
+    ROL_ENCARGADO,
+    ROL_INSPECTOR,
+    ROL_JEFE_ESTABLECIMIENTO,
+)
 
 # Importar el modelo de configuración existente
 from app.models.Inspecciones_models import ConfiguracionEvaluacion
@@ -152,6 +159,14 @@ def inicializar_permisos_basicos():
         # Establecimientos
         {'recurso': 'establecimientos', 'accion': 'ver'},
     ]
+
+    permisos_ayudante_inspector = [
+        {'recurso': 'inspecciones', 'accion': 'crear'},
+        {'recurso': 'inspecciones', 'accion': 'editar', 'condicion': {'propias': True}},
+        {'recurso': 'inspecciones', 'accion': 'ver'},
+        {'recurso': 'firmas', 'accion': 'cargar'},
+        {'recurso': 'establecimientos', 'accion': 'ver'},
+    ]
     
     permisos_encargado = [
         # Inspecciones propias
@@ -180,10 +195,11 @@ def inicializar_permisos_basicos():
         
         # Mapear roles con sus permisos
         roles_permisos = {
-            'Inspector': permisos_inspector,
-            'Encargado': permisos_encargado,
-            'Administrador': permisos_admin,
-            'Jefe de Establecimiento': permisos_jefe
+            ROL_INSPECTOR: permisos_inspector,
+            ROL_AYUDANTE_INSPECTOR: permisos_ayudante_inspector,
+            ROL_ENCARGADO: permisos_encargado,
+            ROL_ADMINISTRADOR: permisos_admin,
+            ROL_JEFE_ESTABLECIMIENTO: permisos_jefe,
         }
         
         for nombre_rol, permisos in roles_permisos.items():

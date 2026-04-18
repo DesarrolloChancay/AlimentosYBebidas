@@ -131,13 +131,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Actualizar interfaz de firmas
     actualizarInterfazFirmas();
 
-    // Para Inspector/Admin/Jefe: Cargar su firma automáticamente al inicio (no requiere establecimiento)
-    if (userRole === 'Inspector' || userRole === 'Administrador' || userRole === 'Jefe de Establecimiento') {
+    // Para personal que firma en pantalla: cargar su firma automáticamente al inicio
+    if (puedeCargarFirmaUsuarioActual()) {
         cargarFirmaUsuarioActual();
     }
 
-    // Para Inspector/Admin: Mostrar opción de inspecciones pendientes
-    if (userRole === 'Inspector' || userRole === 'Administrador') {
+    // Para roles editores: mostrar opción de inspecciones pendientes
+    if (esRolEditorChecklist()) {
         cargarInspeccionesPendientes();
     } else {
     }
@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         let observacionesTimeout = null;
 
         observacionesTextarea.addEventListener('input', function () {
-            if (userRole === 'Inspector' || userRole === 'Administrador') {
+            if (esRolEditorChecklist()) {
                 reiniciarConfirmacionEncargadoPorCambio();
             }
 
@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         observacionesTextarea.addEventListener('blur', function () {
             // Marcar que hay cambios pendientes si el valor cambió realmente
             if (window.inspeccionEstado.observaciones !== this.value) {
-                if (userRole === 'Inspector' || userRole === 'Administrador') {
+                if (esRolEditorChecklist()) {
                     reiniciarConfirmacionEncargadoPorCambio();
                 }
 
@@ -598,7 +598,11 @@ let catalogoTiposEstablecimiento = [];
 let catalogoEstablecimientosIndex = [];
 
 function esRolEditorChecklist(rol = userRole) {
-    return rol === 'Inspector' || rol === 'Administrador';
+    return rol === 'Inspector' || rol === 'Administrador' || rol === 'Ayudante de Inspector';
+}
+
+function puedeCargarFirmaUsuarioActual(rol = userRole) {
+    return esRolEditorChecklist(rol) || rol === 'Jefe de Establecimiento';
 }
 
 function obtenerUsuarioActualId() {
@@ -2683,7 +2687,7 @@ function configurarEventosItems() {
                 return; // No hay cambio real, no hacer nada
             }
 
-            if (userRole === 'Inspector' || userRole === 'Administrador') {
+            if (esRolEditorChecklist()) {
                 reiniciarConfirmacionEncargadoPorCambio();
             }
 
@@ -3127,8 +3131,8 @@ async function aplicarEstadoSincronizado(estado) {
             }
         }
 
-        // Verificar estado de confirmación para inspectores
-        if ((userRole === 'Inspector' || userRole === 'Administrador') && estado.confirmada_por_encargado) {
+        // Verificar estado de confirmación para roles editores
+        if (esRolEditorChecklist() && estado.confirmada_por_encargado) {
             if (!window.inspeccionEstado.confirmacionesPorEstablecimiento) {
                 window.inspeccionEstado.confirmacionesPorEstablecimiento = {};
             }
@@ -3790,7 +3794,7 @@ async function guardarInspeccionFinal(completar = false) {
 // Función específica para firma del inspector
 async function firmarComoInspector() {
     if (!esRolEditorChecklist()) {
-        mostrarNotificacion('Solo el inspector o administrador puede usar esta función', 'error');
+        mostrarNotificacion('Solo Inspector, Ayudante de Inspector o Administrador puede usar esta función', 'error');
         return;
     }
 
@@ -5019,7 +5023,7 @@ function ocultarInterfazInspeccionesPendientes() {
 }
 
 /**
- * Cargar firma del usuario actual (Inspector/Admin/Jefe) al inicio de la página
+ * Cargar firma del usuario actual al inicio de la página
  * No requiere selección de establecimiento
  */
 async function cargarFirmaUsuarioActual() {
@@ -5029,9 +5033,8 @@ async function cargarFirmaUsuarioActual() {
         return;
     }
 
-    // Solo aplica para Inspector, Admin y Jefe
-    const rolesPermitidos = ['Inspector', 'Administrador', 'Jefe de Establecimiento'];
-    if (!rolesPermitidos.includes(userRole)) {
+    // Solo aplica para roles que pueden firmar desde esta pantalla
+    if (!puedeCargarFirmaUsuarioActual()) {
         return;
     }
 
@@ -5416,7 +5419,7 @@ function limpiarFirmaTemporalEncargado({ resetFirmante = false } = {}) {
 
 async function abrirModalFirmaTemporalEncargado() {
     if (!esRolEditorChecklist()) {
-        mostrarNotificacion('Solo el inspector o administrador puede registrar esta firma desde esta pantalla.', 'warning');
+        mostrarNotificacion('Solo Inspector, Ayudante de Inspector o Administrador puede registrar esta firma desde esta pantalla.', 'warning');
         return;
     }
 
@@ -5469,7 +5472,7 @@ function cerrarModalFirmaTemporalEncargado() {
 
 async function confirmarFirmaTemporalEncargadoDesdeInspector() {
     if (!esRolEditorChecklist()) {
-        mostrarNotificacion('Solo el inspector o administrador puede registrar esta firma desde esta pantalla.', 'warning');
+        mostrarNotificacion('Solo Inspector, Ayudante de Inspector o Administrador puede registrar esta firma desde esta pantalla.', 'warning');
         return;
     }
 

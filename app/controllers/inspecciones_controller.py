@@ -21,6 +21,14 @@ from app.models.Inspecciones_models import (
     JefeEstablecimiento,
 )
 from app.models.Usuario_models import Usuario
+from app.utils.roles import (
+    ROL_ADMINISTRADOR,
+    ROL_AYUDANTE_INSPECTOR,
+    ROL_ENCARGADO,
+    ROL_INSPECTOR,
+    ROL_JEFE_ESTABLECIMIENTO,
+    ROLES_EDITOR_INSPECCION,
+)
 
 
 def safe_timestamp():
@@ -572,19 +580,13 @@ class InspeccionesController:
 
         hoy = date.today()
 
-        if user_role == "Administrador":
+        if user_role in [ROL_ADMINISTRADOR, ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR]:
             return [
                 establecimiento.id
                 for establecimiento in Establecimiento.query.filter_by(activo=True).all()
             ]
 
-        if user_role == "Inspector":
-            return [
-                establecimiento.id
-                for establecimiento in Establecimiento.query.filter_by(activo=True).all()
-            ]
-
-        if user_role == "Encargado":
+        if user_role == ROL_ENCARGADO:
             asignaciones = (
                 EncargadoEstablecimiento.query.filter_by(
                     usuario_id=user_id,
@@ -607,7 +609,7 @@ class InspeccionesController:
                 }
             )
 
-        if user_role == "Jefe de Establecimiento":
+        if user_role == ROL_JEFE_ESTABLECIMIENTO:
             asignaciones = (
                 JefeEstablecimiento.query.filter_by(
                     usuario_id=user_id,
@@ -882,7 +884,7 @@ class InspeccionesController:
             user_id = session.get("user_id")
 
             # Admin e Inspector pueden ver todos los establecimientos
-            if user_role in ["Administrador", "Inspector"]:
+            if user_role in [ROL_ADMINISTRADOR, ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR]:
                 establecimientos = Establecimiento.query.filter_by(activo=True).all()
 
             # Inspector solo ve establecimientos asignados (DESCOMENTAR SI QUIERES RESTRICCIONES)
@@ -911,7 +913,7 @@ class InspeccionesController:
             #     )
 
             # Encargado solo ve sus establecimientos
-            elif user_role == "Encargado":
+            elif user_role == ROL_ENCARGADO:
                 establecimientos = (
                     db.session.query(Establecimiento)
                     .join(
@@ -933,7 +935,7 @@ class InspeccionesController:
                 )
 
             # Jefe de Establecimiento solo ve su establecimiento asignado
-            elif user_role == "Jefe de Establecimiento":
+            elif user_role == ROL_JEFE_ESTABLECIMIENTO:
                 establecimiento_ids = (
                     InspeccionesController._obtener_establecimientos_autorizados(
                         user_id, user_role
@@ -1252,7 +1254,7 @@ class InspeccionesController:
             if not data:
                 return jsonify({"error": "No hay datos para guardar"}), 400
 
-            if user_role not in ["Inspector", "Administrador"]:
+            if user_role not in ROLES_EDITOR_INSPECCION:
                 return jsonify({"error": "No autorizado para editar inspecciones"}), 403
 
             # Crear clave única para el establecimiento (cambio para permitir colaboración cross-inspector)
@@ -1591,7 +1593,7 @@ class InspeccionesController:
                 return jsonify({"error": "Sesión no válida"}), 401
 
             # Verificar permisos
-            if user_role not in ["Inspector", "Administrador"]:
+            if user_role not in [ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR, ROL_ADMINISTRADOR]:
                 return jsonify({"error": "No autorizado"}), 403
 
             if not InspeccionesController._usuario_tiene_acceso_establecimiento(
@@ -3888,9 +3890,9 @@ class InspeccionesController:
             user_role = session.get("user_role")
 
             # Verificar que sea inspector
-            if user_role != "Inspector":
+            if user_role not in [ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR]:
                 return (
-                    jsonify({"error": "Solo los inspectores pueden usar esta función"}),
+                    jsonify({"error": "Solo los inspectores y ayudantes de inspector pueden usar esta función"}),
                     403,
                 )
 
@@ -4584,7 +4586,7 @@ class InspeccionesController:
             user_id = session.get("user_id")
             user_role = session.get("user_role")
 
-            if user_role not in ["Encargado", "Jefe de Establecimiento", "Inspector", "Administrador"]:
+            if user_role not in [ROL_ENCARGADO, ROL_JEFE_ESTABLECIMIENTO, ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR, ROL_ADMINISTRADOR]:
                 return jsonify({"error": "No autorizado para confirmar inspecciones"}), 403
 
             data = request.get_json(silent=True) or {}
@@ -4597,7 +4599,7 @@ class InspeccionesController:
             confirmo_firma_encargado = str(
                 data.get("confirmo_firma_encargado", "")
             ).strip().lower() in {"1", "true", "t", "yes", "si", "sí"}
-            confirmacion_desde_editor = user_role in ["Inspector", "Administrador"]
+            confirmacion_desde_editor = user_role in [ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR, ROL_ADMINISTRADOR]
 
             if not establecimiento_id:
                 return jsonify({"error": "Establecimiento requerido"}), 400
@@ -4624,7 +4626,7 @@ class InspeccionesController:
                     }), 400
             elif firma_temporal_data:
                 return jsonify({
-                    "error": "La firma temporal desde pantalla solo puede registrarla el inspector o administrador."
+                    "error": "La firma temporal desde pantalla solo puede registrarla Inspector, Ayudante de Inspector o Administrador."
                 }), 403
 
             firma = None
@@ -4754,7 +4756,7 @@ class InspeccionesController:
             user_role = session.get("user_role")
             current_user_id = session.get("user_id")
 
-            if user_role not in ["Inspector", "Administrador"]:
+            if user_role not in [ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR, ROL_ADMINISTRADOR]:
                 return jsonify({"error": "No autorizado"}), 403
 
             # Obtener inspecciones en_proceso de los últimos 7 días
@@ -4906,7 +4908,7 @@ class InspeccionesController:
             user_role = session.get("user_role")
             current_user_id = session.get("user_id")
 
-            if user_role not in ["Inspector", "Administrador"]:
+            if user_role not in [ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR, ROL_ADMINISTRADOR]:
                 return jsonify({"error": "No autorizado"}), 403
 
             # Convertir inspeccion_id a string de manera segura (maneja tanto str como int)
