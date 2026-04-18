@@ -13,6 +13,11 @@ import os
 from datetime import datetime
 from app.utils.auth_utils import generar_contrasena_temporal
 from app.utils.signature_utils import delete_static_file, save_signature_data_url
+from app.utils.roles import (
+    ROL_ADMINISTRADOR,
+    ROL_AYUDANTE_INSPECTOR,
+    ROL_INSPECTOR,
+)
 
 
 class InspectorController:
@@ -69,10 +74,10 @@ class InspectorController:
                 return jsonify({'success': False, 'message': 'Usuario no encontrado'}), 404
 
             # Verificar que es inspector o admin
-            if usuario.rol.nombre not in ['Inspector', 'Administrador']:
+            if usuario.rol.nombre not in [ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR, ROL_ADMINISTRADOR]:
                 return jsonify({
                     'success': False, 
-                    'message': 'Solo inspectores y administradores pueden usar esta función'
+                    'message': 'Solo inspectores, ayudantes de inspector y administradores pueden usar esta función'
                 }), 403
 
             json_data = request.get_json(silent=True) if request.is_json else {}

@@ -13,6 +13,14 @@ from flask import (
 from app.controllers.inspecciones_controller import InspeccionesController
 from app.extensions import db
 from app.models.Inspecciones_models import ItemEvaluacionBase
+from app.utils.roles import (
+    ROL_ADMINISTRADOR,
+    ROL_AYUDANTE_INSPECTOR,
+    ROL_ENCARGADO,
+    ROL_INSPECTOR,
+    ROL_JEFE_ESTABLECIMIENTO,
+    ROLES_EDITOR_INSPECCION,
+)
 from datetime import datetime
 from functools import wraps
 import os
@@ -62,6 +70,7 @@ def historial_inspecciones():
 
 @inspeccion_bp.route("/inspecciones/<int:inspeccion_id>/detalle")
 @login_required
+@role_required([ROL_INSPECTOR, ROL_ENCARGADO, ROL_ADMINISTRADOR, ROL_JEFE_ESTABLECIMIENTO])
 def detalle_inspeccion(inspeccion_id):
     """Vista detallada de una inspección específica"""
     user_role = session.get("user_role")
@@ -144,7 +153,7 @@ def index():
 
     try:
         # Obtener datos básicos para la interfaz según el rol
-        if user_role in ["Administrador", "Inspector"]:
+        if user_role in [ROL_ADMINISTRADOR, ROL_INSPECTOR]:
             # Admin e Inspector pueden ver plan semanal
             plan_response = InspeccionesController.obtener_plan_semanal()
             if isinstance(plan_response, tuple) and len(plan_response) == 2:
@@ -165,7 +174,7 @@ def index():
             establecimientos = establecimientos_response.get_json()
 
         # Solo Inspector y Admin necesitan categorías completas
-        if user_role in ["Administrador", "Inspector"]:
+        if user_role in [ROL_ADMINISTRADOR, ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR]:
             categorias_response = InspeccionesController.obtener_categorias()
             if isinstance(categorias_response, tuple) and len(categorias_response) == 2:
                 if categorias_response[1] == 200:
@@ -251,7 +260,7 @@ def obtener_datos_tiempo_real_establecimiento(establecimiento_id):
 def buscar_inspecciones():
     """Vista para buscar inspecciones (para inspectores)"""
     user_role = session.get("user_role")
-    if user_role not in ["Inspector", "Encargado", "Administrador", "Jefe de Establecimiento"]:
+    if user_role not in [ROL_INSPECTOR, ROL_ENCARGADO, ROL_ADMINISTRADOR, ROL_JEFE_ESTABLECIMIENTO]:
         flash("No tienes permisos para acceder a esta función.", "error")
         return redirect(url_for("inspeccion.index"))
 
@@ -260,6 +269,7 @@ def buscar_inspecciones():
 
 @inspeccion_bp.route("/api/inspecciones/buscar", methods=["GET"])
 @login_required
+@role_required([ROL_INSPECTOR, ROL_ENCARGADO, ROL_ADMINISTRADOR, ROL_JEFE_ESTABLECIMIENTO])
 def api_buscar_inspecciones():
     """API para buscar inspecciones con filtros"""
     return InspeccionesController.buscar_inspecciones()
@@ -267,6 +277,7 @@ def api_buscar_inspecciones():
 
 @inspeccion_bp.route("/api/inspecciones/<int:inspeccion_id>/detalle")
 @login_required
+@role_required([ROL_INSPECTOR, ROL_ENCARGADO, ROL_ADMINISTRADOR, ROL_JEFE_ESTABLECIMIENTO])
 def api_detalle_inspeccion(inspeccion_id):
     """API para obtener detalle de una inspección"""
     return InspeccionesController.obtener_detalle_inspeccion(inspeccion_id)
@@ -295,7 +306,7 @@ def limpiar_inspeccion_temporal():
 
 @inspeccion_bp.route("/api/inspecciones/temporal/establecimiento/<int:establecimiento_id>", methods=["GET"])
 @login_required
-@role_required(["Inspector", "Administrador"])
+@role_required([ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR, ROL_ADMINISTRADOR])
 def obtener_datos_temporales_establecimiento(establecimiento_id):
     """
     Obtener datos temporales de inspección para un establecimiento específico
@@ -327,7 +338,7 @@ def guardar_inspeccion():
 
 @inspeccion_bp.route("/api/inspecciones/evidencias", methods=["POST"])
 @login_required
-@role_required(["Inspector", "Administrador"])
+@role_required([ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR, ROL_ADMINISTRADOR])
 def subir_evidencias():
     """Subir evidencias fotográficas para una inspección"""
     return InspeccionesController.subir_evidencias()
@@ -376,6 +387,7 @@ def obtener_inspeccion(inspeccion_id):
 
 @inspeccion_bp.route("/api/informes")
 @login_required
+@role_required([ROL_INSPECTOR, ROL_ENCARGADO, ROL_ADMINISTRADOR, ROL_JEFE_ESTABLECIMIENTO])
 def obtener_informes():
     """El encargado podrá ver los informes solo de su establecimiento"""
     user_role = session.get("user_role")
@@ -433,6 +445,7 @@ def obtener_encargado_actual(establecimiento_id):
 
 @inspeccion_bp.route("/api/inspecciones")
 @login_required
+@role_required([ROL_INSPECTOR, ROL_ENCARGADO, ROL_ADMINISTRADOR, ROL_JEFE_ESTABLECIMIENTO])
 def filtrar_inspecciones():
     """Endpoint para filtrar inspecciones según criterios del pedido.txt"""
     fecha_inicio = request.args.get("fecha_inicio")
@@ -594,7 +607,7 @@ def firmar_inspeccion():
 
 @inspeccion_bp.route("/api/inspector/firmar", methods=["POST"])
 @login_required
-@role_required(["Inspector"])
+@role_required([ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR])
 def firmar_como_inspector():
     """El inspector puede firmar solo después de que el encargado haya firmado"""
     return InspeccionesController.firmar_como_inspector()
@@ -735,7 +748,7 @@ def api_get_establecimientos():
 
 @inspeccion_bp.route("/api/inspecciones/pendientes", methods=["GET"])
 @login_required
-@role_required(["Inspector", "Administrador"])
+@role_required([ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR, ROL_ADMINISTRADOR])
 def obtener_inspecciones_pendientes():
     """
     API para obtener inspecciones pendientes que pueden ser continuadas por cualquier inspector
@@ -746,7 +759,7 @@ def obtener_inspecciones_pendientes():
 
 @inspeccion_bp.route("/api/inspecciones/retomar/<inspeccion_id>", methods=["POST"])
 @login_required
-@role_required(["Inspector", "Administrador"])
+@role_required([ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR, ROL_ADMINISTRADOR])
 def retomar_inspeccion(inspeccion_id):
     """
     API para que un inspector retome una inspección pendiente de otro inspector

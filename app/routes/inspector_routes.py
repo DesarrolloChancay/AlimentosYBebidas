@@ -4,6 +4,11 @@ Rutas para funcionalidades del Inspector
 from flask import Blueprint
 from app.controllers.inspector_controller import InspectorController
 from app.utils.auth_decorators import login_required, role_required
+from app.utils.roles import (
+    ROL_ADMINISTRADOR,
+    ROL_AYUDANTE_INSPECTOR,
+    ROL_INSPECTOR,
+)
 
 inspector_bp = Blueprint('inspector', __name__, url_prefix='/inspector')
 
@@ -11,7 +16,7 @@ inspector_bp = Blueprint('inspector', __name__, url_prefix='/inspector')
 # Vista de perfil del inspector para gestionar su firma
 @inspector_bp.route('/perfil', methods=['GET'])
 @login_required
-@role_required('Inspector', 'Administrador')
+@role_required(ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR, ROL_ADMINISTRADOR)
 def perfil():
     """
     Mostrar página de perfil del inspector
@@ -24,7 +29,7 @@ def perfil():
 # Guardar/actualizar firma del inspector
 @inspector_bp.route('/guardar-firma', methods=['POST'])
 @login_required
-@role_required('Inspector', 'Administrador')
+@role_required(ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR, ROL_ADMINISTRADOR)
 def guardar_firma():
     """
     Guardar o actualizar la firma del inspector
@@ -41,7 +46,7 @@ def guardar_firma():
 # Obtener firma actual del inspector
 @inspector_bp.route('/obtener-firma', methods=['GET'])
 @login_required
-@role_required('Inspector', 'Administrador')
+@role_required(ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR, ROL_ADMINISTRADOR)
 def obtener_firma():
     """
     Obtener la firma actual del inspector
@@ -56,7 +61,7 @@ def obtener_firma():
 
 @inspector_bp.route('/jefes-establecimiento')
 @login_required
-@role_required('Inspector', 'Administrador')
+@role_required(ROL_INSPECTOR, ROL_ADMINISTRADOR)
 def gestionar_jefes_establecimiento():
     """
     Vista para gestionar jefes de establecimiento
@@ -69,7 +74,7 @@ def gestionar_jefes_establecimiento():
 
 @inspector_bp.route('/jefes-establecimiento/crear', methods=['GET'])
 @login_required
-@role_required('Inspector', 'Administrador')
+@role_required(ROL_INSPECTOR, ROL_ADMINISTRADOR)
 def crear_jefe_establecimiento():
     """
     Vista para crear un nuevo jefe de establecimiento
@@ -82,7 +87,7 @@ def crear_jefe_establecimiento():
 
 @inspector_bp.route('/api/jefes-establecimiento', methods=['POST'])
 @login_required
-@role_required('Inspector', 'Administrador')
+@role_required(ROL_INSPECTOR, ROL_ADMINISTRADOR)
 def api_crear_jefe_establecimiento():
     """
     API para crear un jefe de establecimiento
@@ -95,7 +100,7 @@ def api_crear_jefe_establecimiento():
 
 @inspector_bp.route('/api/establecimientos-disponibles', methods=['GET'])
 @login_required
-@role_required('Inspector', 'Administrador')
+@role_required(ROL_INSPECTOR, ROL_ADMINISTRADOR)
 def api_establecimientos_disponibles():
     """
     API para obtener establecimientos disponibles para asignar jefe
@@ -108,7 +113,7 @@ def api_establecimientos_disponibles():
 
 @inspector_bp.route('/api/jefes-establecimiento/<int:jefe_id>/restablecer-contrasena', methods=['POST'])
 @login_required
-@role_required('Inspector', 'Administrador')
+@role_required(ROL_INSPECTOR, ROL_ADMINISTRADOR)
 def api_restablecer_contrasena_jefe(jefe_id):
     """
     API para restablecer la contraseña de un jefe de establecimiento
@@ -124,7 +129,7 @@ def api_restablecer_contrasena_jefe(jefe_id):
 
 @inspector_bp.route('/api/jefes-establecimiento/<int:jefe_id>/detalles', methods=['GET'])
 @login_required
-@role_required('Inspector', 'Administrador')
+@role_required(ROL_INSPECTOR, ROL_ADMINISTRADOR)
 def api_obtener_detalles_jefe(jefe_id):
     """
     API para obtener detalles completos de un jefe de establecimiento
@@ -140,7 +145,7 @@ def api_obtener_detalles_jefe(jefe_id):
 
 @inspector_bp.route('/api/jefes-establecimiento/<int:jefe_id>/editar', methods=['GET'])
 @login_required
-@role_required('Inspector', 'Administrador')
+@role_required(ROL_INSPECTOR, ROL_ADMINISTRADOR)
 def api_obtener_jefe_para_editar(jefe_id):
     """
     API para obtener datos de un jefe para editar
@@ -156,7 +161,7 @@ def api_obtener_jefe_para_editar(jefe_id):
 
 @inspector_bp.route('/api/jefes-establecimiento/<int:jefe_id>', methods=['PUT'])
 @login_required
-@role_required('Inspector', 'Administrador')
+@role_required(ROL_INSPECTOR, ROL_ADMINISTRADOR)
 def api_actualizar_jefe_establecimiento(jefe_id):
     """
     API para actualizar datos de un jefe de establecimiento
@@ -172,7 +177,7 @@ def api_actualizar_jefe_establecimiento(jefe_id):
 
 @inspector_bp.route('/api/jefes-establecimiento/<int:jefe_id>/toggle', methods=['POST'])
 @login_required
-@role_required('Inspector', 'Administrador')
+@role_required(ROL_INSPECTOR, ROL_ADMINISTRADOR)
 def api_toggle_jefe_establecimiento(jefe_id):
     """
     API para activar o desactivar un jefe de establecimiento
@@ -188,7 +193,7 @@ def api_toggle_jefe_establecimiento(jefe_id):
 
 @inspector_bp.route('/api/jefes-establecimiento/lista', methods=['GET'])
 @login_required
-@role_required('Inspector', 'Administrador')
+@role_required(ROL_INSPECTOR, ROL_ADMINISTRADOR)
 def api_obtener_lista_jefes():
     """
     API para obtener lista de jefes de establecimiento para actualizar tabla
@@ -201,7 +206,7 @@ def api_obtener_lista_jefes():
 
 @inspector_bp.route('/api/jefes-establecimiento/estadisticas', methods=['GET'])
 @login_required
-@role_required('Inspector', 'Administrador')
+@role_required(ROL_INSPECTOR, ROL_ADMINISTRADOR)
 def api_obtener_estadisticas_jefes():
     """
     API para obtener estadísticas de jefes de establecimiento

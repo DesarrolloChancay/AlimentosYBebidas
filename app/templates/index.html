@@ -395,6 +395,8 @@
 </style>
 {% endblock %}
 {% block content %}
+{% set editor_inspeccion = user_role in ['Inspector', 'Administrador', 'Ayudante de Inspector'] %}
+{% set puede_ver_plan_semanal = user_role in ['Inspector', 'Administrador'] %}
 <!-- ===== EVALUACIÓN SANITARIA MOBILE-FIRST ===== -->
 <div id="vista-app" class="min-h-screen dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" data-user-role="{{ user_role }}" data-user-id="{{ session.get('user_id', '') }}">
 
@@ -542,7 +544,7 @@
                 </div>
 
                 <!-- ===== PLAN SEMANAL / INFORMES ===== -->
-                {% if user_role in ['Inspector', 'Administrador'] %}
+                {% if puede_ver_plan_semanal %}
                 <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                     <div class="bg-gradient-to-r from-purple-500 to-pink-600 p-4">
                         <h2 class="text-white font-semibold flex items-center">
@@ -662,7 +664,7 @@
                 </div>
 
                 <!-- Evidencias (solo para Inspector y Admin) -->
-                {% if user_role in ['Inspector', 'Administrador'] %}
+                {% if editor_inspeccion %}
                 <div id="evidencias-container" class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                     <div class="bg-gradient-to-r from-rose-500 to-pink-600 p-4">
                         <div class="flex items-center justify-between">
@@ -724,7 +726,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                 <!-- Firma del Inspector (solo para Inspector y Admin) -->
-                {% if user_role in ['Inspector', 'Administrador'] %}
+                {% if editor_inspeccion %}
                 <div id="firma-inspector-area" class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                     <div class="bg-gradient-to-r from-emerald-500 to-green-600 p-4">
                         <h3 class="text-white font-semibold flex items-center">
@@ -791,7 +793,7 @@
                             </p>
                         </div>
 
-                        {% if user_role in ['Inspector', 'Administrador'] %}
+                        {% if editor_inspeccion %}
                         <div id="firma-temporal-encargado-ayuda"
                              class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -821,7 +823,7 @@
             </div>
 
             <!-- ===== BOTONES DE ACCIÓN ===== -->
-            {% if user_role in ['Inspector', 'Administrador'] %}
+            {% if editor_inspeccion %}
             <div class="flex flex-col sm:flex-row gap-4 justify-end">
                 <button id="btn-guardar-borrador" type="submit" name="accion" value="guardar"
                         class="px-8 py-4 bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center">

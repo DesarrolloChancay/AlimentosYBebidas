@@ -1,5 +1,13 @@
 <!-- ===== NAVEGACIÓN PRINCIPAL 100% MOBILE-FIRST ===== -->
 {% if session.user_id and session.get('cambiar_contrasena_obligatorio') != True %}
+{% set puede_ver_dashboard = session.user_role in ['Administrador', 'Inspector', 'Encargado', 'Jefe de Establecimiento'] %}
+{% set puede_iniciar_inspeccion = session.user_role in ['Administrador', 'Inspector', 'Ayudante de Inspector'] %}
+{% set puede_ver_gestion = session.user_role in ['Administrador', 'Inspector'] %}
+{% set puede_ver_historial = session.user_role in ['Administrador', 'Inspector', 'Encargado', 'Jefe de Establecimiento'] %}
+{% set puede_ver_reglamento = session.user_role in ['Administrador', 'Inspector'] %}
+{% set puede_ver_config = session.user_role in ['Administrador', 'Inspector'] %}
+{% set puede_ver_personal_inspeccion = session.user_role in ['Administrador', 'Inspector'] %}
+{% set es_admin = session.user_role == 'Administrador' %}
 <nav class="bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 shadow-xl border-b border-blue-500/20 dark:border-slate-700/30 backdrop-blur-xl sticky top-0 z-50">
     <div class="max-w-full mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 2xl:px-8">
         <div class="flex justify-between items-center h-16 sm:h-18 lg:h-20 2xl:h-18">
@@ -21,21 +29,24 @@
 
             <!-- ===== NAVEGACIÓN DESKTOP ===== -->
             <div class="hidden md:flex md:items-center gap-1 md:gap-1 lg:gap-1.5 xl:gap-1.5 2xl:gap-2">
-                <!-- Dashboard -->
+                {% if puede_ver_dashboard %}
                 <a href="{{ url_for('inspeccion.dashboard_page') }}"
                    class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'inspeccion.dashboard_page' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
                     <span class="ph ph-chart-bar text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
                     <span class="hidden md:inline lg:inline xl:inline 2xl:inline">Dashboard</span>
                 </a>
+                {% endif %}
 
-                {% if session.user_role in ['Inspector', 'Administrador'] %}
+                {% if puede_iniciar_inspeccion %}
                 <a href="{{ url_for('inspeccion.index') }}"
                    class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'inspeccion.index' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
                     <span class="ph ph-plus-circle text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
                     <span class="hidden md:inline lg:inline xl:inline 2xl:inline">Nueva</span>
                 </a>
+                {% endif %}
 
                 <!-- ===== GESTIÓN ===== -->
+                {% if puede_ver_gestion %}
                 <div class="relative group">
                     <button class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm group-hover:bg-white/10">
                         <span class="ph ph-folder text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
@@ -63,17 +74,26 @@
                                 <span class="ph ph-clipboard text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
                                 Plantillas de Checklists
                             </a>
-                            {% if session.user_role in ['Inspector', 'Administrador'] %}
+                            {% if puede_ver_gestion %}
                             <a href="{{ url_for('inspector.gestionar_jefes_establecimiento') }}"
                                class="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-2.5 2xl:gap-3 px-3 md:px-3 lg:px-3 xl:px-3 2xl:px-3 py-2 md:py-2 lg:py-2 xl:py-2 2xl:py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'inspector.gestionar_jefes_establecimiento' or request.endpoint == 'inspector.crear_jefe_establecimiento' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
                                 <span class="ph ph-user-tie text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
                                 Jefes de Establecimiento
                             </a>
                             {% endif %}
+                            {% if puede_ver_personal_inspeccion %}
+                            <a href="{{ url_for('admin.gestionar_inspectores') }}"
+                               class="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-2.5 2xl:gap-3 px-3 md:px-3 lg:px-3 xl:px-3 2xl:px-3 py-2 md:py-2 lg:py-2 xl:py-2 2xl:py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'admin.gestionar_inspectores' %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400{% endif %}">
+                                <span class="ph ph-user-gear text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
+                                Inspectores y Ayudantes
+                            </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
+                {% endif %}
 
+                {% if puede_iniciar_inspeccion %}
                 <a href="{{ url_for('inspector.perfil') }}"
                    class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'inspector.perfil' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
                     <span class="ph ph-signature text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
@@ -81,11 +101,13 @@
                 </a>
                 {% endif %}
 
+                {% if puede_ver_historial %}
                 <a href="{{ url_for('inspeccion.buscar_inspecciones') }}"
                    class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'inspeccion.buscar_inspecciones' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
                     <span class="ph ph-clipboard-text text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
                     <span class="hidden md:inline lg:inline xl:inline 2xl:inline">Historial</span>
                 </a>
+                {% endif %}
 
                 {% if session.user_role == 'Jefe de Establecimiento' %}
                 <a href="{{ url_for('jefe.dashboard') }}"
@@ -100,7 +122,7 @@
                 </a>
                 {% endif %}
 
-                {% if session.user_role in ['Inspector', 'Administrador'] %}
+                {% if puede_ver_reglamento %}
                 <a href="{{ url_for('reglamento.dashboard') }}"
                    class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint and request.endpoint.startswith('reglamento.') %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
                     <span class="ph ph-clipboard-text text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
@@ -108,7 +130,7 @@
                 </a>
                 {% endif %}
 
-                {% if session.user_role in ['Administrador', 'Inspector'] %}
+                {% if puede_ver_config %}
                 <a href="{{ url_for('inspeccion.configuracion_sistema') }}"
                    class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm {% if request.endpoint == 'inspeccion.configuracion_sistema' %}bg-white/20 text-white shadow-lg ring-1 ring-white/20{% endif %}">
                     <span class="ph ph-gear text-sm md:text-base lg:text-base xl:text-lg 2xl:text-lg"></span>
@@ -116,7 +138,7 @@
                 </a>
                 {% endif %}
 
-                {% if session.user_role == 'Administrador' %}
+                {% if es_admin %}
                 <!-- ===== PANEL DE ADMINISTRACIÓN ===== -->
                 <div class="relative group">
                     <button class="flex items-center gap-1 md:gap-1.5 lg:gap-1.5 xl:gap-2 2xl:gap-2 px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-3 py-1.5 md:py-1.5 lg:py-1.5 xl:py-2 2xl:py-2 rounded-md md:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium text-xs md:text-xs lg:text-sm xl:text-sm 2xl:text-sm group-hover:bg-white/10">
@@ -279,6 +301,7 @@
             </div>
 
             <!-- ===== LINKS MOBILE ===== -->
+            {% if puede_ver_dashboard %}
             <a href="{{ url_for('inspeccion.dashboard_page') }}"
                class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'inspeccion.dashboard_page' %}bg-white/20 text-white{% endif %}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -286,8 +309,9 @@
                 </svg>
                 Dashboard
             </a>
+            {% endif %}
 
-            {% if session.user_role in ['Inspector', 'Administrador'] %}
+            {% if puede_iniciar_inspeccion %}
             <a href="{{ url_for('inspeccion.index') }}"
                class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'inspeccion.index' %}bg-white/20 text-white{% endif %}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -295,8 +319,10 @@
                 </svg>
                 Nueva Inspección
             </a>
+            {% endif %}
 
             <!-- ===== GESTIÓN ===== -->
+            {% if puede_ver_gestion %}
             <div class="relative">
                 <button class="flex items-center justify-between w-full px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] group"
                         onclick="toggleGestionMenu()">
@@ -335,7 +361,7 @@
                         </svg>
                         Plantillas de Checklists
                     </a>
-                    {% if session.user_role in ['Inspector', 'Administrador'] %}
+                    {% if puede_ver_gestion %}
                     <a href="{{ url_for('inspector.gestionar_jefes_establecimiento') }}"
                        class="flex items-center space-x-3 px-4 py-3 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'inspector.gestionar_jefes_establecimiento' or request.endpoint == 'inspector.crear_jefe_establecimiento' %}bg-white/20 text-white{% endif %}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -344,9 +370,20 @@
                         Jefes de Establecimiento
                     </a>
                     {% endif %}
+                    {% if puede_ver_personal_inspeccion %}
+                    <a href="{{ url_for('admin.gestionar_inspectores') }}"
+                       class="flex items-center space-x-3 px-4 py-3 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'admin.gestionar_inspectores' %}bg-white/20 text-white{% endif %}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5V9H2v11h5m10 0v-2a4 4 0 00-4-4H11a4 4 0 00-4 4v2m10 0H7m8-10a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Inspectores y Ayudantes
+                    </a>
+                    {% endif %}
                 </div>
             </div>
+            {% endif %}
 
+            {% if puede_iniciar_inspeccion %}
             <a href="{{ url_for('inspector.perfil') }}"
                class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'inspector.perfil' %}bg-white/20 text-white{% endif %}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -354,7 +391,9 @@
                 </svg>
                 Mi Firma
             </a>
-            
+            {% endif %}
+
+            {% if puede_ver_reglamento %}
             <a href="{{ url_for('reglamento.dashboard') }}"
                class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint and request.endpoint.startswith('reglamento.') %}bg-white/20 text-white{% endif %}">
                 <span class="ph ph-clipboard-text text-xl"></span>
@@ -362,6 +401,7 @@
             </a>
             {% endif %}
 
+            {% if puede_ver_historial %}
             <a href="{{ url_for('inspeccion.buscar_inspecciones') }}"
                class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'inspeccion.buscar_inspecciones' %}bg-white/20 text-white{% endif %}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -369,6 +409,7 @@
                 </svg>
                 Historial de Inspecciones
             </a>
+            {% endif %}
 
             {% if session.user_role == 'Jefe de Establecimiento' %}
             <a href="{{ url_for('jefe.dashboard') }}"
@@ -387,7 +428,7 @@
             </a>
             {% endif %}
 
-            {% if session.user_role in ['Administrador', 'Inspector'] %}
+            {% if puede_ver_config %}
             <a href="{{ url_for('inspeccion.configuracion_sistema') }}"
                class="flex items-center space-x-3 px-3 py-3 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 font-medium min-h-[44px] {% if request.endpoint == 'inspeccion.configuracion_sistema' %}bg-white/20 text-white{% endif %}">
                 <span class="ph ph-gear text-xl"></span>
@@ -395,7 +436,7 @@
             </a>
             {% endif %}
 
-            {% if session.user_role == 'Administrador' %}
+            {% if es_admin %}
             <div class="pt-2 border-t border-blue-500/20 dark:border-slate-700/50">
                 <p class="text-blue-200 dark:text-slate-400 text-sm font-medium px-3 pb-2">Panel de Administración</p>
 

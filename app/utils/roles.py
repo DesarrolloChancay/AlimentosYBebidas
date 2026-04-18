@@ -1,0 +1,31 @@
+ROL_ADMINISTRADOR = "Administrador"
+ROL_INSPECTOR = "Inspector"
+ROL_AYUDANTE_INSPECTOR = "Ayudante de Inspector"
+ROL_ENCARGADO = "Encargado"
+ROL_JEFE_ESTABLECIMIENTO = "Jefe de Establecimiento"
+
+ROLES_EDITOR_INSPECCION = (
+    ROL_ADMINISTRADOR,
+    ROL_INSPECTOR,
+    ROL_AYUDANTE_INSPECTOR,
+)
+
+ROLES_GESTION_INSPECTORES = (
+    ROL_ADMINISTRADOR,
+    ROL_INSPECTOR,
+)
+
+ROLES_HISTORIAL_INSPECCIONES = (
+    ROL_ADMINISTRADOR,
+    ROL_INSPECTOR,
+    ROL_ENCARGADO,
+    ROL_JEFE_ESTABLECIMIENTO,
+)
+
+
+def es_editor_inspeccion(rol):
+    return rol in ROLES_EDITOR_INSPECCION
+
+
+def puede_gestionar_inspectores(rol):
+    return rol in ROLES_GESTION_INSPECTORES
