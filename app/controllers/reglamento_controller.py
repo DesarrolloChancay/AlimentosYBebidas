@@ -3,7 +3,8 @@ Descripción: Controlador para gestionar el Reglamento de Restaurante
 Lógica: Maneja reuniones semanales, catálogo configurable de items y cierre de evaluaciones
 """
 
-from datetime import datetime, timedelta
+from collections import defaultdict
+from datetime import date, datetime, timedelta
 import re
 
 from flask import Blueprint, current_app, render_template, request, jsonify, session
@@ -673,6 +674,396 @@ def calcular_sancion_por_platos(total_puntos):
     return {"platos": 25, "descripcion": "25 platos"}
 
 
+MESES_ES = [
+    "Ene",
+    "Feb",
+    "Mar",
+    "Abr",
+    "May",
+    "Jun",
+    "Jul",
+    "Ago",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dic",
+]
+
+
+def _promedio(valores):
+    valores_validos = [valor for valor in valores if valor is not None]
+    if not valores_validos:
+        return 0
+    return round(sum(valores_validos) / len(valores_validos), 2)
+
+
+def _inicio_mes(fecha):
+    return date(fecha.year, fecha.month, 1)
+
+
+def _sumar_meses(fecha, meses):
+    indice = fecha.year * 12 + (fecha.month - 1) + meses
+    return date(indice // 12, (indice % 12) + 1, 1)
+
+
+def _restar_un_anio(fecha):
+    try:
+        return fecha.replace(year=fecha.year - 1)
+    except ValueError:
+        return fecha.replace(year=fecha.year - 1, day=28)
+
+
+def _meses_en_rango(fecha_inicio, fecha_fin):
+    mes_actual = _inicio_mes(fecha_inicio)
+    mes_fin = _inicio_mes(fecha_fin)
+    meses = []
+    while mes_actual <= mes_fin:
+        meses.append(mes_actual)
+        mes_actual = _sumar_meses(mes_actual, 1)
+    return meses
+
+
+def _fecha_referencia_reunion(reunion):
+    if reunion.fecha_inicio_semana:
+        return reunion.fecha_inicio_semana
+    if reunion.fecha_reunion:
+        return reunion.fecha_reunion
+    if reunion.created_at:
+        return reunion.created_at.date()
+    return datetime.utcnow().date()
+
+
+def _puntos_reunion(reunion):
+    if reunion.total_puntos is not None:
+        return int(reunion.total_puntos or 0)
+    return _calcular_resumen_reunion_desde_evaluaciones(reunion.evaluaciones or [])[
+        "total_puntos"
+    ]
+
+
+def _infracciones_reunion(reunion):
+    if reunion.total_infracciones is not None:
+        return int(reunion.total_infracciones or 0)
+    return _calcular_resumen_reunion_desde_evaluaciones(reunion.evaluaciones or [])[
+        "total_infracciones"
+    ]
+
+
+def _platos_reunion(reunion):
+    if reunion.total_platos_sancion is not None:
+        return int(reunion.total_platos_sancion or 0)
+    return calcular_sancion_por_platos(_puntos_reunion(reunion)).get("platos", 0)
+
+
+def _parsear_rango_analitica():
+    hoy = datetime.utcnow().date()
+    fecha_inicio = _parsear_fecha_iso(request.args.get("fecha_inicio")) or date(
+        hoy.year, 1, 1
+    )
+    fecha_fin = _parsear_fecha_iso(request.args.get("fecha_fin")) or hoy
+
+    if fecha_inicio > fecha_fin:
+        fecha_inicio, fecha_fin = fecha_fin, fecha_inicio
+
+    return fecha_inicio, fecha_fin
+
+
+def _query_reuniones_analitica(establecimiento_ids, fecha_inicio, fecha_fin):
+    if not establecimiento_ids:
+        return []
+
+    fecha_base = db.func.coalesce(
+        ReglamentoRestaurante.fecha_inicio_semana,
+        ReglamentoRestaurante.fecha_reunion,
+    )
+
+    return (
+        ReglamentoRestaurante.query.filter(
+            ReglamentoRestaurante.estado == "completada",
+            ReglamentoRestaurante.establecimiento_id.in_(establecimiento_ids),
+            fecha_base >= fecha_inicio,
+            fecha_base <= fecha_fin,
+        )
+        .order_by(fecha_base.asc())
+        .all()
+    )
+
+
+def _resolver_filtro_establecimientos_analitica():
+    establecimientos = _obtener_establecimientos_gestionables()
+    establecimiento_id = request.args.get("establecimiento_id", type=int)
+
+    if establecimiento_id:
+        establecimiento, error = _resolver_establecimiento_autorizado(
+            establecimiento_id
+        )
+        if error:
+            return establecimientos, [], error
+        return establecimientos, [establecimiento.id], None
+
+    return establecimientos, [establecimiento.id for establecimiento in establecimientos], None
+
+
+def _promedio_por_semana(reuniones):
+    semanas = defaultdict(list)
+    for reunion in reuniones:
+        fecha = _fecha_referencia_reunion(reunion)
+        iso_year, iso_week, _ = fecha.isocalendar()
+        semanas[(iso_year, iso_week)].append(_puntos_reunion(reunion))
+
+    return _promedio([_promedio(puntos) for puntos in semanas.values()])
+
+
+def _promedio_por_mes(reuniones):
+    meses = defaultdict(list)
+    for reunion in reuniones:
+        fecha = _fecha_referencia_reunion(reunion)
+        meses[(fecha.year, fecha.month)].append(_puntos_reunion(reunion))
+
+    return _promedio([_promedio(puntos) for puntos in meses.values()])
+
+
+def _serie_mensual(reuniones_actuales, reuniones_anio_anterior, fecha_inicio, fecha_fin):
+    meses = _meses_en_rango(fecha_inicio, fecha_fin)
+    actuales_por_mes = defaultdict(list)
+    anteriores_por_mes_equivalente = defaultdict(list)
+
+    for reunion in reuniones_actuales:
+        fecha = _fecha_referencia_reunion(reunion)
+        actuales_por_mes[(fecha.year, fecha.month)].append(_puntos_reunion(reunion))
+
+    for reunion in reuniones_anio_anterior:
+        fecha = _fecha_referencia_reunion(reunion)
+        anteriores_por_mes_equivalente[(fecha.year + 1, fecha.month)].append(
+            _puntos_reunion(reunion)
+        )
+
+    labels = [f"{MESES_ES[mes.month - 1]} {mes.year}" for mes in meses]
+    actual = []
+    anterior = []
+
+    for mes in meses:
+        puntos_actuales = actuales_por_mes.get((mes.year, mes.month), [])
+        puntos_anteriores = anteriores_por_mes_equivalente.get((mes.year, mes.month), [])
+        actual.append(_promedio(puntos_actuales) if puntos_actuales else None)
+        anterior.append(_promedio(puntos_anteriores) if puntos_anteriores else None)
+
+    return {"labels": labels, "actual": actual, "anterior": anterior}
+
+
+def _barras_restaurantes(reuniones):
+    datos = {}
+    for reunion in reuniones:
+        establecimiento = reunion.establecimiento
+        if not establecimiento:
+            continue
+        item = datos.setdefault(
+            establecimiento.id,
+            {
+                "establecimiento": establecimiento.nombre,
+                "reuniones": 0,
+                "total_puntos": 0,
+                "total_infracciones": 0,
+                "total_platos": 0,
+            },
+        )
+        item["reuniones"] += 1
+        item["total_puntos"] += _puntos_reunion(reunion)
+        item["total_infracciones"] += _infracciones_reunion(reunion)
+        item["total_platos"] += _platos_reunion(reunion)
+
+    filas = []
+    for item in datos.values():
+        reuniones_count = item["reuniones"] or 1
+        filas.append(
+            {
+                **item,
+                "promedio_puntos": round(item["total_puntos"] / reuniones_count, 2),
+            }
+        )
+
+    return sorted(filas, key=lambda item: item["promedio_puntos"], reverse=True)
+
+
+def _datos_evaluacion_reglamento(evaluacion):
+    item = evaluacion.reunion_item or evaluacion.item
+    codigo = getattr(item, "codigo", "") or "S/C"
+    descripcion = getattr(item, "descripcion", "") or "Sin descripcion"
+    categoria = (
+        _normalizar_categoria_reglamento(
+            getattr(item, "categoria", None), permitir_desconocida=True
+        )
+        or "Sin categoria"
+    )
+    puntaje = evaluacion.puntaje_aplicado
+    if puntaje is None:
+        puntaje = getattr(item, "puntaje", 0) or 0
+
+    numero_infracciones = evaluacion.numero_infracciones or 0
+    if not evaluacion.cumple and numero_infracciones <= 0:
+        numero_infracciones = 1
+
+    puntos = 0 if evaluacion.cumple else int(puntaje or 0) * numero_infracciones
+    return {
+        "codigo": codigo,
+        "descripcion": descripcion,
+        "categoria": categoria,
+        "cumple": bool(evaluacion.cumple),
+        "numero_infracciones": numero_infracciones,
+        "puntos": puntos,
+    }
+
+
+def _resumen_categorias_e_items(reunion_ids):
+    if not reunion_ids:
+        return {"categorias": [], "menos_cumplidos": [], "cumplidos": []}
+
+    evaluaciones = EvaluacionReglamento.query.filter(
+        EvaluacionReglamento.reunion_id.in_(reunion_ids)
+    ).all()
+
+    categorias = {}
+    items = {}
+
+    for evaluacion in evaluaciones:
+        datos = _datos_evaluacion_reglamento(evaluacion)
+        categoria = categorias.setdefault(
+            datos["categoria"],
+            {"categoria": datos["categoria"], "total": 0, "cumple": 0, "no_cumple": 0, "puntos": 0},
+        )
+        categoria["total"] += 1
+        categoria["puntos"] += datos["puntos"]
+        if datos["cumple"]:
+            categoria["cumple"] += 1
+        else:
+            categoria["no_cumple"] += 1
+
+        item_key = (datos["codigo"], datos["descripcion"])
+        item = items.setdefault(
+            item_key,
+            {
+                "codigo": datos["codigo"],
+                "descripcion": datos["descripcion"],
+                "categoria": datos["categoria"],
+                "total": 0,
+                "cumple": 0,
+                "no_cumple": 0,
+                "puntos": 0,
+                "infracciones": 0,
+            },
+        )
+        item["total"] += 1
+        item["puntos"] += datos["puntos"]
+        item["infracciones"] += datos["numero_infracciones"]
+        if datos["cumple"]:
+            item["cumple"] += 1
+        else:
+            item["no_cumple"] += 1
+
+    categorias_data = []
+    for categoria in categorias.values():
+        total = categoria["total"] or 1
+        categorias_data.append(
+            {
+                **categoria,
+                "promedio_puntos": round(categoria["puntos"] / total, 2),
+                "cumplimiento": round((categoria["cumple"] / total) * 100, 1),
+            }
+        )
+
+    items_data = []
+    for item in items.values():
+        total = item["total"] or 1
+        items_data.append(
+            {
+                **item,
+                "cumplimiento": round((item["cumple"] / total) * 100, 1),
+            }
+        )
+
+    menos_cumplidos = sorted(
+        [item for item in items_data if item["no_cumple"] > 0],
+        key=lambda item: (
+            item["cumplimiento"],
+            -item["no_cumple"],
+            -item["puntos"],
+            item["codigo"],
+        ),
+    )[:12]
+    cumplidos = sorted(
+        items_data,
+        key=lambda item: (
+            -item["cumplimiento"],
+            -item["total"],
+            item["no_cumple"],
+            item["codigo"],
+        ),
+    )[:12]
+
+    return {
+        "categorias": sorted(categorias_data, key=lambda item: item["promedio_puntos"], reverse=True),
+        "menos_cumplidos": menos_cumplidos,
+        "cumplidos": cumplidos,
+    }
+
+
+def _construir_payload_analitica(establecimiento_ids, fecha_inicio, fecha_fin):
+    reuniones_actuales = _query_reuniones_analitica(
+        establecimiento_ids, fecha_inicio, fecha_fin
+    )
+    reuniones_anio_anterior = _query_reuniones_analitica(
+        establecimiento_ids, _restar_un_anio(fecha_inicio), _restar_un_anio(fecha_fin)
+    )
+
+    puntos_actuales = [_puntos_reunion(reunion) for reunion in reuniones_actuales]
+    puntos_anteriores = [_puntos_reunion(reunion) for reunion in reuniones_anio_anterior]
+    promedio_actual = _promedio(puntos_actuales)
+    promedio_anterior = _promedio(puntos_anteriores)
+
+    if promedio_anterior > 0:
+        variacion_anual = round(
+            ((promedio_actual - promedio_anterior) / promedio_anterior) * 100, 1
+        )
+    else:
+        variacion_anual = None
+
+    resumen_items = _resumen_categorias_e_items(
+        [reunion.id for reunion in reuniones_actuales]
+    )
+
+    return {
+        "filtros": {
+            "fecha_inicio": fecha_inicio.isoformat(),
+            "fecha_fin": fecha_fin.isoformat(),
+            "fecha_inicio_anio_anterior": _restar_un_anio(fecha_inicio).isoformat(),
+            "fecha_fin_anio_anterior": _restar_un_anio(fecha_fin).isoformat(),
+        },
+        "kpis": {
+            "promedio_semanal": _promedio_por_semana(reuniones_actuales),
+            "promedio_mensual": _promedio_por_mes(reuniones_actuales),
+            "promedio_actual": promedio_actual,
+            "promedio_anio_anterior": promedio_anterior,
+            "variacion_anual": variacion_anual,
+            "reuniones": len(reuniones_actuales),
+            "total_puntos": sum(puntos_actuales),
+            "total_infracciones": sum(
+                _infracciones_reunion(reunion) for reunion in reuniones_actuales
+            ),
+        },
+        "series": {
+            "movimiento_mensual": _serie_mensual(
+                reuniones_actuales, reuniones_anio_anterior, fecha_inicio, fecha_fin
+            ),
+            "restaurantes": _barras_restaurantes(reuniones_actuales),
+            "categorias": resumen_items["categorias"],
+        },
+        "reportes": {
+            "menos_cumplidos": resumen_items["menos_cumplidos"],
+            "cumplidos": resumen_items["cumplidos"],
+        },
+    }
+
+
 @reglamento_bp.route("/dashboard")
 @login_required
 def dashboard():
@@ -748,6 +1139,55 @@ def dashboard():
     except Exception:
         current_app.logger.exception("Error cargando dashboard de reglamento")
         return "Error interno del módulo de reglamento.", 500
+
+
+@reglamento_bp.route("/analitica")
+@login_required
+def analitica():
+    try:
+        if not _usuario_puede_gestionar_reglamento():
+            return (
+                "Acceso denegado. Solo inspectores y administradores pueden ver analítica del reglamento.",
+                403,
+            )
+
+        establecimientos = _obtener_establecimientos_gestionables()
+        hoy = datetime.utcnow().date()
+        fecha_inicio_default = date(hoy.year, 1, 1)
+
+        return render_template(
+            "reglamento/analitica.html",
+            establecimientos=establecimientos,
+            fecha_inicio_default=fecha_inicio_default.isoformat(),
+            fecha_fin_default=hoy.isoformat(),
+        )
+
+    except Exception:
+        current_app.logger.exception("Error cargando analítica de reglamento")
+        return "Error interno del módulo de reglamento.", 500
+
+
+@reglamento_bp.route("/api/analitica")
+@login_required
+def api_analitica():
+    try:
+        if not _usuario_puede_gestionar_reglamento():
+            return jsonify({"error": "No autorizado para ver analítica."}), 403
+
+        _, establecimiento_ids, error = _resolver_filtro_establecimientos_analitica()
+        if error:
+            return jsonify({"error": error[0]}), error[1]
+
+        fecha_inicio, fecha_fin = _parsear_rango_analitica()
+        payload = _construir_payload_analitica(
+            establecimiento_ids, fecha_inicio, fecha_fin
+        )
+        return jsonify(payload)
+
+    except Exception:
+        current_app.logger.exception("Error generando analítica de reglamento")
+        return jsonify({"error": "Error interno al generar analítica."}), 500
+
 
 @reglamento_bp.route("/crear-reunion", methods=["POST"])
 @login_required
@@ -988,24 +1428,47 @@ def guardar_evaluacion():
             if not reunion_item:
                 continue
 
-            activo_reunion = _normalizar_booleano(eval_data.get("activo", True))
+            activo_reunion = (
+                _normalizar_booleano(eval_data.get("activo", True))
+                if reunion_item.es_adicional
+                else True
+            )
             reunion_item.activo = activo_reunion
 
-            try:
-                puntaje_reunion = int(eval_data.get("puntaje_reunion"))
-            except (TypeError, ValueError):
-                errores_validacion.append(
-                    f"{reunion_item.codigo}: el puntaje de la reunión debe ser un entero."
-                )
-                continue
+            puntaje_actual = int(reunion_item.puntaje or 0)
+            if reunion_item.es_adicional:
+                try:
+                    puntaje_reunion = int(eval_data.get("puntaje_reunion"))
+                except (TypeError, ValueError):
+                    errores_validacion.append(
+                        f"{reunion_item.codigo}: el puntaje de la reunión debe ser un entero."
+                    )
+                    continue
 
-            if puntaje_reunion < 0:
-                errores_validacion.append(
-                    f"{reunion_item.codigo}: el puntaje no puede ser negativo."
-                )
-                continue
+                if puntaje_reunion < 0:
+                    errores_validacion.append(
+                        f"{reunion_item.codigo}: el puntaje no puede ser negativo."
+                    )
+                    continue
 
-            reunion_item.puntaje = puntaje_reunion
+                reunion_item.puntaje = puntaje_reunion
+            else:
+                puntaje_enviado = eval_data.get("puntaje_reunion")
+                if puntaje_enviado not in (None, ""):
+                    try:
+                        puntaje_enviado = int(puntaje_enviado)
+                    except (TypeError, ValueError):
+                        errores_validacion.append(
+                            f"{reunion_item.codigo}: el puntaje del reglamento base no se puede modificar."
+                        )
+                        continue
+
+                    if puntaje_enviado != puntaje_actual:
+                        errores_validacion.append(
+                            f"{reunion_item.codigo}: el puntaje del reglamento base no se puede modificar desde la reunión."
+                        )
+                        continue
+                puntaje_reunion = puntaje_actual
             observacion = (eval_data.get("observacion") or "").strip()
 
             if not activo_reunion:

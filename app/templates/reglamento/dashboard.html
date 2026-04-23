@@ -11,6 +11,9 @@
                 <p class="text-sm text-slate-600 dark:text-slate-300">{{ establecimiento.nombre }}</p>
             </div>
             <div class="flex flex-wrap gap-3">
+                <a href="{{ url_for('reglamento.analitica', establecimiento_id=establecimiento.id) }}" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 shadow-sm transition hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200">
+                    Analítica
+                </a>
                 <a href="{{ url_for('reglamento.historial_reuniones', establecimiento_id=establecimiento.id) }}" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                     Historial
                 </a>
