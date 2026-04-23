@@ -7,7 +7,8 @@
     <!-- Header -->
     <div class="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 shadow-lg">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div class="flex items-center gap-4">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-center gap-4">
                 <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
                     <span class="ph ph-clipboard-text text-2xl text-white"></span>
                 </div>
@@ -15,6 +16,11 @@
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Reglamento de Restaurante</h1>
                     <p class="text-sm text-gray-600 dark:text-gray-400">Selecciona uno de tus establecimientos autorizados para evaluar</p>
                 </div>
+                </div>
+                <a href="{{ url_for('reglamento.analitica') }}" class="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 shadow-sm transition hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200">
+                    <span class="ph ph-chart-line-up mr-2 text-lg"></span>
+                    Analítica general
+                </a>
             </div>
         </div>
     </div>

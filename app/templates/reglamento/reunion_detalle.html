@@ -4,28 +4,176 @@
 
 {% block content %}
 <style>
-    .reglamento-btn {
-        border: 1px solid #cbd5e1;
-        background: #e2e8f0;
-        color: #475569;
+    .reglamento-shell {
+        background: #f8fafc;
     }
+
+    .dark .reglamento-shell {
+        background: #020617;
+    }
+
+    .reglamento-btn {
+        min-width: 5.75rem;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #475569;
+        box-shadow: none;
+    }
+
+    .dark .reglamento-btn {
+        background: #0f172a;
+        color: #cbd5e1;
+    }
+
     .reglamento-btn.is-selected-good {
         border-color: #059669;
         background: #10b981;
         color: #fff;
+        box-shadow: none;
     }
+
     .reglamento-btn.is-selected-bad {
         border-color: #dc2626;
         background: #ef4444;
         color: #fff;
+        box-shadow: none;
     }
-    .reglamento-row-good { background: rgba(16, 185, 129, 0.08); }
-    .reglamento-row-bad { background: rgba(239, 68, 68, 0.08); }
-    .reglamento-row-pending { background: rgba(148, 163, 184, 0.08); }
-    .reglamento-row-disabled { opacity: 0.58; }
+
+    .reglamento-item-card {
+        position: relative;
+        overflow: hidden;
+        transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+    }
+
+    .reglamento-item-card::before {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 0.35rem;
+        content: "";
+        background: #94a3b8;
+    }
+
+    .reglamento-item-card:hover {
+        transform: translateY(-1px);
+    }
+
+    .reglamento-row-good {
+        border-color: rgba(16, 185, 129, 0.38);
+        background: rgba(16, 185, 129, 0.07);
+    }
+
+    .reglamento-row-good::before { background: #10b981; }
+
+    .reglamento-row-bad {
+        border-color: rgba(239, 68, 68, 0.42);
+        background: rgba(239, 68, 68, 0.08);
+    }
+
+    .reglamento-row-bad::before { background: #ef4444; }
+
+    .reglamento-row-pending {
+        border-color: rgba(148, 163, 184, 0.32);
+        background: rgba(255, 255, 255, 0.78);
+    }
+
+    .dark .reglamento-row-pending {
+        background: rgba(15, 23, 42, 0.62);
+    }
+
+    .reglamento-row-pending::before { background: #94a3b8; }
+
+    .reglamento-row-disabled {
+        opacity: 0.55;
+        filter: grayscale(.25);
+    }
+
+    .reglamento-switch {
+        position: relative;
+        display: inline-flex;
+        height: 2.1rem;
+        width: 4.15rem;
+        cursor: pointer;
+        align-items: center;
+        border-radius: 999px;
+        background: #cbd5e1;
+        padding: .25rem;
+        transition: background .2s ease;
+    }
+
+    .reglamento-switch::after {
+        height: 1.6rem;
+        width: 1.6rem;
+        border-radius: 999px;
+        background: #fff;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, .22);
+        content: "";
+        transition: transform .2s ease;
+    }
+
+    .toggle-item-activo:checked + .reglamento-switch,
+    #nuevoLogicaInversa:checked + .reglamento-switch {
+        background: #2563eb;
+    }
+
+    .toggle-item-activo:checked + .reglamento-switch::after,
+    #nuevoLogicaInversa:checked + .reglamento-switch::after {
+        transform: translateX(2rem);
+    }
+
+    .reglamento-puntaje-stepper {
+        display: inline-grid;
+        grid-template-columns: 2.15rem minmax(3rem, auto) 2.15rem;
+        align-items: center;
+        overflow: hidden;
+        border: 1px solid #cbd5e1;
+        border-radius: 999px;
+        background: #ffffff;
+    }
+
+    .dark .reglamento-puntaje-stepper {
+        border-color: #334155;
+        background: #0f172a;
+    }
+
+    .reglamento-step-btn {
+        height: 2.25rem;
+        font-weight: 800;
+        color: #475569;
+        transition: background .2s ease, color .2s ease;
+    }
+
+    .reglamento-step-btn:hover:not(:disabled) {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+
+    .reglamento-step-btn:disabled {
+        cursor: not-allowed;
+        opacity: .45;
+    }
+
+    .reglamento-number-clean {
+        appearance: textfield;
+    }
+
+    .reglamento-number-clean::-webkit-outer-spin-button,
+    .reglamento-number-clean::-webkit-inner-spin-button {
+        margin: 0;
+        appearance: none;
+    }
+
+    .reglamento-quick-stat {
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+    }
+
+    .dark .reglamento-quick-stat {
+        border-color: #334155;
+        background: #0f172a;
+    }
 </style>
 
-<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+<div class="reglamento-shell mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
     <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div class="space-y-2">
@@ -167,7 +315,7 @@
                     </div>
                     <div>
                         <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Puntaje base</label>
-                        <input id="nuevoPuntaje" type="number" min="0" value="1" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                        <input id="nuevoPuntaje" type="text" inputmode="numeric" value="1" class="reglamento-number-clean w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
                     </div>
                     <div>
                         <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Alcance</label>
@@ -214,12 +362,13 @@
                         </div>
                         <div>
                             <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Umbral</label>
-                            <input id="nuevoUmbral" type="number" step="0.01" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                            <input id="nuevoUmbral" type="text" inputmode="decimal" class="reglamento-number-clean w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
                         </div>
                     </div>
-                    <label class="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-3 text-sm text-slate-700 dark:border-slate-800 dark:text-slate-200 lg:col-span-2">
-                        <input id="nuevoLogicaInversa" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600">
-                        La lógica es inversa: “SI” o cumplir la regla cuenta como infracción
+                    <label for="nuevoLogicaInversa" class="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:text-slate-200 lg:col-span-2">
+                        <span>La lógica es inversa: “SI” o cumplir la regla cuenta como infracción</span>
+                        <input id="nuevoLogicaInversa" type="checkbox" class="sr-only">
+                        <span class="reglamento-switch shrink-0"></span>
                     </label>
                 </div>
 
@@ -257,7 +406,7 @@
                     </div>
                     <div>
                         <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Puntaje en reunión</label>
-                        <input id="editarItemPuntaje" type="number" min="0" class="w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white" required>
+                        <input id="editarItemPuntaje" type="text" inputmode="numeric" class="reglamento-number-clean w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white" required>
                     </div>
                 </div>
 
@@ -307,7 +456,7 @@
                     <button id="btnCancelarEditarItem" type="button" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
                         Cancelar
                     </button>
-                    <button id="btnGuardarEditarItem" type="submit" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700">
+                    <button id="btnGuardarEditarItem" type="submit" class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
                         Guardar cambios del acuerdo
                     </button>
                 </div>
@@ -316,174 +465,161 @@
     </div>
     {% endif %}
 
-    <div class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div class="border-b border-slate-200 px-6 py-4 dark:border-slate-800">
-            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Reglamento base de la reunión</h2>
-            <p class="text-sm text-slate-500 dark:text-slate-400">Aquí se evalúan solo las infracciones oficiales del reglamento aplicables a este establecimiento. Los acuerdos creados durante la reunión se muestran aparte.</p>
+    <section class="mt-6 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div class="flex flex-col gap-2 border-b border-slate-200 pb-5 dark:border-slate-800 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-[0.24em] text-blue-600 dark:text-blue-300">Evaluación oficial</p>
+                <h2 class="mt-1 text-2xl font-black text-slate-950 dark:text-white">Reglamento base</h2>
+                <p class="mt-1 max-w-3xl text-sm text-slate-500 dark:text-slate-400">Cada tarjeta representa una infracción oficial. El puntaje es fijo y no se edita desde la reunión.</p>
+            </div>
+            <span class="rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ items_por_tipo.values()|map('length')|sum }} item(s)</span>
         </div>
-        <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
-                <thead class="bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                    <tr>
-                        <th class="px-4 py-3 text-left font-semibold">Código</th>
-                        <th class="px-4 py-3 text-left font-semibold">Infracción</th>
-                        <th class="px-4 py-3 text-center font-semibold">Puntaje reunión</th>
-                        <th class="px-4 py-3 text-center font-semibold">Activo</th>
-                        <th class="px-4 py-3 text-center font-semibold">Evaluación</th>
-                        <th class="px-4 py-3 text-center font-semibold">Infracciones</th>
-                        <th class="px-4 py-3 text-left font-semibold">Observación</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
-                    {% for categoria, categoria_items in items_por_tipo.items() %}
-                    <tr class="bg-slate-100 dark:bg-slate-800/80">
-                        <td colspan="7" class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100">{{ categoria }}</td>
-                    </tr>
+
+        <div class="mt-5 space-y-6">
+            {% for categoria, categoria_items in items_por_tipo.items() %}
+            <div>
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <h3 class="text-sm font-black uppercase tracking-wide text-slate-700 dark:text-slate-200">{{ categoria }}</h3>
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-300">{{ categoria_items|length }} item(s)</span>
+                </div>
+                <div class="grid gap-4">
                     {% for item in categoria_items %}
                     {% set eval_data = evaluaciones.get(item.id) %}
                     {% set alcance_label = 'Plantilla global' if item.alcance == 'global' else 'Solo establecimiento' if item.alcance == 'establecimiento' else 'Solo esta reunión' %}
-                    <tr data-item-row="{{ item.id }}" data-item-code="{{ item.codigo }}" data-tipo="{{ item.tipo_validacion or 'si_no' }}" data-logica-inversa="{{ 'true' if item.logica_inversa_efectiva else 'false' }}" class="reglamento-row-pending">
-                        <td class="px-4 py-4 align-top">
-                            <div class="font-semibold text-slate-900 dark:text-white">{{ item.codigo }}</div>
-                        </td>
-                        <td class="px-4 py-4 align-top">
-                            <div class="space-y-2">
-                                <p class="text-slate-900 dark:text-slate-100" data-item-descripcion="{{ item.id }}">{{ item.descripcion }}</p>
-                                <div class="flex flex-wrap gap-2 text-xs" data-item-badges="{{ item.id }}">
-                                    <span class="rounded-full bg-slate-100 px-2 py-1 text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ item.riesgo }}</span>
-                                    <span class="rounded-full bg-blue-100 px-2 py-1 text-blue-700 dark:bg-blue-950/40 dark:text-blue-200">{{ alcance_label }}</span>
-                                    <span class="rounded-full bg-amber-100 px-2 py-1 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{{ item.tipo_vigencia|capitalize }}</span>
+                    <article data-item-row="{{ item.id }}" data-item-code="{{ item.codigo }}" data-es-acuerdo="false" data-tipo="{{ item.tipo_validacion or 'si_no' }}" data-logica-inversa="{{ 'true' if item.logica_inversa_efectiva else 'false' }}" class="reglamento-item-card reglamento-row-pending rounded-3xl border p-5 shadow-sm">
+                        <div class="grid gap-5 xl:grid-cols-[1fr_auto]">
+                            <div class="space-y-3">
+                                <div class="flex flex-wrap items-center gap-2 text-xs font-bold" data-item-badges="{{ item.id }}">
+                                    <span class="rounded-full bg-slate-900 px-3 py-1 text-white dark:bg-white dark:text-slate-900">{{ item.codigo }}</span>
+                                    <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ item.riesgo }}</span>
+                                    <span class="rounded-full bg-blue-100 px-3 py-1 text-blue-700 dark:bg-blue-950/40 dark:text-blue-200">{{ alcance_label }}</span>
+                                    <span class="rounded-full bg-amber-100 px-3 py-1 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{{ item.tipo_vigencia|capitalize }}</span>
                                     {% if item.tipo_vigencia == 'temporal' and item.fecha_fin_vigencia %}
-                                    <span class="rounded-full bg-rose-100 px-2 py-1 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">Hasta {{ item.fecha_fin_vigencia.strftime('%d/%m/%Y') }}</span>
+                                    <span class="rounded-full bg-rose-100 px-3 py-1 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">Hasta {{ item.fecha_fin_vigencia.strftime('%d/%m/%Y') }}</span>
                                     {% endif %}
                                 </div>
+                                <p class="text-base font-bold leading-relaxed text-slate-950 dark:text-white" data-item-descripcion="{{ item.id }}">{{ item.descripcion }}</p>
                             </div>
-                        </td>
-                        <td class="px-4 py-4 align-top text-center">
-                            <input type="number" min="0" step="1" class="input-puntaje w-24 rounded-lg border border-slate-300 px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-item-id="{{ item.id }}" value="{{ item.puntaje }}" {% if solo_lectura %}disabled{% endif %}>
-                        </td>
-                        <td class="px-4 py-4 align-top text-center">
-                            <input type="checkbox" class="toggle-item-activo h-4 w-4 rounded border-slate-300 text-blue-600" data-item-id="{{ item.id }}" {% if item.activo %}checked{% endif %} {% if solo_lectura %}disabled{% endif %}>
-                        </td>
-                        <td class="px-4 py-4 align-top text-center">
-                            {% if item.tipo_validacion in ['numerico', 'porcentaje'] %}
-                            <div class="flex flex-col items-center gap-2">
-                                <input type="number" step="0.01" class="input-valor-medido w-28 rounded-lg border border-slate-300 px-3 py-2 text-center font-semibold dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-item-id="{{ item.id }}" data-logica-inversa="{{ 'true' if item.logica_inversa_efectiva else 'false' }}" data-umbral="{{ item.valor_umbral }}" data-operador="{{ item.operador_comparacion }}" value="{{ eval_data.valor_medido if eval_data and eval_data.valor_medido is not none else '' }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>
-                                <span class="text-xs text-slate-500 dark:text-slate-400">{{ item.operador_comparacion }} {{ item.valor_umbral }}{% if item.tipo_validacion == 'porcentaje' %}%{% endif %}</span>
-                            </div>
-                            {% else %}
-                            <div class="flex justify-center gap-2">
-                                <button type="button" class="btn-estado reglamento-btn rounded-lg px-4 py-2 font-semibold transition-colors" data-item-id="{{ item.id }}" data-estado="cumple" data-selected="{{ 'true' if eval_data and eval_data.estado == 'cumple' else 'false' }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>SI</button>
-                                <button type="button" class="btn-estado reglamento-btn rounded-lg px-4 py-2 font-semibold transition-colors" data-item-id="{{ item.id }}" data-estado="no_cumple" data-selected="{{ 'true' if eval_data and eval_data.estado == 'no_cumple' else 'false' }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>NO</button>
-                            </div>
-                            {% endif %}
-                        </td>
-                        <td class="px-4 py-4 align-top text-center">
-                            <input type="number" min="0" step="1" class="input-infracciones w-20 rounded-lg border border-slate-300 px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-item-id="{{ item.id }}" value="{{ eval_data.numero_infracciones if eval_data and eval_data.numero_infracciones is not none else 0 }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>
-                        </td>
-                        <td class="px-4 py-4 align-top">
-                            <input type="text" class="input-observacion w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-item-id="{{ item.id }}" value="{{ eval_data.observacion if eval_data else '' }}" placeholder="Detalle adicional..." {% if solo_lectura or not item.activo %}disabled{% endif %}>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
 
-    <div class="mt-6 overflow-hidden rounded-2xl border border-indigo-200 bg-white shadow-sm dark:border-indigo-900/40 dark:bg-slate-900">
-        <div class="border-b border-indigo-100 px-6 py-4 dark:border-indigo-900/40">
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Acuerdos con el establecimiento</h2>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">Estos acuerdos nacen en esta reunión o se reusan como plantillas de acuerdos. Se evalúan aquí, pero no forman parte del reglamento base.</p>
-                </div>
-                <span class="inline-flex self-start rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-200">{{ acuerdos_reunion|length }} acuerdo(s)</span>
-            </div>
-        </div>
-        {% if acuerdos_reunion %}
-        <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
-                <thead class="bg-indigo-50 text-slate-600 dark:bg-indigo-950/20 dark:text-slate-300">
-                    <tr>
-                        <th class="px-4 py-3 text-left font-semibold">Código</th>
-                        <th class="px-4 py-3 text-left font-semibold">Acuerdo</th>
-                        <th class="px-4 py-3 text-center font-semibold">Puntaje reunión</th>
-                        <th class="px-4 py-3 text-center font-semibold">Activo</th>
-                        <th class="px-4 py-3 text-center font-semibold">Evaluación</th>
-                        <th class="px-4 py-3 text-center font-semibold">Infracciones</th>
-                        <th class="px-4 py-3 text-left font-semibold">Observación</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
-                    {% for item in acuerdos_reunion %}
-                    {% set eval_data = evaluaciones.get(item.id) %}
-                    {% set alcance_label = 'Plantilla global' if item.alcance == 'global' else 'Solo establecimiento' if item.alcance == 'establecimiento' else 'Solo esta reunión' %}
-                    <tr data-item-row="{{ item.id }}" data-item-code="{{ item.codigo }}" data-tipo="{{ item.tipo_validacion or 'si_no' }}" data-logica-inversa="{{ 'true' if item.logica_inversa_efectiva else 'false' }}" class="reglamento-row-pending bg-indigo-50/40 dark:bg-indigo-950/10">
-                        <td class="px-4 py-4 align-top">
-                            <div class="font-semibold text-slate-900 dark:text-white">{{ item.codigo }}</div>
-                        </td>
-                        <td class="px-4 py-4 align-top">
-                            <div class="space-y-2">
-                                <p class="text-slate-900 dark:text-slate-100" data-item-descripcion="{{ item.id }}">{{ item.descripcion }}</p>
-                                <div class="flex flex-wrap gap-2 text-xs" data-item-badges="{{ item.id }}">
-                                    <span class="rounded-full bg-fuchsia-100 px-2 py-1 text-fuchsia-800 dark:bg-fuchsia-950/40 dark:text-fuchsia-200">Acuerdo de reunión</span>
-                                    <span class="rounded-full bg-slate-100 px-2 py-1 text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ item.riesgo }}</span>
-                                    <span class="rounded-full bg-emerald-100 px-2 py-1 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200">{{ item.categoria }}</span>
-                                    <span class="rounded-full bg-blue-100 px-2 py-1 text-blue-700 dark:bg-blue-950/40 dark:text-blue-200">{{ alcance_label }}</span>
-                                    <span class="rounded-full bg-amber-100 px-2 py-1 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{{ item.tipo_vigencia|capitalize }}</span>
-                                    {% if item.tipo_vigencia == 'temporal' and item.fecha_fin_vigencia %}
-                                    <span class="rounded-full bg-rose-100 px-2 py-1 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">Hasta {{ item.fecha_fin_vigencia.strftime('%d/%m/%Y') }}</span>
-                                    {% endif %}
+                            <div class="flex flex-wrap items-center gap-3 xl:justify-end">
+                                <input type="hidden" class="input-puntaje" data-item-id="{{ item.id }}" data-puntaje-editable="false" value="{{ item.puntaje }}">
+                                <div class="rounded-2xl bg-slate-100 px-4 py-3 text-center dark:bg-slate-800">
+                                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Puntaje fijo</p>
+                                    <p class="text-2xl font-black text-slate-950 dark:text-white">{{ item.puntaje }}</p>
                                 </div>
-                                {% if not solo_lectura %}
-                                <div class="pt-1">
-                                    <button type="button" class="btn-editar-item-reunion inline-flex items-center rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100 dark:border-indigo-900/40 dark:bg-indigo-950/30 dark:text-indigo-200" data-item-id="{{ item.id }}">
-                                        Editar acuerdo
-                                    </button>
+                            </div>
+                        </div>
+
+                        <div class="mt-5 grid gap-4 lg:grid-cols-[1fr_1.2fr] lg:items-end">
+                            <div>
+                                <p class="mb-2 text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Respuesta</p>
+                                {% if item.tipo_validacion in ['numerico', 'porcentaje'] %}
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <input type="text" inputmode="decimal" class="input-valor-medido reglamento-number-clean w-32 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-center text-lg font-black text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-950 dark:text-white" data-item-id="{{ item.id }}" data-logica-inversa="{{ 'true' if item.logica_inversa_efectiva else 'false' }}" data-umbral="{{ item.valor_umbral }}" data-operador="{{ item.operador_comparacion }}" value="{{ eval_data.valor_medido if eval_data and eval_data.valor_medido is not none else '' }}" {% if solo_lectura %}disabled{% endif %}>
+                                    <span class="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-300">Regla {{ item.operador_comparacion }} {{ item.valor_umbral }}{% if item.tipo_validacion == 'porcentaje' %}%{% endif %}</span>
+                                </div>
+                                {% else %}
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" class="btn-estado reglamento-btn rounded-2xl px-5 py-3 font-black transition-colors" data-item-id="{{ item.id }}" data-estado="cumple" data-selected="{{ 'true' if eval_data and eval_data.estado == 'cumple' else 'false' }}" {% if solo_lectura %}disabled{% endif %}>SI</button>
+                                    <button type="button" class="btn-estado reglamento-btn rounded-2xl px-5 py-3 font-black transition-colors" data-item-id="{{ item.id }}" data-estado="no_cumple" data-selected="{{ 'true' if eval_data and eval_data.estado == 'no_cumple' else 'false' }}" {% if solo_lectura %}disabled{% endif %}>NO</button>
                                 </div>
                                 {% endif %}
                             </div>
-                        </td>
-                        <td class="px-4 py-4 align-top text-center">
-                            <input type="number" min="0" step="1" class="input-puntaje w-24 rounded-lg border border-slate-300 px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-item-id="{{ item.id }}" value="{{ item.puntaje }}" {% if solo_lectura %}disabled{% endif %}>
-                        </td>
-                        <td class="px-4 py-4 align-top text-center">
-                            <input type="checkbox" class="toggle-item-activo h-4 w-4 rounded border-slate-300 text-blue-600" data-item-id="{{ item.id }}" {% if item.activo %}checked{% endif %} {% if solo_lectura %}disabled{% endif %}>
-                        </td>
-                        <td class="px-4 py-4 align-top text-center">
-                            {% if item.tipo_validacion in ['numerico', 'porcentaje'] %}
-                            <div class="flex flex-col items-center gap-2">
-                                <input type="number" step="0.01" class="input-valor-medido w-28 rounded-lg border border-slate-300 px-3 py-2 text-center font-semibold dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-item-id="{{ item.id }}" data-logica-inversa="{{ 'true' if item.logica_inversa_efectiva else 'false' }}" data-umbral="{{ item.valor_umbral }}" data-operador="{{ item.operador_comparacion }}" value="{{ eval_data.valor_medido if eval_data and eval_data.valor_medido is not none else '' }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>
-                                <span class="text-xs text-slate-500 dark:text-slate-400">{{ item.operador_comparacion }} {{ item.valor_umbral }}{% if item.tipo_validacion == 'porcentaje' %}%{% endif %}</span>
+                            <div>
+                                <label class="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Observación</label>
+                                <input type="text" class="input-observacion w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-950 dark:text-white" data-item-id="{{ item.id }}" value="{{ eval_data.observacion if eval_data else '' }}" placeholder="Detalle adicional..." {% if solo_lectura %}disabled{% endif %}>
                             </div>
-                            {% else %}
-                            <div class="flex justify-center gap-2">
-                                <button type="button" class="btn-estado reglamento-btn rounded-lg px-4 py-2 font-semibold transition-colors" data-item-id="{{ item.id }}" data-estado="cumple" data-selected="{{ 'true' if eval_data and eval_data.estado == 'cumple' else 'false' }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>SI</button>
-                                <button type="button" class="btn-estado reglamento-btn rounded-lg px-4 py-2 font-semibold transition-colors" data-item-id="{{ item.id }}" data-estado="no_cumple" data-selected="{{ 'true' if eval_data and eval_data.estado == 'no_cumple' else 'false' }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>NO</button>
-                            </div>
-                            {% endif %}
-                        </td>
-                        <td class="px-4 py-4 align-top text-center">
-                            <input type="number" min="0" step="1" class="input-infracciones w-20 rounded-lg border border-slate-300 px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-item-id="{{ item.id }}" value="{{ eval_data.numero_infracciones if eval_data and eval_data.numero_infracciones is not none else 0 }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>
-                        </td>
-                        <td class="px-4 py-4 align-top">
-                            <input type="text" class="input-observacion w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-item-id="{{ item.id }}" value="{{ eval_data.observacion if eval_data else '' }}" placeholder="Detalle adicional..." {% if solo_lectura or not item.activo %}disabled{% endif %}>
-                        </td>
-                    </tr>
+                        </div>
+                    </article>
                     {% endfor %}
-                </tbody>
-            </table>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="mt-6 rounded-[2rem] border border-blue-200 bg-white p-5 shadow-sm dark:border-blue-900/40 dark:bg-slate-900">
+        <div class="flex flex-col gap-2 border-b border-blue-100 pb-5 dark:border-blue-900/40 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-[0.24em] text-blue-600 dark:text-blue-300">Compromisos puntuales</p>
+                <h2 class="mt-1 text-2xl font-black text-slate-950 dark:text-white">Acuerdos con el establecimiento</h2>
+                <p class="mt-1 max-w-3xl text-sm text-slate-500 dark:text-slate-400">Se evalúan aparte del reglamento base. Aquí sí puedes ajustar puntaje y activar o pausar un acuerdo.</p>
+            </div>
+            <span class="rounded-full bg-blue-100 px-4 py-2 text-sm font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-200">{{ acuerdos_reunion|length }} acuerdo(s)</span>
+        </div>
+
+        {% if acuerdos_reunion %}
+        <div class="mt-5 grid gap-4">
+            {% for item in acuerdos_reunion %}
+            {% set eval_data = evaluaciones.get(item.id) %}
+            {% set alcance_label = 'Plantilla global' if item.alcance == 'global' else 'Solo establecimiento' if item.alcance == 'establecimiento' else 'Solo esta reunión' %}
+            <article data-item-row="{{ item.id }}" data-item-code="{{ item.codigo }}" data-es-acuerdo="true" data-tipo="{{ item.tipo_validacion or 'si_no' }}" data-logica-inversa="{{ 'true' if item.logica_inversa_efectiva else 'false' }}" class="reglamento-item-card reglamento-row-pending rounded-3xl border p-5 shadow-sm">
+                <div class="grid gap-5 xl:grid-cols-[1fr_auto]">
+                    <div class="space-y-3">
+                        <div class="flex flex-wrap items-center gap-2 text-xs font-bold" data-item-badges="{{ item.id }}">
+                            <span class="rounded-full bg-blue-600 px-3 py-1 text-white">{{ item.codigo }}</span>
+                            <span class="rounded-full bg-fuchsia-100 px-3 py-1 text-fuchsia-800 dark:bg-fuchsia-950/40 dark:text-fuchsia-200">Acuerdo</span>
+                            <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ item.riesgo }}</span>
+                            <span class="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200">{{ item.categoria }}</span>
+                            <span class="rounded-full bg-blue-100 px-3 py-1 text-blue-700 dark:bg-blue-950/40 dark:text-blue-200">{{ alcance_label }}</span>
+                            <span class="rounded-full bg-amber-100 px-3 py-1 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{{ item.tipo_vigencia|capitalize }}</span>
+                            {% if item.tipo_vigencia == 'temporal' and item.fecha_fin_vigencia %}
+                            <span class="rounded-full bg-rose-100 px-3 py-1 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">Hasta {{ item.fecha_fin_vigencia.strftime('%d/%m/%Y') }}</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-base font-bold leading-relaxed text-slate-950 dark:text-white" data-item-descripcion="{{ item.id }}">{{ item.descripcion }}</p>
+                        {% if not solo_lectura %}
+                        <button type="button" class="btn-editar-item-reunion rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 transition hover:border-blue-300 hover:bg-blue-100 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-200" data-item-id="{{ item.id }}">Editar acuerdo</button>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-4 xl:justify-end">
+                        <div class="rounded-2xl bg-blue-50 px-4 py-3 text-center dark:bg-blue-950/30">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-blue-500 dark:text-blue-300">Puntaje</p>
+                            <div class="reglamento-puntaje-stepper mt-1">
+                                <button type="button" class="reglamento-step-btn btn-puntaje-step" data-item-id="{{ item.id }}" data-step="-1" {% if solo_lectura %}disabled{% endif %}>-</button>
+                                <span class="puntaje-display px-3 text-xl font-black text-slate-950 dark:text-white" data-item-id="{{ item.id }}">{{ item.puntaje }}</span>
+                                <button type="button" class="reglamento-step-btn btn-puntaje-step" data-item-id="{{ item.id }}" data-step="1" {% if solo_lectura %}disabled{% endif %}>+</button>
+                            </div>
+                            <input type="hidden" class="input-puntaje" data-item-id="{{ item.id }}" data-puntaje-editable="true" value="{{ item.puntaje }}">
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 px-4 py-3 text-center dark:bg-slate-800">
+                            <p class="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Activo</p>
+                            <input id="toggleItem{{ item.id }}" type="checkbox" class="toggle-item-activo sr-only" data-item-id="{{ item.id }}" {% if item.activo %}checked{% endif %} {% if solo_lectura %}disabled{% endif %}>
+                            <label for="toggleItem{{ item.id }}" class="reglamento-switch" title="Activar o pausar acuerdo"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-5 grid gap-4 lg:grid-cols-[1fr_1.2fr] lg:items-end">
+                    <div>
+                        <p class="mb-2 text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Respuesta</p>
+                        {% if item.tipo_validacion in ['numerico', 'porcentaje'] %}
+                        <div class="flex flex-wrap items-center gap-3">
+                            <input type="text" inputmode="decimal" class="input-valor-medido reglamento-number-clean w-32 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-center text-lg font-black text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-950 dark:text-white" data-item-id="{{ item.id }}" data-logica-inversa="{{ 'true' if item.logica_inversa_efectiva else 'false' }}" data-umbral="{{ item.valor_umbral }}" data-operador="{{ item.operador_comparacion }}" value="{{ eval_data.valor_medido if eval_data and eval_data.valor_medido is not none else '' }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>
+                            <span class="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-300">Regla {{ item.operador_comparacion }} {{ item.valor_umbral }}{% if item.tipo_validacion == 'porcentaje' %}%{% endif %}</span>
+                        </div>
+                        {% else %}
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" class="btn-estado reglamento-btn rounded-2xl px-5 py-3 font-black transition-colors" data-item-id="{{ item.id }}" data-estado="cumple" data-selected="{{ 'true' if eval_data and eval_data.estado == 'cumple' else 'false' }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>SI</button>
+                            <button type="button" class="btn-estado reglamento-btn rounded-2xl px-5 py-3 font-black transition-colors" data-item-id="{{ item.id }}" data-estado="no_cumple" data-selected="{{ 'true' if eval_data and eval_data.estado == 'no_cumple' else 'false' }}" {% if solo_lectura or not item.activo %}disabled{% endif %}>NO</button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Observación</label>
+                        <input type="text" class="input-observacion w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-950 dark:text-white" data-item-id="{{ item.id }}" value="{{ eval_data.observacion if eval_data else '' }}" placeholder="Detalle adicional..." {% if solo_lectura or not item.activo %}disabled{% endif %}>
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
         </div>
         {% else %}
-        <div class="px-6 py-8">
-            <div class="rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/70 px-5 py-6 text-sm text-slate-600 dark:border-indigo-900/40 dark:bg-indigo-950/10 dark:text-slate-300">
-                Todavía no hay acuerdos registrados para esta reunión. Usa <span class="font-semibold">Agregar acuerdo con el establecimiento</span> para dejar compromisos o ajustes puntuales sin mezclarlos con el reglamento base.
-            </div>
+        <div class="mt-5 rounded-3xl border border-dashed border-blue-200 bg-blue-50 px-5 py-8 text-center text-sm text-slate-600 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-slate-300">
+            Todavía no hay acuerdos registrados para esta reunión. Usa <span class="font-semibold">Agregar acuerdo con el establecimiento</span> para dejar compromisos o ajustes puntuales sin mezclarlos con el reglamento base.
         </div>
         {% endif %}
-    </div>
+    </section>
 
     <div class="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div class="grid gap-4 md:grid-cols-3">
@@ -574,8 +710,16 @@ document.addEventListener('DOMContentLoaded', function () {
         return document.querySelector(`.input-puntaje[data-item-id="${itemId}"]`);
     }
 
-    function obtenerInputInfracciones(itemId) {
-        return document.querySelector(`.input-infracciones[data-item-id="${itemId}"]`);
+    function actualizarDisplayPuntaje(itemId) {
+        const input = obtenerInputPuntaje(itemId);
+        const display = document.querySelector(`.puntaje-display[data-item-id="${itemId}"]`);
+        if (input && display) {
+            display.textContent = input.value || '0';
+        }
+    }
+
+    function itemPermiteEditarPuntaje(itemId) {
+        return obtenerInputPuntaje(itemId)?.dataset.puntajeEditable === 'true';
     }
 
     function obtenerInputObservacion(itemId) {
@@ -616,11 +760,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function obtenerNumeroInfracciones(itemId, incumplimiento) {
-        const input = obtenerInputInfracciones(itemId);
-        const valor = Number.parseInt(input?.value || '0', 10);
         if (!incumplimiento) return 0;
-        if (!Number.isInteger(valor) || valor <= 0) return 1;
-        return valor;
+        return 1;
     }
 
     function actualizarEstadoFila(itemId, incumplimiento) {
@@ -639,10 +780,12 @@ document.addEventListener('DOMContentLoaded', function () {
     function actualizarDisponibilidadItem(itemId) {
         const activo = itemEstaActivoEnReunion(itemId);
         document.querySelectorAll(`.btn-estado[data-item-id="${itemId}"]`).forEach((btn) => { btn.disabled = soloLectura || !activo; });
-        document.querySelectorAll(`.input-valor-medido[data-item-id="${itemId}"], .input-infracciones[data-item-id="${itemId}"], .input-observacion[data-item-id="${itemId}"], .input-puntaje[data-item-id="${itemId}"]`).forEach((input) => {
-            if (!input.classList.contains('input-puntaje')) {
-                input.disabled = soloLectura || !activo;
+        document.querySelectorAll(`.input-valor-medido[data-item-id="${itemId}"], .input-observacion[data-item-id="${itemId}"], .input-puntaje[data-item-id="${itemId}"]`).forEach((input) => {
+            if (input.classList.contains('input-puntaje')) {
+                input.disabled = soloLectura || !itemPermiteEditarPuntaje(itemId);
+                return;
             }
+            input.disabled = soloLectura || !activo;
         });
     }
 
@@ -736,10 +879,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const payload = {
                 reunion_item_id: itemId,
                 activo: activo,
-                puntaje_reunion: obtenerPuntajeItem(itemId),
-                numero_infracciones: Number.parseInt(obtenerInputInfracciones(itemId)?.value || '0', 10),
                 observacion: obtenerInputObservacion(itemId)?.value?.trim() || '',
             };
+            if (itemPermiteEditarPuntaje(itemId)) {
+                payload.puntaje_reunion = obtenerPuntajeItem(itemId);
+            }
             if (['numerico', 'porcentaje'].includes(tipo)) {
                 const input = document.querySelector(`.input-valor-medido[data-item-id="${itemId}"]`);
                 payload.valor_medido = input?.value ?? '';
@@ -781,8 +925,24 @@ document.addEventListener('DOMContentLoaded', function () {
         actualizarDisponibilidadItem(itemId);
     });
 
-    document.querySelectorAll('.input-infracciones, .input-puntaje').forEach((input) => {
+    document.querySelectorAll('.input-puntaje').forEach((input) => {
         input.addEventListener('input', calcularResumen);
+        actualizarDisplayPuntaje(input.dataset.itemId);
+    });
+
+    document.querySelectorAll('.btn-puntaje-step').forEach((boton) => {
+        boton.addEventListener('click', function () {
+            if (soloLectura) return;
+            const itemId = this.dataset.itemId;
+            const input = obtenerInputPuntaje(itemId);
+            if (!input || !itemPermiteEditarPuntaje(itemId)) return;
+            const step = Number.parseInt(this.dataset.step || '0', 10);
+            const actual = Number.parseInt(input.value || '0', 10);
+            const siguiente = Math.max(0, (Number.isInteger(actual) ? actual : 0) + step);
+            input.value = String(siguiente);
+            actualizarDisplayPuntaje(itemId);
+            calcularResumen();
+        });
     });
 
     calcularResumen();
@@ -918,6 +1078,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const inputPuntaje = obtenerInputPuntaje(item.id);
         if (inputPuntaje) {
             inputPuntaje.value = item.puntaje ?? 0;
+            actualizarDisplayPuntaje(item.id);
         }
 
         itemsReunionEditables[String(item.id)] = item;
