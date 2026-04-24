@@ -72,20 +72,19 @@ function handleFileSelect(event, tipo) {
             window.inspeccionEstado[`firma_${tipo}`] = e.target.result;
         }
 
-        // Mostrar preview  
+        // Mostrar preview
         const preview = document.getElementById(`preview-firma-${tipo}`);
         if (preview) {
             const imgUrl = e.target.result;
             preview.innerHTML = `
                 <div class="relative">
-                    <img src="${imgUrl}" 
-                         class="max-w-full h-20 object-contain border rounded cursor-pointer" 
+                    <img src="${imgUrl}"
+                         class="max-w-full h-20 object-contain border rounded cursor-pointer bg-white"
                          onclick="abrirVistaPrevia ? abrirVistaPrevia('${imgUrl}') : void(0)">
                 </div>
                 <p class="text-xs text-gray-500 mt-1">Haga clic en la imagen para ampliar</p>
             `;
         }
-
         // Funciones específicas de app.js si están disponibles
         if (typeof actualizarInterfazFirmas === 'function') {
             actualizarInterfazFirmas();
@@ -345,38 +344,48 @@ function crearPreviewEvidencia(file, container) {
     const reader = new FileReader();
     reader.onload = function(e) {
         const div = document.createElement('div');
-        div.className = 'relative inline-block m-2';
+        // Estilo de tarjeta moderna con hover y sombra
+        div.className = 'group relative flex flex-col gap-2 rounded-xl bg-white p-2 shadow-sm border border-slate-200 transition-all hover:shadow-md hover:border-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:hover:border-slate-600 m-1';
         div.dataset.evidenciaId = file._uniqueId;
         
         const imageContainer = document.createElement('div');
-        imageContainer.className = 'relative';
+        // Contenedor de la imagen con aspecto cuadrado, esquinas redondeadas y overflow hidden
+        imageContainer.className = 'relative aspect-square w-full overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-900 min-h-[96px]';
         
         const img = document.createElement('img');
         img.src = e.target.result;
         img.alt = `Evidencia: ${file.name}`;
-        img.className = 'w-24 h-24 object-cover border rounded shadow cursor-pointer hover:opacity-80 transition-opacity';
+        // Efecto de zoom suave al hacer hover en la tarjeta
+        img.className = 'h-full w-full cursor-pointer object-cover transition-transform duration-300 group-hover:scale-105';
         
-        // Agregar evento de click para abrir modal
+        const overlay = document.createElement('div');
+        // Overlay sutil
+        overlay.className = 'pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/10 dark:group-hover:bg-black/20';
+        
         img.addEventListener('click', function() {
             abrirModalEvidencia(e.target.result, file.name);
         });
         
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
-        deleteBtn.className = 'absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition-colors';
-        deleteBtn.innerHTML = '×';
+        // Botón de eliminar elegante
+        deleteBtn.className = 'absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-red-500/90 text-white opacity-0 backdrop-blur shadow-sm transition-all hover:bg-red-600 hover:scale-110 group-hover:opacity-100 z-10 focus:opacity-100 focus:outline-none';
+        deleteBtn.innerHTML = '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>';
+        deleteBtn.title = 'Eliminar evidencia';
         
-        // Agregar evento de click para eliminar usando el ID único
-        deleteBtn.addEventListener('click', function() {
+        deleteBtn.addEventListener('click', function(evt) {
+            evt.stopPropagation();
             eliminarEvidenciaPorId(file._uniqueId);
         });
         
         const nameDiv = document.createElement('div');
-        nameDiv.className = 'text-xs text-center mt-1 max-w-24 truncate';
+        // Nombre truncado con estilo limpio
+        nameDiv.className = 'w-full truncate px-1 text-center text-xs font-medium text-slate-600 dark:text-slate-300';
         nameDiv.title = file.name;
         nameDiv.textContent = file.name;
         
         imageContainer.appendChild(img);
+        imageContainer.appendChild(overlay);
         imageContainer.appendChild(deleteBtn);
         div.appendChild(imageContainer);
         div.appendChild(nameDiv);
@@ -769,65 +778,134 @@ window.limpiarInputsEvidencias = limpiarInputsEvidencias;
 window.abrirModalCamaraEvidencia = abrirModalCamaraEvidencia;
 
 /**
- * Abre modal para ver evidencia en grande
+ * Abre modal tipo lightbox para ver evidencia en grande
  */
 function abrirModalEvidencia(src, nombre) {
-    // Crear modal específico para evidencias (no usar abrirVistaPrevia de app.js)
-    // ya que esa función valida URLs de archivo y no funciona con datos base64
+    if (document.getElementById('modal-evidencia')) return;
     
-    // Crear modal simple para evidencias
     const modal = document.createElement('div');
     modal.id = 'modal-evidencia';
-    modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+    modal.className = 'fixed inset-0 z-[200] hidden items-center justify-center transition-all duration-300';
+    modal.setAttribute('aria-hidden', 'true');
     
+    // Fondo oscuro con desenfoque
+    const backdrop = document.createElement('div');
+    backdrop.className = 'absolute inset-0 bg-slate-950/90 backdrop-blur-md transition-opacity duration-300 opacity-0';
+    backdrop.addEventListener('click', cerrarModalEvidencia);
+    
+    // Contenedor principal
     const modalContent = document.createElement('div');
-    modalContent.className = 'relative max-w-4xl max-h-4xl p-4';
+    modalContent.className = 'relative z-10 flex h-full w-full flex-col items-center justify-center p-4 sm:p-8 opacity-0 scale-95 transition-all duration-300';
+    // Evento para cerrar si se hace clic fuera de la imagen pero dentro del contenedor
+    modalContent.addEventListener('click', function(e) {
+        if (e.target === modalContent) cerrarModalEvidencia();
+    });
+
+    // Barra superior flotante con nombre y botón cerrar
+    const topBar = document.createElement('div');
+    topBar.className = 'absolute top-4 left-0 w-full flex justify-between items-start px-4 sm:px-8 z-20 pointer-events-none';
+    
+    const titleInfo = document.createElement('div');
+    titleInfo.className = 'flex flex-col drop-shadow-md pointer-events-auto bg-black/40 backdrop-blur-md rounded-xl px-4 py-2 border border-white/10';
+    
+    const title = document.createElement('h3');
+    title.className = 'text-white text-sm sm:text-base font-medium truncate max-w-[200px] sm:max-w-md';
+    title.textContent = 'Evidencia Fotográfica';
+    
+    const subtitle = document.createElement('p');
+    subtitle.className = 'text-slate-300 text-xs truncate max-w-[200px] sm:max-w-md mt-0.5';
+    subtitle.textContent = nombre;
+    
+    titleInfo.appendChild(title);
+    titleInfo.appendChild(subtitle);
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'pointer-events-auto inline-flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md transition-all hover:bg-white/25 hover:scale-105 border border-white/10';
+    closeBtn.innerHTML = '<svg class="h-6 w-6 sm:h-7 sm:w-7 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>';
+    closeBtn.addEventListener('click', cerrarModalEvidencia);
+    
+    topBar.appendChild(titleInfo);
+    topBar.appendChild(closeBtn);
+    
+    // Contenedor de la imagen (centrado)
+    const imgContainer = document.createElement('div');
+    imgContainer.className = 'relative max-w-5xl max-h-[85vh] w-auto h-auto rounded-xl overflow-hidden shadow-2xl pointer-events-auto ring-1 ring-white/10';
     
     const img = document.createElement('img');
     img.src = src;
     img.alt = `Evidencia: ${nombre}`;
-    img.className = 'max-w-full max-h-full object-contain';
-    
-    const closeBtn = document.createElement('button');
-    closeBtn.className = 'absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600';
-    closeBtn.innerHTML = '×';
-    closeBtn.addEventListener('click', cerrarModalEvidencia);
-    
-    const nameLabel = document.createElement('div');
-    nameLabel.className = 'absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm';
-    nameLabel.textContent = nombre;
-    
-    modalContent.appendChild(img);
-    modalContent.appendChild(closeBtn);
-    modalContent.appendChild(nameLabel);
-    modal.appendChild(modalContent);
-    
-    // Cerrar con ESC o click fuera
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) {
-            cerrarModalEvidencia();
-        }
+    img.className = 'max-w-full max-h-[85vh] object-contain rounded-xl bg-slate-900/50';
+    // Evitar que el clic en la imagen cierre el modal
+    img.addEventListener('click', function(e) {
+        e.stopPropagation();
     });
+    
+    imgContainer.appendChild(img);
+    modalContent.appendChild(topBar);
+    modalContent.appendChild(imgContainer);
+    
+    modal.appendChild(backdrop);
+    modal.appendChild(modalContent);
     
     // Listener para ESC (se agrega temporalmente)
     const escListener = function(e) {
         if (e.key === 'Escape') {
             cerrarModalEvidencia();
-            document.removeEventListener('keydown', escListener);
         }
     };
     document.addEventListener('keydown', escListener);
+    window._escListenerModalEvidenciaLightbox = escListener;
     
     document.body.appendChild(modal);
+    
+    // Evitar scroll en el body
+    document.body.style.overflow = 'hidden';
+    
+    // Animar entrada
+    requestAnimationFrame(() => {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        requestAnimationFrame(() => {
+            backdrop.classList.remove('opacity-0');
+            backdrop.classList.add('opacity-100');
+            modalContent.classList.remove('scale-95', 'opacity-0');
+            modalContent.classList.add('scale-100', 'opacity-100');
+        });
+    });
 }
 
 /**
- * Cierra el modal de evidencia
+ * Cierra el modal de evidencia tipo lightbox
  */
 function cerrarModalEvidencia() {
     const modal = document.getElementById('modal-evidencia');
     if (modal) {
-        modal.remove();
+        const backdrop = modal.children[0];
+        const modalContent = modal.children[1];
+        
+        if (backdrop && modalContent) {
+            backdrop.classList.remove('opacity-100');
+            backdrop.classList.add('opacity-0');
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+            
+            setTimeout(() => {
+                if (window._escListenerModalEvidenciaLightbox) {
+                    document.removeEventListener('keydown', window._escListenerModalEvidenciaLightbox);
+                    window._escListenerModalEvidenciaLightbox = null;
+                }
+                document.body.style.overflow = ''; // Restaurar scroll
+                modal.remove();
+            }, 300);
+        } else {
+            if (window._escListenerModalEvidenciaLightbox) {
+                document.removeEventListener('keydown', window._escListenerModalEvidenciaLightbox);
+                window._escListenerModalEvidenciaLightbox = null;
+            }
+            document.body.style.overflow = '';
+            modal.remove();
+        }
     }
 }
 
