@@ -58,7 +58,7 @@
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Firma Actual</h3>
                 <div id="firma-actual-container" class="min-h-[150px] flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
                     {% if usuario.ruta_firma %}
-                    <img src="/static/{{ usuario.ruta_firma }}" 
+                    <img src="{{ firma_url(usuario.ruta_firma) }}"
                          alt="Firma actual" 
                          class="max-h-[200px] object-contain"
                          onerror="this.parentElement.innerHTML='<p class=\'text-red-500\'>Error al cargar la firma</p>'">

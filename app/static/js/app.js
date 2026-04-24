@@ -1297,7 +1297,7 @@ function emitirEstadoCompleto() {
 }
 
 function enviarEstadoPendienteConBeacon() {
-    if (!hayCambiosPendientes || !window.inspeccionEstado?.establecimiento_id || !navigator.sendBeacon) {
+    if (!hayCambiosPendientes || !window.inspeccionEstado?.establecimiento_id) {
         return false;
     }
 
@@ -1306,14 +1306,33 @@ function enviarEstadoPendienteConBeacon() {
             ...window.inspeccionEstado,
             evidencias: []
         };
-        const payload = new Blob(
-            [JSON.stringify(estadoParaServidor)],
-            { type: 'application/json' }
-        );
-        return navigator.sendBeacon('/api/inspecciones/temporal', payload);
+        const request = window.secureFetch || fetch;
+        request('/api/inspecciones/temporal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(estadoParaServidor),
+            keepalive: true
+        }).catch((error) => {
+            console.error('Error enviando autosave:', error);
+        });
+        return true;
     } catch (error) {
-        console.error('Error enviando beacon de autosave:', error);
+        console.error('Error enviando autosave:', error);
         return false;
+    }
+}
+
+async function cerrarSesionSegura() {
+    try {
+        const request = window.secureFetch || fetch;
+        await request('/api/auth/logout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error cerrando sesion:', error);
+    } finally {
+        window.location.href = '/login';
     }
 }
 
@@ -2416,7 +2435,7 @@ function mostrarDialogoSesionDuplicada() {
     acceptButton.className = 'bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors font-semibold';
     acceptButton.textContent = 'Entendido';
     acceptButton.onclick = () => {
-        window.location.href = '/api/auth/logout';
+        cerrarSesionSegura();
     };
 
     buttonContainer.appendChild(acceptButton);
@@ -3208,8 +3227,12 @@ function mostrarEstadoSincronizacion(mensaje, progreso = false) {
 // Función para limpiar datos temporales completamente
 async function limpiarDatosTemporalesCompleto() {
     try {
-        // Limpiar datos del servidor
-        await fetch('/api/inspecciones/temporal', {
+        // Obtener el establecimiento_id del estado actual
+        const establecimientoId = window.inspeccionEstado?.establecimiento_id;
+
+        // Limpiar datos del servidor incluyendo el establecimiento_id
+        const urlParams = establecimientoId ? `?establecimiento_id=${establecimientoId}` : '';
+        await fetch(`/api/inspecciones/temporal${urlParams}`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -3397,7 +3420,7 @@ function mostrarAdvertenciaSesion() {
     document.body.appendChild(modal);
 
     document.getElementById('cerrar-sesion-btn').onclick = () => {
-        window.location.href = '/api/auth/logout';
+        cerrarSesionSegura();
     };
 
     document.getElementById('continuar-sesion-btn').onclick = () => {
@@ -3409,7 +3432,7 @@ function mostrarAdvertenciaSesion() {
 // Función para cerrar sesión por inactividad
 function cerrarSesionPorInactividad() {
     alert('Su sesión ha expirado por inactividad');
-    window.location.href = '/api/auth/logout';
+    cerrarSesionSegura();
 }
 
 // Función para detectar actividad del usuario - DESHABILITADA
@@ -5128,7 +5151,7 @@ function mostrarPreviewFirmaInspector(pathFirma) {
     // Verificar que el elemento esté visible
     const computedStyle = window.getComputedStyle(preview);
 
-    const imageUrl = `/static/${pathFirma}`;
+    const imageUrl = resolverSrcFirmaEncargado(pathFirma);
 
     // Crear el HTML de la imagen
     const imageHtml = `
@@ -5173,17 +5196,36 @@ function resolverSrcFirmaEncargado(firma) {
         return null;
     }
 
+    const limpia = firma.trim();
+
     if (
-        firma.startsWith('data:image/')
-        || firma.startsWith('/static/')
-        || firma.startsWith('http://')
-        || firma.startsWith('https://')
-        || firma.startsWith('blob:')
+        limpia.startsWith('data:image/')
+        || limpia.startsWith('/media/firmas/')
+        || limpia.startsWith('http://')
+        || limpia.startsWith('https://')
+        || limpia.startsWith('blob:')
     ) {
-        return firma;
+        return limpia;
     }
 
-    return `/static/${firma.replace(/^\/+/, '')}`;
+    const relativa = limpia.replace(/^\/+/, '');
+    if (relativa.startsWith('media/firmas/')) {
+        return `/${relativa}`;
+    }
+    if (relativa.startsWith('static/img/firmas/')) {
+        return `/media/firmas/${relativa.slice('static/'.length)}`;
+    }
+    if (relativa.startsWith('static/firmas/')) {
+        return `/media/firmas/${relativa}`;
+    }
+    if (relativa.startsWith('img/firmas/')) {
+        return `/media/firmas/${relativa}`;
+    }
+    if (relativa.startsWith('firmas/')) {
+        return `/media/firmas/${relativa.slice('firmas/'.length)}`;
+    }
+
+    return `/media/firmas/${relativa}`;
 }
 
 function mostrarEstadoFirmaTemporalEncargado(mensaje = '', tipo = 'error') {

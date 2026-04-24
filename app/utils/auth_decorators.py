@@ -2,6 +2,17 @@ from functools import wraps
 from flask import session, jsonify
 from app.models.Usuario_models import Usuario
 
+
+def _normalizar_roles(roles):
+    roles_normalizados = []
+    for rol in roles:
+        if isinstance(rol, (list, tuple, set)):
+            roles_normalizados.extend(rol)
+        elif rol:
+            roles_normalizados.append(rol)
+    return tuple(str(rol) for rol in roles_normalizados)
+
+
 def login_required(f):
     """Decorador que requiere que el usuario esté autenticado"""
     @wraps(f)
@@ -13,6 +24,8 @@ def login_required(f):
 
 def role_required(*roles):
     """Decorador que requiere roles específicos"""
+    roles_permitidos = _normalizar_roles(roles)
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -20,8 +33,8 @@ def role_required(*roles):
                 return jsonify({'error': 'No autorizado - Login requerido'}), 401
             
             user_role = session.get('user_role')
-            if user_role not in roles:
-                return jsonify({'error': f'Acceso denegado - Se requiere rol: {", ".join(roles)}'}), 403
+            if user_role not in roles_permitidos:
+                return jsonify({'error': f'Acceso denegado - Se requiere rol: {", ".join(roles_permitidos)}'}), 403
             
             return f(*args, **kwargs)
         return decorated_function

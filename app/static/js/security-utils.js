@@ -81,6 +81,69 @@ class CSRFManager {
     }
 }
 
+// ===== FETCH SEGURO CENTRALIZADO =====
+const NATIVE_FETCH = window.fetch ? window.fetch.bind(window) : null;
+const SAFE_HTTP_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'TRACE']);
+
+function isSameOriginRequest(input) {
+    try {
+        const rawUrl = input instanceof Request ? input.url : String(input);
+        const url = new URL(rawUrl, window.location.origin);
+        return url.origin === window.location.origin;
+    } catch (error) {
+        return true;
+    }
+}
+
+function mergeHeaders(input, options) {
+    const headers = new Headers(input instanceof Request ? input.headers : undefined);
+    const optionHeaders = new Headers(options.headers || {});
+    optionHeaders.forEach((value, key) => headers.set(key, value));
+    return headers;
+}
+
+async function secureFetch(input, options = {}) {
+    if (!NATIVE_FETCH) {
+        throw new Error('Fetch no está disponible en este navegador.');
+    }
+
+    const method = String(
+        options.method || (input instanceof Request ? input.method : 'GET')
+    ).toUpperCase();
+    const headers = mergeHeaders(input, options);
+
+    if (!SAFE_HTTP_METHODS.has(method) && isSameOriginRequest(input)) {
+        const token = CSRFManager.getToken();
+        if (token && !headers.has(SECURITY_CONFIG.CSRF_TOKEN_HEADER)) {
+            headers.set(SECURITY_CONFIG.CSRF_TOKEN_HEADER, token);
+        }
+    }
+
+    const response = await NATIVE_FETCH(input, {
+        ...options,
+        credentials: options.credentials || 'same-origin',
+        headers
+    });
+
+    if (response.status === 401 || response.status === 403) {
+        window.dispatchEvent(new CustomEvent('secure-fetch-auth-error', {
+            detail: { status: response.status, url: response.url }
+        }));
+    }
+
+    return response;
+}
+
+if (NATIVE_FETCH) {
+    window.fetch = secureFetch;
+}
+
+document.addEventListener('submit', (event) => {
+    if (event.target instanceof HTMLFormElement) {
+        CSRFManager.addTokenToForm(event.target);
+    }
+}, true);
+
 // ===== GESTIÓN DE SESIONES SEGURAS =====
 class SessionManager {
     static lastActivity = Date.now();
@@ -158,7 +221,7 @@ class SessionManager {
         headers['Content-Type'] = headers['Content-Type'] || 'application/json';
         headers['X-Session-Fingerprint'] = this.fingerprint;
         
-        return fetch(url, { ...options, headers });
+        return secureFetch(url, { ...options, headers });
     }
 }
 
@@ -243,13 +306,13 @@ function validateImageUrl(url) {
             const rest = trimmed.slice('static/'.length);
             if (rest.startsWith('evidencias') && !rest.startsWith('evidencias/')) {
                 const evidenciasRest = rest.slice('evidencias'.length).replace(/^\/+/, '');
-                cleanUrl = `/static/evidencias/${evidenciasRest}`;
+                cleanUrl = `/evidencias/${evidenciasRest}`;
             } else {
                 cleanUrl = `/${trimmed}`;
             }
         } else if (trimmed.startsWith('evidencias')) {
             const evidenciasRest = trimmed.slice('evidencias'.length).replace(/^\/+/, '');
-            cleanUrl = `/static/evidencias/${evidenciasRest}`;
+            cleanUrl = `/evidencias/${evidenciasRest}`;
         }
 
     cleanUrl = cleanUrl.replace(/\/{2,}/g, '/');
@@ -388,7 +451,7 @@ function validateImageFile(file) {
     }
     
     // Validar tipo MIME
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
     if (!allowedTypes.includes(file.type)) {
         return { valid: false, error: 'Tipo de archivo no permitido' };
     }
@@ -400,7 +463,7 @@ function validateImageFile(file) {
     }
     
     // Validar extensión del nombre
-    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.avif'];
     const fileExtension = file.name.toLowerCase().split('.').pop();
     if (!allowedExtensions.includes('.' + fileExtension)) {
         return { valid: false, error: 'Extensión de archivo no permitida' };
@@ -411,6 +474,9 @@ function validateImageFile(file) {
 
 // Exportar funciones para uso global
 if (typeof window !== 'undefined') {
+    window.CSRFManager = CSRFManager;
+    window.SessionManager = SessionManager;
+    window.secureFetch = secureFetch;
     window.SecurityUtils = {
         sanitizeText,
         validateImageUrl,

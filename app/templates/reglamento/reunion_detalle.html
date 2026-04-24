@@ -621,6 +621,40 @@
         {% endif %}
     </section>
 
+    <section class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white">Evidencia fotográfica</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Opcional para esta reunión de reglamento.</p>
+        </div>
+
+        {% if not solo_lectura %}
+        <form id="formEvidenciaReunion" class="flex flex-col gap-3 sm:flex-row sm:items-center" enctype="multipart/form-data">
+            <input id="fotoReunionReglamento" name="foto" type="file" accept="image/*" capture="environment" class="hidden">
+            <button type="button" id="btnSeleccionarFotoReunion" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 dark:border-slate-700 dark:text-slate-200">
+                Seleccionar foto
+            </button>
+            <button type="submit" id="btnSubirFotoReunion" class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">
+                Subir evidencia
+            </button>
+        </form>
+        {% endif %}
+    </div>
+
+    <div id="previewFotoReunion" class="mt-4 hidden">
+        <img class="max-h-64 rounded-xl border border-slate-200 object-contain dark:border-slate-700" alt="Vista previa">
+    </div>
+
+    <div id="listaEvidenciasReunion" class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {% for evidencia in evidencias_reunion %}
+        <a href="{{ url_for('reglamento.ver_evidencia_reunion', evidencia_id=evidencia.id) }}" target="_blank" class="block overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
+            <img src="{{ url_for('reglamento.ver_evidencia_reunion', evidencia_id=evidencia.id) }}" class="h-44 w-full object-cover" alt="{{ evidencia.filename }}">
+        </a>
+        {% endfor %}
+    </div>
+</section>
+
+
     <div class="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div class="grid gap-4 md:grid-cols-3">
             <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-950/40 dark:bg-rose-950/20">
@@ -653,10 +687,15 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+
     const reunionId = Number({{ reunion.id }});
     const soloLectura = {{ 'true' if solo_lectura else 'false' }};
     const alertEl = document.getElementById('reglamento-alert');
     const observacionesReunionEl = document.getElementById('observacionesReunion');
+    const inputFotoReunion = document.getElementById('fotoReunionReglamento');
+    const btnSeleccionarFotoReunion = document.getElementById('btnSeleccionarFotoReunion');
+    const formEvidenciaReunion = document.getElementById('formEvidenciaReunion');
+    const previewFotoReunion = document.getElementById('previewFotoReunion');
 
     function mostrarMensaje(tipo, texto) {
         const estilos = {
@@ -1447,6 +1486,57 @@ document.addEventListener('DOMContentLoaded', function () {
             btnGuardarEditarItem.textContent = 'Guardar cambios del acuerdo';
         }
     });
+    btnSeleccionarFotoReunion?.addEventListener('click', () => {
+    inputFotoReunion?.click();
+});
+
+inputFotoReunion?.addEventListener('change', () => {
+    const file = inputFotoReunion.files?.[0];
+    if (!file) return;
+
+    const img = previewFotoReunion.querySelector('img');
+    img.src = URL.createObjectURL(file);
+    previewFotoReunion.classList.remove('hidden');
+});
+
+formEvidenciaReunion?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const file = inputFotoReunion.files?.[0];
+    if (!file) {
+        mostrarNotificacion?.('Selecciona una foto primero.', 'warning');
+        return;
+    }
+
+    const btn = document.getElementById('btnSubirFotoReunion');
+    btn.disabled = true;
+    btn.textContent = 'Subiendo...';
+
+    try {
+        const formData = new FormData();
+        formData.append('foto', file);
+
+        const response = await fetch(`/reglamento/reunion/{{ reunion.id }}/evidencia`, {
+            method: 'POST',
+            body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'No se pudo subir la evidencia.');
+        }
+
+        mostrarNotificacion?.('Evidencia subida correctamente.', 'success');
+        window.location.reload();
+
+    } catch (error) {
+        mostrarNotificacion?.(error.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Subir evidencia';
+    }
+});
 });
 </script>
 {% endblock %}

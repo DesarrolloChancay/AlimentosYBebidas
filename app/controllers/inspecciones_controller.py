@@ -29,6 +29,18 @@ from app.utils.roles import (
     ROL_JEFE_ESTABLECIMIENTO,
     ROLES_EDITOR_INSPECCION,
 )
+from app.utils.security import (
+    is_allowed_image_filename,
+    save_validated_base64_image,
+    save_validated_image_bytes,
+    save_validated_upload_image,
+)
+from app.utils.media import (
+    normalize_signature_reference,
+    private_signature_dir,
+    signature_db_path,
+    signature_public_url,
+)
 
 
 def safe_timestamp():
@@ -53,35 +65,20 @@ def guardar_firma_como_archivo(firma_base64, tipo_firma, inspeccion_id, usuario_
         String con la ruta relativa del archivo guardado
     """
     try:
-        # Verificar que la firma tenga el formato correcto
         if not firma_base64 or not firma_base64.startswith("data:image/"):
             return None
 
-        # Extraer el tipo de imagen y los datos base64
-        header, data = firma_base64.split(",", 1)
-        image_type = header.split("/")[1].split(";")[0]  # jpeg, png, etc.
-
-        # Generar nombre único para el archivo
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        unique_id = str(uuid.uuid4())[:8]
-        filename = f"firma_{tipo_firma}_{inspeccion_id}_{usuario_id}_{timestamp}_{unique_id}.{image_type}"
+        firmas_dir = private_signature_dir("inspecciones")
+        stored_image = save_validated_base64_image(
+            firma_base64,
+            f"firma_{tipo_firma}.png",
+            firmas_dir,
+            f"firma_{tipo_firma}_{inspeccion_id}_{usuario_id}_{timestamp}",
+            max_size=3 * 1024 * 1024,
+        )
 
-        # Crear la ruta completa del archivo
-        firmas_dir = os.path.join("app", "static", "img", "firmas")
-        if not os.path.exists(firmas_dir):
-            os.makedirs(firmas_dir, exist_ok=True)
-
-        file_path = os.path.join(firmas_dir, filename)
-
-        # Decodificar y guardar la imagen
-        image_data = base64.b64decode(data)
-        with open(file_path, "wb") as f:
-            f.write(image_data)
-
-        # Retornar la ruta relativa para la BD (formato web)
-        relative_path = f"/static/img/firmas/{filename}"
-
-        return relative_path
+        return signature_db_path("inspecciones", stored_image.filename)
 
     except Exception as e:
         return None
@@ -113,8 +110,8 @@ datos_tiempo_real = {}  # Para almacenar datos temporales entre inspector y enca
 
 class InspeccionesController:
     EVIDENCIAS_FOLDER = "app/static/evidencias"
-    FIRMAS_FOLDER = "app/static/firmas"
-    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+    FIRMAS_FOLDER = "firmas"
+    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "avif"}
     MOTIVO_SIN_FIRMA_INICIO = "[[MOTIVO_SIN_FIRMA_ENCARGADO]]"
     MOTIVO_SIN_FIRMA_FIN = "[[/MOTIVO_SIN_FIRMA_ENCARGADO]]"
 
@@ -542,11 +539,7 @@ class InspeccionesController:
 
     @staticmethod
     def allowed_file(filename):
-        return (
-            "." in filename
-            and filename.rsplit(".", 1)[1].lower()
-            in InspeccionesController.ALLOWED_EXTENSIONS
-        )
+        return is_allowed_image_filename(filename)
 
     @staticmethod
     def _build_static_relative_path(filepath):
@@ -647,7 +640,7 @@ class InspeccionesController:
 
     @staticmethod
     def _normalize_evidence_url(ruta):
-        """Convierte rutas antiguas de evidencias a formato /static/evidencias/..."""
+        """Convierte rutas antiguas de evidencias a la ruta autenticada /evidencias/..."""
         if not ruta:
             return None
 
@@ -667,7 +660,7 @@ class InspeccionesController:
         if ruta_sin_prefix.startswith("evidencias"):
             resto = ruta_sin_prefix[len("evidencias") :]
             resto = resto.lstrip("/")
-            ruta_normalizada = f"/static/evidencias/{resto}"
+            ruta_normalizada = f"/evidencias/{resto}"
         else:
             ruta_normalizada = f"/static/{ruta_sin_prefix}" if ruta_sin_prefix else "/static"
 
@@ -679,19 +672,16 @@ class InspeccionesController:
     @staticmethod
     def guardar_firma(file, tipo, inspeccion_id):
         if file and InspeccionesController.allowed_file(file.filename):
-            # Crear directorio si no existe
-            if not os.path.exists(InspeccionesController.FIRMAS_FOLDER):
-                os.makedirs(InspeccionesController.FIRMAS_FOLDER)
-
-            # Generar nombre único para la firma
-            filename = f"firma_{tipo}_{inspeccion_id}_{secure_filename(file.filename)}"
-            filepath = os.path.join(InspeccionesController.FIRMAS_FOLDER, filename)
-
-            # Guardar archivo
-            file.save(filepath)
-
-            # Devolver ruta relativa para almacenar en la base de datos
-            return os.path.join("static/firmas", filename)
+            try:
+                stored_image = save_validated_upload_image(
+                    file,
+                    private_signature_dir("inspecciones"),
+                    f"firma_{tipo}_{inspeccion_id}",
+                    max_size=3 * 1024 * 1024,
+                )
+                return signature_db_path("inspecciones", stored_image.filename)
+            except ValueError:
+                return None
         return None
 
     @staticmethod
@@ -734,35 +724,27 @@ class InspeccionesController:
         """Guardar una evidencia fotográfica organizándola por establecimiento y fecha"""
         if file and InspeccionesController.allowed_file(file.filename):
             try:
-                # Crear directorio organizado
                 directorio = InspeccionesController.crear_directorio_evidencias(
                     establecimiento_id, fecha
                 )
                 if not directorio:
                     return None
 
-                # Generar nombre único
-                timestamp = datetime.now().strftime("%H%M%S_%f")[
-                    :-3
-                ]  # incluye milisegundos
-                extension = file.filename.rsplit(".", 1)[1].lower()
-                filename = f"evidencia_{inspeccion_id}_{timestamp}.{extension}"
-
-                filepath = os.path.join(directorio, filename)
-
-                # Guardar archivo
-                file.save(filepath)
-
-                # Ruta relativa para la base de datos (normalizada)
+                timestamp = datetime.now().strftime("%H%M%S_%f")[:-3]
+                stored_image = save_validated_upload_image(
+                    file,
+                    directorio,
+                    f"evidencia_{inspeccion_id}_{timestamp}",
+                )
                 ruta_relativa = InspeccionesController._build_static_relative_path(
-                    filepath
+                    stored_image.filepath
                 )
 
                 return {
-                    "filename": filename,
+                    "filename": stored_image.filename,
                     "ruta_archivo": ruta_relativa,
-                    "tamano_bytes": os.path.getsize(filepath),
-                    "mime_type": f"image/{extension}",
+                    "tamano_bytes": stored_image.size,
+                    "mime_type": stored_image.mime_type,
                 }
             except Exception as e:
                 return None
@@ -784,55 +766,31 @@ class InspeccionesController:
             if not base64_data:
                 return None
 
-            # Remover el prefijo data:image/...;base64, si existe
-            if "," in base64_data:
-                base64_data = base64_data.split(",")[1]
-
-            # Decodificar base64
-            import base64
-
-            try:
-                file_data = base64.b64decode(base64_data)
-            except Exception as e:
-                return None
-
-            # Crear directorio organizado
             directorio = InspeccionesController.crear_directorio_evidencias(
                 establecimiento_id, fecha
             )
             if not directorio:
                 return None
 
+            timestamp = datetime.now().strftime("%H%M%S_%f")[:-3]
+            if "," not in base64_data:
+                base64_data = f"data:{mime_type};base64,{base64_data}"
 
-            # Generar nombre único
-            timestamp = datetime.now().strftime("%H%M%S_%f")[
-                :-3
-            ]  # incluye milisegundos
-            extension = filename.rsplit(".", 1)[1].lower() if "." in filename else "jpg"
-            filename_unico = f"evidencia_{inspeccion_id}_{timestamp}.{extension}"
-
-            filepath = os.path.join(directorio, filename_unico)
-
-            # Guardar archivo
-            with open(filepath, "wb") as f:
-                f.write(file_data)
-
-            # Verificar que el archivo se guardó
-            if os.path.exists(filepath):
-                file_size = os.path.getsize(filepath)
-            else:
-                return None
-
-            # Ruta relativa para la base de datos (normalizada)
+            stored_image = save_validated_base64_image(
+                base64_data,
+                filename,
+                directorio,
+                f"evidencia_{inspeccion_id}_{timestamp}",
+            )
             ruta_relativa = InspeccionesController._build_static_relative_path(
-                filepath
+                stored_image.filepath
             )
 
             resultado = {
-                "filename": filename_unico,
+                "filename": stored_image.filename,
                 "ruta_archivo": ruta_relativa,
-                "tamano_bytes": len(file_data),
-                "mime_type": mime_type,
+                "tamano_bytes": stored_image.size,
+                "mime_type": stored_image.mime_type,
             }
 
             return resultado
@@ -1571,9 +1529,18 @@ class InspeccionesController:
                         jsonify({"error": "Sin acceso a este establecimiento"}),
                         403,
                     )
+
+                # Limpiar inspecciones_temporales
                 clave_temporal = f"establecimiento_{establecimiento_id}"
                 if clave_temporal in inspecciones_temporales:
                     del inspecciones_temporales[clave_temporal]
+                    logging.info(f"Datos temporales eliminados: {clave_temporal}")
+
+                # Limpiar datos_tiempo_real
+                clave_tiempo_real = f"establecimiento_{establecimiento_id}"
+                if clave_tiempo_real in datos_tiempo_real:
+                    del datos_tiempo_real[clave_tiempo_real]
+                    logging.info(f"Datos tiempo real eliminados: {clave_tiempo_real}")
 
             return jsonify({"mensaje": "Datos temporales eliminados"})
         except Exception as e:
@@ -1819,8 +1786,17 @@ class InspeccionesController:
                 if firma_encargado.startswith("data:image/"):
                     firma_encargado_base64 = firma_encargado
                     logging.info("Firma del encargado detectada como base64")
-                elif firma_encargado.startswith("img/firmas/") or firma_encargado.startswith("/static/"):
-                    firma_encargado_ruta = firma_encargado
+                elif firma_encargado.startswith((
+                    "img/firmas/",
+                    "static/img/firmas/",
+                    "static/firmas/",
+                    "firmas/",
+                    "/static/img/firmas/",
+                    "/static/firmas/",
+                    "/media/firmas/",
+                    "media/firmas/",
+                )):
+                    firma_encargado_ruta = normalize_signature_reference(firma_encargado)
                     logging.info(f"Firma del encargado detectada como ruta: {firma_encargado_ruta}")
                 else:
                     logging.warning(f"Firma del encargado no reconocida: {firma_encargado[:50]}...")
@@ -1838,8 +1814,17 @@ class InspeccionesController:
                 if firma_inspector.startswith("data:image/"):
                     firma_inspector_base64 = firma_inspector
                     logging.info("Firma del inspector detectada como base64")
-                elif firma_inspector.startswith("img/firmas/") or firma_inspector.startswith("/static/"):
-                    firma_inspector_ruta = firma_inspector
+                elif firma_inspector.startswith((
+                    "img/firmas/",
+                    "static/img/firmas/",
+                    "static/firmas/",
+                    "firmas/",
+                    "/static/img/firmas/",
+                    "/static/firmas/",
+                    "/media/firmas/",
+                    "media/firmas/",
+                )):
+                    firma_inspector_ruta = normalize_signature_reference(firma_inspector)
                     logging.info(f"Firma del inspector detectada como ruta: {firma_inspector_ruta}")
                 else:
                     logging.warning(f"Firma del inspector no reconocida: {firma_inspector[:50]}...")
@@ -2059,27 +2044,26 @@ class InspeccionesController:
                             logging.error("ERROR: No se pudo guardar firma del encargado desde base64")
                             firmas_procesadas = False
                     elif firma_encargado_ruta:
-                        # Firma como ruta - usar directamente
-                        # Normalizar la ruta si es necesario
-                        if firma_encargado_ruta.startswith("/static/"):
-                            inspeccion.firma_encargado = firma_encargado_ruta
+                        ruta_normalizada = normalize_signature_reference(firma_encargado_ruta)
+                        if ruta_normalizada:
+                            inspeccion.firma_encargado = ruta_normalizada
+                            if not inspeccion.fecha_firma_encargado:
+                                inspeccion.fecha_firma_encargado = datetime.now()
+                            logging.info(f"Firma del encargado desde ruta: {inspeccion.firma_encargado}")
                         else:
-                            inspeccion.firma_encargado = f"/static/{firma_encargado_ruta}"
-                        if not inspeccion.fecha_firma_encargado:
-                            inspeccion.fecha_firma_encargado = datetime.now()
-                        logging.info(f"Firma del encargado desde ruta: {inspeccion.firma_encargado}")
+                            firmas_procesadas = False
                     elif firma_encargado_dict:
                         # Firma precargada desde diccionario
                         ruta_firma = firma_encargado_dict.get('ruta')
                         if ruta_firma:
-                            # Normalizar la ruta
-                            if ruta_firma.startswith("/static/"):
-                                inspeccion.firma_encargado = ruta_firma
+                            ruta_normalizada = normalize_signature_reference(ruta_firma)
+                            if ruta_normalizada:
+                                inspeccion.firma_encargado = ruta_normalizada
+                                if not inspeccion.fecha_firma_encargado:
+                                    inspeccion.fecha_firma_encargado = datetime.now()
+                                logging.info(f"Firma del encargado desde diccionario precargado: {inspeccion.firma_encargado}")
                             else:
-                                inspeccion.firma_encargado = f"/static/{ruta_firma}"
-                            if not inspeccion.fecha_firma_encargado:
-                                inspeccion.fecha_firma_encargado = datetime.now()
-                            logging.info(f"Firma del encargado desde diccionario precargado: {inspeccion.firma_encargado}")
+                                firmas_procesadas = False
                         else:
                             logging.error("ERROR: Diccionario de firma del encargado no contiene ruta")
                             firmas_procesadas = False
@@ -2102,27 +2086,26 @@ class InspeccionesController:
                         logging.error("ERROR: No se pudo guardar firma del inspector desde base64")
                         firmas_procesadas = False
                 elif firma_inspector_ruta:
-                    # Firma como ruta - usar directamente
-                    # Normalizar la ruta si es necesario
-                    if firma_inspector_ruta.startswith("/static/"):
-                        inspeccion.firma_inspector = firma_inspector_ruta
+                    ruta_normalizada = normalize_signature_reference(firma_inspector_ruta)
+                    if ruta_normalizada:
+                        inspeccion.firma_inspector = ruta_normalizada
+                        if not inspeccion.fecha_firma_inspector:
+                            inspeccion.fecha_firma_inspector = datetime.now()
+                        logging.info(f"Firma del inspector desde ruta: {inspeccion.firma_inspector}")
                     else:
-                        inspeccion.firma_inspector = f"/static/{firma_inspector_ruta}"
-                    if not inspeccion.fecha_firma_inspector:
-                        inspeccion.fecha_firma_inspector = datetime.now()
-                    logging.info(f"Firma del inspector desde ruta: {inspeccion.firma_inspector}")
+                        firmas_procesadas = False
                 elif firma_inspector_dict:
                     # Firma precargada desde diccionario
                     ruta_firma = firma_inspector_dict.get('ruta')
                     if ruta_firma:
-                        # Normalizar la ruta
-                        if ruta_firma.startswith("/static/"):
-                            inspeccion.firma_inspector = ruta_firma
+                        ruta_normalizada = normalize_signature_reference(ruta_firma)
+                        if ruta_normalizada:
+                            inspeccion.firma_inspector = ruta_normalizada
+                            if not inspeccion.fecha_firma_inspector:
+                                inspeccion.fecha_firma_inspector = datetime.now()
+                            logging.info(f"Firma del inspector desde diccionario precargado: {inspeccion.firma_inspector}")
                         else:
-                            inspeccion.firma_inspector = f"/static/{ruta_firma}"
-                        if not inspeccion.fecha_firma_inspector:
-                            inspeccion.fecha_firma_inspector = datetime.now()
-                        logging.info(f"Firma del inspector desde diccionario precargado: {inspeccion.firma_inspector}")
+                            firmas_procesadas = False
                     else:
                         logging.error("ERROR: Diccionario de firma del inspector no contiene ruta")
                         firmas_procesadas = False
@@ -2186,26 +2169,22 @@ class InspeccionesController:
                             inspeccion.fecha_firma_inspector = datetime.now()
                             logging.info(f"Firma del inspector guardada (borrador): {ruta_firma_inspector}")
                     elif firma_inspector_ruta:
-                        # Usar ruta directamente
-                        if firma_inspector_ruta.startswith("/static/"):
-                            inspeccion.firma_inspector = firma_inspector_ruta
-                        else:
-                            inspeccion.firma_inspector = f"/static/{firma_inspector_ruta}"
-                        if not inspeccion.fecha_firma_inspector:
-                            inspeccion.fecha_firma_inspector = datetime.now()
-                        logging.info(f"Firma del inspector desde ruta (borrador): {inspeccion.firma_inspector}")
+                        ruta_normalizada = normalize_signature_reference(firma_inspector_ruta)
+                        if ruta_normalizada:
+                            inspeccion.firma_inspector = ruta_normalizada
+                            if not inspeccion.fecha_firma_inspector:
+                                inspeccion.fecha_firma_inspector = datetime.now()
+                            logging.info(f"Firma del inspector desde ruta (borrador): {inspeccion.firma_inspector}")
                     elif firma_inspector_dict:
                         # Firma precargada desde diccionario
                         ruta_firma = firma_inspector_dict.get('ruta')
                         if ruta_firma:
-                            # Normalizar la ruta
-                            if ruta_firma.startswith("/static/"):
-                                inspeccion.firma_inspector = ruta_firma
-                            else:
-                                inspeccion.firma_inspector = f"/static/{ruta_firma}"
-                            if not inspeccion.fecha_firma_inspector:
-                                inspeccion.fecha_firma_inspector = datetime.now()
-                            logging.info(f"Firma del inspector desde diccionario (borrador): {inspeccion.firma_inspector}")
+                            ruta_normalizada = normalize_signature_reference(ruta_firma)
+                            if ruta_normalizada:
+                                inspeccion.firma_inspector = ruta_normalizada
+                                if not inspeccion.fecha_firma_inspector:
+                                    inspeccion.fecha_firma_inspector = datetime.now()
+                                logging.info(f"Firma del inspector desde diccionario (borrador): {inspeccion.firma_inspector}")
 
                 # NO procesar firma del encargado en borradores
                 # La firma del encargado solo se procesa al completar (accion == "completar")
@@ -2626,7 +2605,9 @@ class InspeccionesController:
                     {
                         "id": evidencia.id,
                         "filename": evidencia.filename,
-                        "ruta_archivo": evidencia.ruta_archivo,
+                        "ruta_archivo": InspeccionesController._normalize_evidence_url(
+                            evidencia.ruta_archivo
+                        ),
                         "descripcion": evidencia.descripcion,
                         "mime_type": evidencia.mime_type,
                     }
@@ -3852,8 +3833,8 @@ class InspeccionesController:
                     establecimiento.nombre if establecimiento else None
                 ),
                 "inspector_nombre": inspector.nombre if inspector else None,
-                "firma_inspector": inspeccion.firma_inspector,
-                "firma_encargado": inspeccion.firma_encargado,
+                "firma_inspector": signature_public_url(inspeccion.firma_inspector),
+                "firma_encargado": signature_public_url(inspeccion.firma_encargado),
                 "fecha_firma_inspector": inspeccion.fecha_firma_inspector.isoformat() if inspeccion.fecha_firma_inspector else None,
                 "fecha_firma_encargado": inspeccion.fecha_firma_encargado.isoformat() if inspeccion.fecha_firma_encargado else None,
                 "items_evaluados": resumen_calculado["items_calificados"],
@@ -3960,12 +3941,22 @@ class InspeccionesController:
         """Limpiar todos los datos temporales de un usuario"""
         try:
             if establecimiento_id:
-                # Limpiar datos específicos del establecimiento y usuario
+                # Limpiar datos específicos del establecimiento (formato correcto usado en guardar_inspeccion_parcial)
+                clave_establecimiento = f"establecimiento_{establecimiento_id}"
+                if clave_establecimiento in inspecciones_temporales:
+                    del inspecciones_temporales[clave_establecimiento]
+
+                # Limpiar datos de tiempo real del establecimiento
+                clave_tiempo_real = f"establecimiento_{establecimiento_id}"
+                if clave_tiempo_real in datos_tiempo_real:
+                    del datos_tiempo_real[clave_tiempo_real]
+
+                # Limpiar datos específicos del establecimiento y usuario (formato antiguo)
                 clave_especifica = f"user_{user_id}_{establecimiento_id}"
                 if clave_especifica in inspecciones_temporales:
                     del inspecciones_temporales[clave_especifica]
 
-            # Limpiar datos generales del usuario
+            # Limpiar datos generales del usuario (formato antiguo)
             clave_usuario = f"user_{user_id}"
             if clave_usuario in inspecciones_temporales:
                 del inspecciones_temporales[clave_usuario]
@@ -4700,7 +4691,7 @@ class InspeccionesController:
                 if firma:
                     firma_encargado_data = {
                         "id": firma.id,
-                        "ruta": firma.path_firma,
+                        "ruta": signature_public_url(firma.path_firma),
                         "encargado_id": firma.encargado_id,
                         "encargado_nombre": nombre_confirmador,
                     }
@@ -5027,7 +5018,11 @@ class InspeccionesController:
             evidencias_urls = []
             if inspeccion.evidencias:
                 for evidencia in inspeccion.evidencias:
-                    evidencias_urls.append(evidencia.ruta)
+                    evidencias_urls.append(
+                        InspeccionesController._normalize_evidence_url(
+                            evidencia.ruta_archivo
+                        )
+                    )
 
             observaciones_limpias, motivo_sin_firma_encargado = (
                 InspeccionesController._obtener_observaciones_y_motivo(inspeccion)
@@ -5046,8 +5041,8 @@ class InspeccionesController:
                     ),
                     'estado': inspeccion.estado,
                     'items': items_data,
-                    'firma_inspector': inspeccion.firma_inspector,
-                    'firma_encargado': inspeccion.firma_encargado,
+                    'firma_inspector': signature_public_url(inspeccion.firma_inspector),
+                    'firma_encargado': signature_public_url(inspeccion.firma_encargado),
                     'evidencias': evidencias_urls
                 }
             }

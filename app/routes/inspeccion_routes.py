@@ -10,9 +10,9 @@ from flask import (
     send_from_directory,
     abort,
 )
-from app.controllers.inspecciones_controller import InspeccionesController
+from app.controllers.inspecciones_controller import InspeccionesController, guardar_firma_como_archivo
 from app.extensions import db
-from app.models.Inspecciones_models import ItemEvaluacionBase
+from app.models.Inspecciones_models import EvidenciaInspeccion, Inspeccion, ItemEvaluacionBase
 from app.utils.roles import (
     ROL_ADMINISTRADOR,
     ROL_AYUDANTE_INSPECTOR,
@@ -21,8 +21,10 @@ from app.utils.roles import (
     ROL_JEFE_ESTABLECIMIENTO,
     ROLES_EDITOR_INSPECCION,
 )
+from app.utils.media import signature_public_url
 from datetime import datetime
 from functools import wraps
+from werkzeug.exceptions import HTTPException
 import os
 
 inspeccion_bp = Blueprint("inspeccion", __name__)
@@ -57,6 +59,22 @@ def role_required(allowed_roles):
         return decorated_function
 
     return decorator
+
+
+def _usuario_puede_ver_inspeccion(inspeccion):
+    if not inspeccion:
+        return False
+
+    user_role = session.get("user_role")
+    user_id = session.get("user_id")
+    if user_role in [ROL_ADMINISTRADOR, ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR]:
+        return True
+
+    return InspeccionesController._usuario_tiene_acceso_establecimiento(
+        user_id,
+        user_role,
+        inspeccion.establecimiento_id,
+    )
 
 
 @inspeccion_bp.route("/inspecciones")
@@ -348,27 +366,37 @@ def subir_evidencias():
 def servir_evidencia(filename):
     """Servir archivos de evidencias de forma segura"""
     try:
-        # Construir ruta base de evidencias
-        evidencias_dir = os.path.join(os.getcwd(), 'app', 'static', 'evidencias')
-        
-        # Verificar que el archivo existe
-        archivo_path = os.path.join(evidencias_dir, filename)
+        filename = filename.replace("\\", "/").lstrip("/")
+        if ".." in filename or filename.startswith("/"):
+            abort(403)
+
+        evidencia = EvidenciaInspeccion.query.filter(
+            EvidenciaInspeccion.ruta_archivo.like(f"%{filename}")
+        ).first()
+        if not evidencia:
+            abort(404)
+
+        inspeccion = Inspeccion.query.get(evidencia.inspeccion_id)
+        if not _usuario_puede_ver_inspeccion(inspeccion):
+            abort(403)
+
+        evidencias_dir = os.path.abspath(
+            os.path.join(os.getcwd(), "app", "static", "evidencias")
+        )
+        archivo_path = os.path.abspath(os.path.join(evidencias_dir, filename))
         if not os.path.exists(archivo_path):
             abort(404)
-            
-        # Verificar que el archivo está dentro del directorio permitido (seguridad)
-        archivo_path = os.path.abspath(archivo_path)
-        evidencias_dir = os.path.abspath(evidencias_dir)
-        
-        if not archivo_path.startswith(evidencias_dir):
+
+        if not archivo_path.startswith(evidencias_dir + os.sep):
             abort(403)
-            
-        # Servir el archivo
+
         directory = os.path.dirname(archivo_path)
-        filename = os.path.basename(archivo_path)
+        safe_filename = os.path.basename(archivo_path)
         
-        return send_from_directory(directory, filename)
+        return send_from_directory(directory, safe_filename)
         
+    except HTTPException:
+        raise
     except Exception as e:
         abort(404)
 
@@ -570,8 +598,17 @@ def firmar_inspeccion():
                 403,
             )
 
-        # Guardar la firma
-        inspeccion.firma_encargado = firma_data
+        # Guardar la firma como archivo privado, no como base64 en BD
+        ruta_firma = guardar_firma_como_archivo(
+            firma_data,
+            "encargado",
+            inspeccion.id,
+            session.get("user_id"),
+        )
+        if not ruta_firma:
+            return jsonify({"error": "No se pudo procesar la firma"}), 400
+
+        inspeccion.firma_encargado = ruta_firma
         inspeccion.fecha_firma_encargado = datetime.now()
 
         from app.extensions import db
@@ -596,7 +633,10 @@ def firmar_inspeccion():
         except Exception as e:
             pass  # Error silenciado en producción
 
-        return jsonify({"mensaje": "Firma guardada exitosamente"})
+        return jsonify({
+            "mensaje": "Firma guardada exitosamente",
+            "firma_encargado": signature_public_url(ruta_firma),
+        })
 
     except Exception as e:
         from app.extensions import db

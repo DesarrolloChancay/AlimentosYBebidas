@@ -1,6 +1,9 @@
 
 import os
+from datetime import timedelta
 from dotenv import load_dotenv
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 # Cargar variables de entorno desde .env (solo en desarrollo)
 if os.getenv('FLASK_ENV') != 'production':
@@ -45,6 +48,8 @@ class Config:
 
     # Clave secreta
     SECRET_KEY = os.getenv('SECRET_KEY', 'clave-desarrollo-temporal')
+    if FLASK_ENV == 'production' and SECRET_KEY == 'clave-desarrollo-temporal':
+        raise RuntimeError('SECRET_KEY seguro requerido en produccion.')
 
     # Base de datos
     # En Render, las variables de entorno se pasan directamente
@@ -74,18 +79,28 @@ class Config:
     )
 
     # Cookies y sesión
+    SESSION_COOKIE_NAME = os.getenv('SESSION_COOKIE_NAME', 'ayb_session')
     SESSION_COOKIE_SECURE = _get_bool_env(
         'SESSION_COOKIE_SECURE',
         FLASK_ENV == 'production'
     )
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
+    PERMANENT_SESSION_LIFETIME = timedelta(
+        minutes=_get_int_env('SESSION_TIMEOUT_MINUTES', 30)
+    )
     REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = SESSION_COOKIE_SAMESITE
 
     # Tamaño máximo de carga
     MAX_CONTENT_LENGTH = _get_int_env('MAX_CONTENT_LENGTH_MB', 25) * 1024 * 1024
+
+    # Archivos privados servidos solo por rutas autenticadas
+    PRIVATE_UPLOAD_ROOT = os.getenv(
+        'PRIVATE_UPLOAD_ROOT',
+        os.path.join(BASE_DIR, 'var', 'uploads')
+    )
 
     # Configuración de Socket.IO
     # En producción (Render) usar threading para evitar problemas de compatibilidad
