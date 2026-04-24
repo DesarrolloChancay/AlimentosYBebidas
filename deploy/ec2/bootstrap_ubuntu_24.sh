@@ -36,9 +36,9 @@ source .venv/bin/activate
 pip install --upgrade pip wheel
 pip install -r requirements.txt
 
-mkdir -p app/static/evidencias app/static/firmas app/static/img/firmas
-sudo chown -R ubuntu:www-data app/static/evidencias app/static/firmas app/static/img/firmas
-sudo chmod -R 775 app/static/evidencias app/static/firmas app/static/img/firmas
+mkdir -p var/uploads/firmas app/static/evidencias app/static/firmas app/static/img/firmas
+sudo chown -R ubuntu:www-data var/uploads app/static/evidencias app/static/firmas app/static/img/firmas
+sudo chmod -R 775 var/uploads app/static/evidencias app/static/firmas app/static/img/firmas
 
 echo "Bootstrap base completado."
 echo "Siguiente paso: copiar /etc/alimentosybebidas.env, systemd y nginx según deploy/ec2/README.md"

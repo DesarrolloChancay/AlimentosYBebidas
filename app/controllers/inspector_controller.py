@@ -12,6 +12,8 @@ from sqlalchemy import and_
 import os
 from datetime import datetime
 from app.utils.auth_utils import generar_contrasena_temporal
+from app.utils.media import private_signature_dir, signature_db_path, signature_public_url
+from app.utils.security import save_validated_upload_image
 from app.utils.signature_utils import delete_static_file, save_signature_data_url
 from app.utils.roles import (
     ROL_ADMINISTRADOR,
@@ -87,6 +89,7 @@ class InspectorController:
                 try:
                     ruta_firma = save_signature_data_url(
                         firma_data,
+                        directory_segments=['inspectores'],
                         filename_prefix='firma_inspector',
                         subject_id=usuario.id
                     )
@@ -105,7 +108,8 @@ class InspectorController:
                 return jsonify({
                     'success': True,
                     'message': 'Firma guardada exitosamente',
-                    'ruta_firma': usuario.ruta_firma
+                    'ruta_firma': signature_public_url(usuario.ruta_firma),
+                    'ruta_firma_original': usuario.ruta_firma
                 })
 
             # Mantener compatibilidad con carga de archivo existente
@@ -124,17 +128,8 @@ class InspectorController:
                     'message': 'Formato no válido. Use PNG, JPG o JPEG'
                 }), 400
 
-            # Generar nombre seguro para el archivo
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filename = secure_filename(file.filename)
-            ext = filename.rsplit('.', 1)[1].lower()
-            nuevo_nombre = f"firma_inspector_{usuario.id}_{timestamp}.{ext}"
-
-            # Ruta de guardado
-            upload_folder = os.path.join('app', 'static', 'img', 'firmas')
-            os.makedirs(upload_folder, exist_ok=True)
-            
-            filepath = os.path.join(upload_folder, nuevo_nombre)
+            upload_folder = private_signature_dir('inspectores')
             
             # Eliminar firma anterior si existe
             if usuario.ruta_firma:
@@ -144,17 +139,28 @@ class InspectorController:
                     import logging
                     logging.warning(f"No se pudo eliminar firma anterior: {str(e)}")
 
-            # Guardar archivo
-            file.save(filepath)
+            try:
+                stored_image = save_validated_upload_image(
+                    file,
+                    upload_folder,
+                    f"firma_inspector_{usuario.id}_{timestamp}",
+                    max_size=2 * 1024 * 1024,
+                )
+            except ValueError as exc:
+                return jsonify({
+                    'success': False,
+                    'message': str(exc)
+                }), 400
 
             # Actualizar base de datos
-            usuario.ruta_firma = f"img/firmas/{nuevo_nombre}"
+            usuario.ruta_firma = signature_db_path('inspectores', stored_image.filename)
             db.session.commit()
 
             return jsonify({
                 'success': True,
                 'message': 'Firma guardada exitosamente',
-                'ruta_firma': usuario.ruta_firma
+                'ruta_firma': signature_public_url(usuario.ruta_firma),
+                'ruta_firma_original': usuario.ruta_firma
             })
 
         except Exception as e:
@@ -185,7 +191,8 @@ class InspectorController:
             if usuario.ruta_firma:
                 return jsonify({
                     'success': True,
-                    'ruta_firma': usuario.ruta_firma,
+                    'ruta_firma': signature_public_url(usuario.ruta_firma),
+                    'ruta_firma_original': usuario.ruta_firma,
                     'usuario_nombre': f"{usuario.nombre} {usuario.apellido}"
                 })
             else:

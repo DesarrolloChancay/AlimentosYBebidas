@@ -1,10 +1,16 @@
 """Utilidades para guardar firmas dibujadas en canvas."""
 
-import base64
-import binascii
 import os
-import uuid
 from datetime import datetime
+
+from flask import current_app
+
+from app.utils.media import (
+    private_signature_dir,
+    signature_db_path,
+    normalize_signature_reference,
+)
+from app.utils.security import save_validated_base64_image
 
 
 MAX_SIGNATURE_BYTES = 2 * 1024 * 1024
@@ -39,7 +45,7 @@ def save_signature_data_url(
     filename_prefix="firma",
     subject_id=None,
 ):
-    """Guarda una firma en formato data URL y devuelve su ruta relativa a static."""
+    """Guarda una firma en formato data URL y devuelve su referencia privada."""
     if not signature_data or not isinstance(signature_data, str):
         raise ValueError("No se recibio la firma")
 
@@ -55,55 +61,51 @@ def save_signature_data_url(
     if not extension:
         raise ValueError("Formato de firma no permitido")
 
-    try:
-        image_bytes = base64.b64decode(encoded_data, validate=True)
-    except (binascii.Error, ValueError) as exc:
-        raise ValueError("La firma no es una imagen valida") from exc
-
-    if not image_bytes:
-        raise ValueError("La firma esta vacia")
-
-    if not _matches_signature_mime(mime_type, image_bytes):
-        raise ValueError("La firma no coincide con el formato declarado")
-
-    if len(image_bytes) > MAX_SIGNATURE_BYTES:
-        raise ValueError("La firma supera el tamano maximo permitido")
-
     safe_segments = [
         sanitize_signature_segment(segment)
         for segment in (directory_segments or [])
     ]
-    upload_folder = os.path.join("app", "static", "img", "firmas", *safe_segments)
-    os.makedirs(upload_folder, exist_ok=True)
+    upload_folder = private_signature_dir(*safe_segments)
 
     safe_prefix = sanitize_signature_segment(filename_prefix, "firma")
     safe_subject = sanitize_signature_segment(str(subject_id), "usuario")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    unique_suffix = uuid.uuid4().hex[:8]
-    filename = f"{safe_prefix}_{safe_subject}_{timestamp}_{unique_suffix}.{extension}"
+    stored_image = save_validated_base64_image(
+        signature_data,
+        f"{safe_prefix}.{extension}",
+        upload_folder,
+        f"{safe_prefix}_{safe_subject}_{timestamp}",
+        max_size=MAX_SIGNATURE_BYTES,
+    )
 
-    filepath = os.path.join(upload_folder, filename)
-    with open(filepath, "wb") as image_file:
-        image_file.write(image_bytes)
-
-    relative_parts = ["img", "firmas", *safe_segments, filename]
-    return "/".join(relative_parts)
+    return signature_db_path(*safe_segments, stored_image.filename)
 
 
 def delete_static_file(relative_path):
-    """Elimina un archivo dentro de app/static si existe."""
+    """Elimina una firma privada o un archivo legado dentro de app/static."""
     if not relative_path:
         return
 
-    normalized_path = relative_path.replace("\\", "/").strip()
-    if normalized_path.startswith("/static/"):
-        normalized_path = normalized_path[len("/static/"):]
-    normalized_path = normalized_path.lstrip("/")
+    normalized_path = normalize_signature_reference(relative_path)
+    if not normalized_path or normalized_path.startswith("data:image/"):
+        return
 
-    static_root = os.path.abspath(os.path.join("app", "static"))
-    absolute_path = os.path.abspath(os.path.join(static_root, *normalized_path.split("/")))
+    if normalized_path.startswith("firmas/"):
+        private_root = os.path.abspath(current_app.config["PRIVATE_UPLOAD_ROOT"])
+        absolute_path = os.path.abspath(
+            os.path.join(private_root, *normalized_path.split("/"))
+        )
+        allowed_root = private_root
+    else:
+        if normalized_path.startswith("static/firmas/"):
+            normalized_path = normalized_path[len("static/"):]
+        static_root = os.path.abspath(current_app.static_folder)
+        absolute_path = os.path.abspath(
+            os.path.join(static_root, *normalized_path.split("/"))
+        )
+        allowed_root = static_root
 
-    if not absolute_path.startswith(static_root + os.sep):
+    if absolute_path != allowed_root and not absolute_path.startswith(allowed_root + os.sep):
         return
 
     if os.path.exists(absolute_path):

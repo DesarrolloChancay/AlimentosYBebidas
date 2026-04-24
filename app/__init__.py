@@ -4,16 +4,19 @@ from app.extensions import db, socketio
 from app.routes.inspeccion_routes import inspeccion_bp
 from app.routes.jefe_routes import jefe_routes
 from app.routes.inspector_routes import inspector_bp
+from app.routes.media_routes import media_bp
 from app.routes.plantillas_routes import plantillas_bp
 from app.controllers.usuarios_controller import usuarios_bp
 from app.controllers.auth_controller import AuthController
 from app.controllers.admin_controller import admin_bp
 from app.controllers.reglamento_controller import reglamento_bp
+from app.utils.security import register_security
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+    register_security(app)
 
     trusted_proxy_count = app.config.get('TRUST_PROXY_COUNT', 0)
     if trusted_proxy_count:
@@ -53,6 +56,7 @@ def create_app():
     app.register_blueprint(inspeccion_bp)
     app.register_blueprint(jefe_routes)
     app.register_blueprint(inspector_bp)
+    app.register_blueprint(media_bp)
     app.register_blueprint(plantillas_bp)
     app.register_blueprint(usuarios_bp)
     app.register_blueprint(admin_bp)
@@ -61,6 +65,11 @@ def create_app():
     # Registrar filtros personalizados
     from app.template_filters import register_filters
     register_filters(app)
+
+    @app.context_processor
+    def media_helpers():
+        from app.utils.media import signature_public_url
+        return {'firma_url': signature_public_url}
 
     @app.route('/login', methods=['GET'])
     def login_page():
@@ -82,6 +91,10 @@ def create_app():
 
     @app.route('/api/auth/verificar-sesion-unica', methods=['POST'])
     def verificar_sesion_unica():
+        return AuthController.verificar_sesion_unica()
+
+    @app.route('/api/auth/validate-session', methods=['POST'])
+    def validate_session():
         return AuthController.verificar_sesion_unica()
 
     @app.route('/api/auth/verificar-timeout', methods=['POST'])

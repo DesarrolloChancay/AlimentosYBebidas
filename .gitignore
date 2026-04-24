@@ -32,3 +32,4 @@ venv.bak/
 
 app/static/evidencias/
 app/static/img/firmas/
+var/uploads/

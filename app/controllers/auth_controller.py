@@ -1,6 +1,7 @@
 from flask import jsonify, session
 from app.models.Usuario_models import Usuario
 from app.utils.auth_utils import check_password, hash_password, generar_contrasena_temporal
+from app.utils.roles import ROL_ADMINISTRADOR
 from datetime import datetime, timedelta
 import json
 
@@ -436,7 +437,7 @@ class AuthController:
         """Lista todas las sesiones activas (solo para admin)"""
         try:
             # Verificar que es admin
-            if session.get("user_role") != "Admin":
+            if session.get("user_role") != ROL_ADMINISTRADOR:
                 return jsonify({"success": False, "error": "No autorizado"}), 403
 
             # Obtener usuarios que están en línea
@@ -599,7 +600,7 @@ class AuthController:
             from app.extensions import db
 
             # Verificar que es admin
-            if session.get("user_role") != "Admin":
+            if session.get("user_role") != ROL_ADMINISTRADOR:
                 return jsonify({"success": False, "error": "No autorizado"}), 403
 
             usuario = Usuario.query.get(usuario_id)

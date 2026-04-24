@@ -5,6 +5,8 @@ from app.models.Inspecciones_models import Establecimiento, JefeEstablecimiento,
 from app.extensions import db
 from app.utils.auth_decorators import login_required
 from app.utils.auth_utils import generar_contrasena_temporal
+from app.utils.media import private_signature_dir, signature_db_path, signature_public_url
+from app.utils.security import save_validated_upload_image
 from app.utils.signature_utils import delete_static_file, save_signature_data_url, sanitize_signature_segment
 from datetime import datetime, timedelta
 import base64
@@ -417,9 +419,7 @@ def guardar_firma():
         establecimiento_nombre = jefe_info.establecimiento.nombre
         nombre_limpio = sanitize_signature_segment(establecimiento_nombre, 'establecimiento')
 
-        directorio_firmas = os.path.join(
-            'app', 'static', 'img', 'firmas', nombre_limpio)
-        os.makedirs(directorio_firmas, exist_ok=True)
+        directorio_firmas = private_signature_dir(nombre_limpio)
 
         if firma_data:
             try:
@@ -439,20 +439,18 @@ def guardar_firma():
             if archivo.filename == '':
                 return jsonify({'success': False, 'message': 'No se seleccionó archivo'}), 400
 
-            extensiones_permitidas = {'png', 'jpg', 'jpeg', 'gif'}
-            extension = archivo.filename.rsplit(
-                '.', 1)[1].lower() if '.' in archivo.filename else ''
-
-            if extension not in extensiones_permitidas:
-                return jsonify({'success': False, 'message': 'Formato de archivo no permitido. Use PNG, JPG o JPEG'}), 400
-
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            nombre_archivo = f"firma_{tipo_firma}_{user_id}_{timestamp}.{extension}"
-            ruta_archivo = os.path.join(directorio_firmas, nombre_archivo)
+            try:
+                stored_image = save_validated_upload_image(
+                    archivo,
+                    directorio_firmas,
+                    f"firma_{tipo_firma}_{user_id}_{timestamp}",
+                    max_size=2 * 1024 * 1024,
+                )
+            except ValueError as exc:
+                return jsonify({'success': False, 'message': str(exc)}), 400
 
-            archivo.save(ruta_archivo)
-
-            ruta_relativa = f"img/firmas/{nombre_limpio}/{nombre_archivo}"
+            ruta_relativa = signature_db_path(nombre_limpio, stored_image.filename)
 
         # Actualizar base de datos con la ruta de la firma
         db.session.execute(text("""
@@ -473,7 +471,8 @@ def guardar_firma():
         return jsonify({
             'success': True,
             'message': 'Firma guardada exitosamente',
-            'ruta_archivo': ruta_relativa
+            'ruta_archivo': signature_public_url(ruta_relativa),
+            'ruta_archivo_original': ruta_relativa
         })
 
     except Exception as e:
@@ -835,10 +834,7 @@ def subir_firma():
 
         # Crear directorio para las firmas
         nombre_seguro = sanitize_signature_segment(establecimiento_nombre, 'establecimiento')
-        directorio_firma = os.path.join('app', 'static', 'img', 'firmas', f"{nombre_seguro}")
-
-        # Crear directorio si no existe
-        os.makedirs(directorio_firma, exist_ok=True)
+        directorio_firma = private_signature_dir(nombre_seguro)
 
         if firma_data:
             try:
@@ -851,21 +847,18 @@ def subir_firma():
             except ValueError as exc:
                 return jsonify({'success': False, 'message': str(exc)}), 400
         else:
-            # Verificar extensión de archivo para compatibilidad con el flujo antiguo
-            extensiones_permitidas = {'png', 'jpg', 'jpeg', 'gif'}
-            if not ('.' in archivo.filename and archivo.filename.rsplit('.', 1)[1].lower() in extensiones_permitidas):
-                return jsonify({'success': False, 'message': 'Tipo de archivo no permitido. Use PNG, JPG, JPEG o GIF'}), 400
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            try:
+                stored_image = save_validated_upload_image(
+                    archivo,
+                    directorio_firma,
+                    f"firma_{encargado_verificacion.usuario_id}_{timestamp}",
+                    max_size=2 * 1024 * 1024,
+                )
+            except ValueError as exc:
+                return jsonify({'success': False, 'message': str(exc)}), 400
 
-            # Generar nombre único para el archivo
-            extension = archivo.filename.rsplit('.', 1)[1].lower()
-            nombre_archivo = f"firma_{encargado_verificacion.usuario_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{extension}"
-            ruta_archivo = os.path.join(directorio_firma, nombre_archivo)
-
-            # Guardar archivo
-            archivo.save(ruta_archivo)
-
-            # Ruta relativa para guardar en BD
-            ruta_relativa = f"img/firmas/{nombre_seguro}/{nombre_archivo}"
+            ruta_relativa = signature_db_path(nombre_seguro, stored_image.filename)
 
         # ✅ ELIMINAR ARCHIVO FÍSICO ANTERIOR SI LA NUEVA FIRMA YA SE GUARDÓ
         if firma_existente and firma_existente.path_firma:
@@ -896,7 +889,8 @@ def subir_firma():
         return jsonify({
             'success': True,
             'message': f'Firma guardada exitosamente para {encargado_verificacion.usuario.nombre} {encargado_verificacion.usuario.apellido}',
-            'ruta_firma': ruta_relativa,
+            'ruta_firma': signature_public_url(ruta_relativa),
+            'ruta_firma_original': ruta_relativa,
             'encargado_usuario_id': encargado_verificacion.usuario_id,
             'accion': 'actualizada' if firma_existente else 'creada'
         })
@@ -1016,7 +1010,8 @@ def listar_firmas():
                 'encargado_id': firma.encargado_id,
                 'encargado_nombre': firma.encargado.nombre if firma.encargado else 'Sin nombre',
                 'encargado_apellido': firma.encargado.apellido if firma.encargado else 'Sin apellido',
-                'path_firma': firma.path_firma,
+                'path_firma': signature_public_url(firma.path_firma),
+                'path_firma_original': firma.path_firma,
                 'fecha_firma': firma.fecha_firma.strftime('%d/%m/%Y %H:%M') if firma.fecha_firma else ''
             }
             for firma in firmas
@@ -1061,7 +1056,8 @@ def obtener_firmas_establecimiento(establecimiento_id):
             if user.ruta_firma:
                 response_data['firma_inspector'] = {
                     'id': user.id,
-                    'ruta': user.ruta_firma,
+                    'ruta': signature_public_url(user.ruta_firma),
+                    'ruta_original': user.ruta_firma,
                     'usuario_nombre': f"{user.nombre} {user.apellido}"
                 }
             else:
@@ -1082,7 +1078,8 @@ def obtener_firmas_establecimiento(establecimiento_id):
                     'encargado_id': firma_encargado.encargado_id,
                     'encargado_nombre': firma_encargado.encargado.nombre,
                     'encargado_apellido': firma_encargado.encargado.apellido,
-                    'ruta': firma_encargado.path_firma,
+                    'ruta': signature_public_url(firma_encargado.path_firma),
+                    'ruta_original': firma_encargado.path_firma,
                     'fecha_firma': firma_encargado.fecha_firma.strftime('%d/%m/%Y %H:%M') if firma_encargado.fecha_firma else ''
                 }
             else:
@@ -1109,7 +1106,8 @@ def obtener_firmas_establecimiento(establecimiento_id):
                         'encargado_id': firma.encargado_id,
                         'encargado_nombre': user.nombre,
                         'encargado_apellido': user.apellido,
-                        'ruta': firma.path_firma,
+                        'ruta': signature_public_url(firma.path_firma),
+                        'ruta_original': firma.path_firma,
                         'fecha_firma': firma.fecha_firma.strftime('%d/%m/%Y %H:%M') if firma.fecha_firma else ''
                     }
                 })
@@ -1146,7 +1144,8 @@ def obtener_firmas_establecimiento(establecimiento_id):
                     'encargado_id': firma.encargado_id,
                     'encargado_nombre': firma.encargado.nombre if firma.encargado else 'Sin nombre',
                     'encargado_apellido': firma.encargado.apellido if firma.encargado else 'Sin apellido',
-                    'path_firma': firma.path_firma,
+                    'path_firma': signature_public_url(firma.path_firma),
+                    'path_firma_original': firma.path_firma,
                     'fecha_firma': firma.fecha_firma.strftime('%d/%m/%Y %H:%M') if firma.fecha_firma else ''
                 }
                 for firma in firmas
@@ -1188,7 +1187,8 @@ def obtener_firma_propia():
                     'success': True,
                     'firma': {
                         'id': user.id,
-                        'ruta': user.ruta_firma,
+                        'ruta': signature_public_url(user.ruta_firma),
+                        'ruta_original': user.ruta_firma,
                         'usuario_nombre': f"{user.nombre} {user.apellido}"
                     }
                 })

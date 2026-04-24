@@ -5,10 +5,11 @@ Lógica: Maneja reuniones semanales, catálogo configurable de items y cierre de
 
 from collections import defaultdict
 from datetime import date, datetime, timedelta
+import os
 import re
 
-from flask import Blueprint, current_app, render_template, request, jsonify, session
-from sqlalchemy import and_, or_
+from flask import Blueprint, abort, current_app, render_template, request, jsonify, send_from_directory, session, url_for
+from sqlalchemy import and_, or_, text
 
 from app.extensions import db
 from app.models.Inspecciones_models import (
@@ -20,6 +21,7 @@ from app.models.Inspecciones_models import (
     ReunionItemReglamento,
 )
 from app.utils.auth_decorators import login_required
+from app.utils.security import safe_text, save_validated_upload_image
 
 reglamento_bp = Blueprint("reglamento", __name__, url_prefix="/reglamento")
 ROLES_GESTION_REGLAMENTO = {"Inspector", "Administrador"}
@@ -1337,8 +1339,19 @@ def ver_reunion(reunion_id):
             reunion.evaluaciones
         )
 
+        evidencias_reunion = db.session.execute(
+            text("""
+                SELECT id, filename, ruta_archivo, descripcion, uploaded_at
+                FROM evidencias_reunion_reglamento
+                WHERE reunion_id = :reunion_id
+                ORDER BY uploaded_at DESC
+            """),
+            {"reunion_id": reunion.id},
+        ).mappings().all()
+
         return render_template(
             "reglamento/reunion_detalle.html",
+            evidencias_reunion=evidencias_reunion,
             reunion=reunion,
             items_por_tipo=items_por_tipo,
             acuerdos_reunion=acuerdos_reunion,
@@ -2028,3 +2041,121 @@ def historial_reuniones(establecimiento_id):
     except Exception:
         current_app.logger.exception("Error cargando historial de reglamento")
         return "Error interno del módulo de reglamento.", 500
+
+
+@reglamento_bp.route("/evidencias/<int:evidencia_id>")
+@login_required
+def ver_evidencia_reunion(evidencia_id):
+    evidencia = db.session.execute(
+        text("""
+            SELECT id, reunion_id, filename, ruta_archivo
+            FROM evidencias_reunion_reglamento
+            WHERE id = :evidencia_id
+        """),
+        {"evidencia_id": evidencia_id},
+    ).mappings().first()
+
+    if not evidencia:
+        abort(404)
+
+    _, error = _resolver_reunion_autorizada(evidencia["reunion_id"])
+    if error:
+        abort(error[1])
+
+    ruta_relativa = (evidencia["ruta_archivo"] or "").replace("\\", "/").lstrip("/")
+    if ".." in ruta_relativa or not ruta_relativa.startswith("evidencias_reglamento/"):
+        abort(403)
+
+    base_dir = os.path.abspath(
+        os.path.join(current_app.root_path, "static", "evidencias_reglamento")
+    )
+    archivo_path = os.path.abspath(
+        os.path.join(current_app.root_path, "static", ruta_relativa)
+    )
+    if not archivo_path.startswith(base_dir + os.sep) or not os.path.exists(archivo_path):
+        abort(404)
+
+    return send_from_directory(os.path.dirname(archivo_path), os.path.basename(archivo_path))
+
+
+@reglamento_bp.route("/reunion/<int:reunion_id>/evidencia", methods=["POST"])
+@login_required
+def subir_evidencia_reunion(reunion_id):
+    try:
+        if not _usuario_puede_gestionar_reglamento():
+            return jsonify({"error": "No autorizado para subir evidencias."}), 403
+
+        reunion, error = _resolver_reunion_autorizada(reunion_id)
+
+        if error:
+            return jsonify({"error": error[0]}), error[1]
+
+        if reunion.estado != "pendiente":
+            return jsonify({"error": "No se puede subir evidencia a una reunión que ya está cerrada."}), 409
+
+        if "evidencia" not in request.files:
+            return jsonify({"error": "No se ha seleccionado ningún archivo para subir."}), 400
+
+        archivo = request.files["evidencia"]
+        if archivo.filename == "":
+            return jsonify({"error": "No se ha seleccionado ningún archivo para subir."}), 400
+
+        import os
+
+        carpeta = os.path.join(
+            current_app.root_path,
+            "static",
+            "evidencias_reglamento",
+            str(reunion.establecimiento_id),
+            str(reunion.id)
+        )
+        try:
+            stored_image = save_validated_upload_image(
+                archivo,
+                carpeta,
+                f"reunion_{reunion.id}",
+            )
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+        filename = stored_image.filename
+        ruta_publica = f"evidencias_reglamento/{reunion.establecimiento_id}/{reunion.id}/{filename}"
+
+        resultado_insert = db.session.execute(
+            text("""
+                INSERT INTO evidencias_reunion_reglamento
+                    (reunion_id, filename, ruta_archivo, mime_type, tamano_bytes, descripcion, uploaded_by)
+                VALUES
+                    (:reunion_id, :filename, :ruta_archivo, :mime_type, :tamano_bytes, :descripcion, :uploaded_by)
+            """),
+            {
+                "reunion_id": reunion.id,
+                "filename": filename,
+                "ruta_archivo": ruta_publica,
+                "mime_type": stored_image.mime_type,
+                "tamano_bytes": stored_image.size,
+                "descripcion": safe_text(request.form.get("descripcion"), 500) or None,
+                "uploaded_by": session.get("user_id"),
+            },
+        )
+
+        evidencia_id = getattr(resultado_insert, "lastrowid", None)
+        db.session.commit()
+        foto_url = (
+            url_for("reglamento.ver_evidencia_reunion", evidencia_id=evidencia_id)
+            if evidencia_id
+            else f"/static/{ruta_publica}"
+        )
+
+        return jsonify(
+            {
+                "success": True,
+                "message": "Evidencia subida correctamente.",
+                "foto": foto_url,
+            }
+        )
+
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Error subiendo evidencia para reunión de reglamento")
+        return jsonify({"error": "Error interno al subir la evidencia."}), 500
