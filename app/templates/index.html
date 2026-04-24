@@ -295,12 +295,13 @@
 /* Estilos para botones de scroll flotantes */
 .scroll-buttons {
     position: fixed;
-    bottom: 40px;
-    left: 20px;
+    bottom: 30px;
+    right: 30px;
+    left: auto;
     z-index: 1000;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 8px;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease-in-out;
@@ -312,25 +313,28 @@
 }
 
 .scroll-button {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: 2px solid #ffffff;
-    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    color: #475569;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-    transition: all 0.3s ease;
-    opacity: 1;
-    transform: translateY(20px) scale(1.1);
-    animation: pulse 2s infinite;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: all 0.2s ease;
+    transform: translateY(20px);
+}
+
+.dark .scroll-button {
+    background: #1e293b;
+    border-color: #1e293b;
+    color: #94a3b8;
 }
 
 .scroll-button.visible {
-    opacity: 1;
     transform: translateY(0);
 }
 
@@ -354,11 +358,11 @@
 }
 
 .scroll-button.scroll-to-top {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #3b82f6;
 }
 
 .scroll-button.scroll-to-bottom {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: #64748b;
 }
 
 /* Responsive para móviles */
@@ -383,13 +387,13 @@
 /* Animación de pulso para llamar la atención */
 @keyframes pulse {
     0% {
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 0 0 rgba(102, 126, 234, 0.6);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 0 0 rgba(59, 130, 246, 0.6);
     }
     50% {
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 0 8px rgba(102, 126, 234, 0);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 0 8px rgba(59, 130, 246, 0);
     }
     100% {
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 0 0 rgba(102, 126, 234, 0);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 0 0 rgba(59, 130, 246, 0);
     }
 }
 </style>
@@ -405,7 +409,7 @@
 
         <!-- ===== MENSAJE INFORMATIVO PARA ENCARGADO ===== -->
         {% if user_role == 'Encargado' %}
-        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-6 mb-6">
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-6 mb-6">
             <div class="flex items-start space-x-4">
                 <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center flex-shrink-0">
                     <i class="fas fa-eye text-2xl text-blue-600 dark:text-blue-400"></i>
@@ -438,10 +442,10 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 <!-- ===== SELECCIÓN ===== -->
-                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-4">
-                        <h2 class="text-white font-semibold flex items-center">
-                            <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">1</span>
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center">
+                            <span class="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-lg flex items-center justify-center text-sm font-bold mr-3 shadow-sm">1</span>
                             Selección
                         </h2>
                     </div>
@@ -500,10 +504,10 @@
                 </div>
 
                 <!-- ===== RESUMEN ===== -->
-                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <div class="bg-gradient-to-r from-green-500 to-emerald-600 p-4">
-                        <h2 class="text-white font-semibold flex items-center">
-                            <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">2</span>
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col h-full">
+                    <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center">
+                            <span class="flex-shrink-0 w-8 h-8 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-lg flex items-center justify-center text-sm font-bold mr-3 shadow-sm">2</span>
                             Resumen
                         </h2>
                     </div>
@@ -537,18 +541,18 @@
                         </div>
 
                         <!-- Barra de progreso -->
-                        <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
-                            <div id="barra-progreso" class="h-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+                        <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
+                            <div id="barra-progreso" class="h-3 bg-blue-500 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- ===== PLAN SEMANAL / INFORMES ===== -->
                 {% if puede_ver_plan_semanal %}
-                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <div class="bg-gradient-to-r from-purple-500 to-pink-600 p-4">
-                        <h2 class="text-white font-semibold flex items-center">
-                            <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">3</span>
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col h-full">
+                    <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center">
+                            <span class="flex-shrink-0 w-8 h-8 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 rounded-lg flex items-center justify-center text-sm font-bold mr-3 shadow-sm">3</span>
                             Plan Semanal
                         </h2>
                     </div>
@@ -576,18 +580,15 @@
                     </div>
                 </div>
                 {% else %}
-                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <div class="bg-gradient-to-r from-orange-500 to-red-600 p-4">
-                        <h2 class="text-white font-semibold flex items-center">
-                            <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">3</span>
-                            Mis Informes
-                        </h2>
-                    </div>
-                    <div class="p-6">
-                        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                            Inspecciones de su establecimiento
+                <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-5 flex flex-col h-full">
+                    <h2 class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-5 uppercase tracking-wider flex items-center">
+                        <i class="fas fa-file-alt mr-2"></i> Mis Informes
+                    </h2>
+                    <div class="flex-grow flex flex-col">
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-wide font-medium">
+                            Historial
                         </p>
-                        <div id="informes-container" class="space-y-3">
+                        <div id="informes-container" class="space-y-2">
                             <!-- Se cargarán dinámicamente -->
                         </div>
                     </div>
@@ -596,259 +597,188 @@
             </div>
 
             <!-- ===== CHECKLIST DE EVALUACIÓN ===== -->
-            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div class="bg-gradient-to-r from-indigo-500 to-blue-600 p-4">
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-white font-semibold flex items-center">
-                            <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">4</span>
-                            Checklist de Evaluación
-                            {% if user_role == 'Encargado' %}
-                            <span class="text-xs font-normal text-blue-200 ml-2">(Solo lectura)</span>
-                            {% endif %}
-                        </h2>
+            <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden mb-6">
+                <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
+                    <h2 class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center uppercase tracking-wider">
+                        <i class="fas fa-tasks mr-2 text-indigo-500"></i> Checklist de Evaluación
+                        {% if user_role == 'Encargado' %}
+                        <span class="ml-2 font-medium text-slate-400 tracking-normal normal-case">(Solo lectura)</span>
+                        {% endif %}
+                    </h2>
 
-                        <div class="flex items-center space-x-3">
-                            {% if user_role == 'Encargado' %}
-                            <div id="sync-status" class="text-xs bg-blue-200/20 text-blue-200 px-3 py-1 rounded-full border border-blue-300/30">
-                                <!-- Estado dinámico de sincronización -->
-                            </div>
-                            {% endif %}
-
-                            <div class="hidden lg:block text-xs text-blue-200">
-                                Menor/Mayor: 1 Excelente · 2 Bueno · 3 Regular • Crítico: 1 Cumple · 8 No cumple
-                            </div>
+                    <div class="flex items-center space-x-3">
+                        {% if user_role == 'Encargado' %}
+                        <div id="sync-status" class="text-[10px] font-bold tracking-wider uppercase bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded">
+                            <!-- Estado dinámico de sincronización -->
                         </div>
+                        {% endif %}
                     </div>
                 </div>
 
-                <div class="p-3">
+                <div class="p-0">
                     <div id="categorias-container">
-                        <div class="text-center py-12">
-                            <div class="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                </svg>
+                        <div class="text-center py-16">
+                            <div class="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-200 dark:border-slate-700">
+                                <i class="fas fa-clipboard-list text-xl text-slate-400"></i>
                             </div>
-                            <p class="text-slate-500 dark:text-slate-400">
+                            <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">
                                 {% if user_role == 'Encargado' %}
                                 Sus establecimientos aparecerán automáticamente
                                 {% else %}
-                                Seleccione un tipo de establecimiento y luego un establecimiento para ver los items de evaluación
+                                Seleccione un tipo y un establecimiento
                                 {% endif %}
                             </p>
                         </div>
                     </div>
                 </div>
             </div>
-
             <!-- ===== OBSERVACIONES Y EVIDENCIAS ===== -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
 
                 <!-- Observaciones -->
-                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <div class="bg-gradient-to-r from-teal-500 to-cyan-600 p-4">
-                        <h3 class="text-white font-semibold flex items-center">
-                            <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">5</span>
-                            Observaciones
-                            {% if user_role == 'Encargado' %}
-                            <span class="text-xs font-normal text-blue-200 ml-2">(Solo lectura)</span>
-                            {% endif %}
-                        </h3>
-                    </div>
-                    <div class="p-6">
+                <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-5 flex flex-col h-full">
+                    <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-4 uppercase tracking-wider flex items-center">
+                        <i class="fas fa-comment-alt mr-2"></i> Observaciones
+                        {% if user_role == 'Encargado' %}
+                        <span class="ml-2 font-medium text-slate-400 tracking-normal normal-case">(Solo lectura)</span>
+                        {% endif %}
+                    </h3>
+                    <div class="flex-grow">
                         <textarea id="observaciones-generales" name="observaciones"
-                                  placeholder="{% if user_role == 'Encargado' %}Las observaciones del inspector aparecerán aquí...{% else %}Escriba sus observaciones generales sobre la inspección...{% endif %}"
-                                  class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-white resize-none"
-                                  rows="6" {{ 'readonly' if user_role == 'Encargado' else '' }}></textarea>
+                                  placeholder="{% if user_role == 'Encargado' %}Las observaciones del inspector aparecerán aquí...{% else %}Escriba observaciones generales...{% endif %}"
+                                  class="w-full h-full min-h-[150px] px-3 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm text-slate-900 dark:text-white resize-none"
+                                  {{ 'readonly' if user_role == 'Encargado' else '' }}></textarea>
                     </div>
                 </div>
 
                 <!-- Evidencias (solo para Inspector y Admin) -->
                 {% if editor_inspeccion %}
-                <div id="evidencias-container" class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <div class="bg-gradient-to-r from-rose-500 to-pink-600 p-4">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-white font-semibold flex items-center">
-                                <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">6</span>
-                                Evidencia Fotográfica
-                            </h3>
-                            <span id="evidencias-contador" class="text-xs bg-white/20 text-white px-3 py-1 rounded-full">0 evidencia(s)</span>
-                        </div>
+                <div id="evidencias-container" class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-5 flex flex-col h-full">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center">
+                            <i class="fas fa-camera mr-2"></i> Evidencia Fotográfica
+                        </h3>
+                        <span id="evidencias-contador" class="text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded">0 evidencias</span>
                     </div>
 
-                    <div class="p-6">
+                    <div class="flex-grow flex flex-col">
                         <input type="file" id="evidencias-input" multiple accept="image/*" class="hidden">
                         <input type="file" id="evidencias-camera-input" accept="image/*" capture="environment" class="hidden">
 
-                        <div class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-6 sm:p-8 text-center hover:border-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all duration-200">
-                            <div class="flex flex-col items-center">
-                                <div class="w-16 h-16 bg-rose-100 dark:bg-rose-900 rounded-full flex items-center justify-center mb-4">
-                                    <svg class="w-8 h-8 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                    </svg>
-                                </div>
-                                <h4 class="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">Agregar Evidencias</h4>
-                                <p class="text-sm text-slate-500 dark:text-slate-400 mb-1">Desde el sistema puede tomar una foto o elegir imágenes guardadas</p>
-                                <p class="text-xs text-slate-400 mb-5">JPG, PNG, GIF, WEBP • Máx. 10MB por archivo</p>
+                        <div class="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg p-5 text-center hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors cursor-pointer" id="abrir-archivos-evidencia-zone" onclick="document.getElementById('abrir-archivos-evidencia').click()">
+                            <div class="w-10 h-10 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3 border border-slate-100 dark:border-slate-700">
+                                <i class="fas fa-image text-slate-400"></i>
+                            </div>
+                            <h4 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Agregar Evidencias</h4>
+                            <p class="text-xs text-slate-500 mb-4">JPG, PNG, WEBP (Máx 10MB)</p>
 
-                                <div class="w-full max-w-md grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <button type="button"
-                                            id="abrir-camara-evidencia"
-                                            class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-rose-700 transition-colors">
-                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h4l2-2h6l2 2h4v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7zm9 3a4 4 0 100 8 4 4 0 000-8z"/>
-                                        </svg>
-                                        Tomar foto
-                                    </button>
-                                    <button type="button"
-                                            id="abrir-archivos-evidencia"
-                                            class="inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:border-rose-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors">
-                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h3l2 2h9a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
-                                        </svg>
-                                        Elegir archivos
-                                    </button>
-                                </div>
-
-                                <p class="mt-4 text-xs text-slate-400">En celular, "Tomar foto" abre un modal con la camara dentro del sistema. Puede repetir la captura y las evidencias se acumulan.</p>
+                            <div class="flex flex-col sm:flex-row justify-center gap-2">
+                                <button type="button"
+                                        id="abrir-camara-evidencia"
+                                        class="inline-flex items-center justify-center px-4 py-2 bg-slate-800 dark:bg-slate-700 text-white text-xs font-semibold rounded-md hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors"
+                                        onclick="event.stopPropagation()">
+                                    <i class="fas fa-camera mr-1.5"></i> Tomar foto
+                                </button>
+                                <button type="button"
+                                        id="abrir-archivos-evidencia"
+                                        class="inline-flex items-center justify-center px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                                        onclick="event.stopPropagation()">
+                                    <i class="fas fa-folder-open mr-1.5"></i> Elegir archivos
+                                </button>
                             </div>
                         </div>
 
-                        <div id="evidencias-preview" class="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            <!-- Previsualizaciones se cargarán aquí dinámicamente -->
+                        <div id="evidencias-preview" class="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto max-h-64 p-4 bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner">
+                            <!-- Previsualizaciones -->
                         </div>
                     </div>
                 </div>
                 {% endif %}
             </div>
-
             <!-- ===== FIRMAS ===== -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
 
-                <!-- Firma del Inspector (solo para Inspector y Admin) -->
+                <!-- Firma del Inspector -->
                 {% if editor_inspeccion %}
-                <div id="firma-inspector-area" class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <div class="bg-gradient-to-r from-emerald-500 to-green-600 p-4">
-                        <h3 class="text-white font-semibold flex items-center">
-                            <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">7</span>
-                            Su Firma
-                        </h3>
-                    </div>
-                    <div class="p-6 space-y-4">
-                        <!-- Mensaje informativo -->
-                        <div id="firma-inspector-info" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 hidden">
-                            <p class="text-sm text-blue-800 dark:text-blue-400">
-                                Su firma está precargada automáticamente
-                            </p>
+                <div id="firma-inspector-area" class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-5 flex flex-col h-full">
+                    <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-4 uppercase tracking-wider flex items-center">
+                        <i class="fas fa-pen-nib mr-2"></i> Su Firma
+                    </h3>
+                    <div class="flex-grow flex flex-col justify-center">
+                        <div id="firma-inspector-info" class="hidden text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-2 rounded-md mb-3 font-medium">
+                            Su firma está precargada automáticamente
                         </div>
                         
-                        <!-- Preview de la firma -->
-                        <div id="preview-firma-inspector" class="min-h-[100px] border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl flex items-center justify-center">
-                            <p class="text-slate-400 text-sm">Cargando firma...</p>
+                        <div id="preview-firma-inspector" class="min-h-[120px] border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 rounded-lg flex items-center justify-center p-4">
+                            <p class="text-slate-400 text-xs font-medium uppercase tracking-wider">Cargando firma...</p>
                         </div>
-                        
-                        <!-- Input hidden para almacenar la firma -->
                         <input type="hidden" id="firma-inspector-hidden" name="firma_inspector_path">
                     </div>
                 </div>
                 {% endif %}
 
                 <!-- Firma del Encargado -->
-                <div id="firma-encargado-area" class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <div class="bg-gradient-to-r from-amber-500 to-orange-600 p-4">
-                        <h3 class="text-white font-semibold flex items-center">
-                            <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold mr-3">
-                                {% if user_role in ['Encargado', 'Jefe de Establecimiento'] %}7{% else %}8{% endif %}
-                            </span>
-                            {% if user_role in ['Encargado', 'Jefe de Establecimiento'] %}
-                            Su Firma
-                            {% else %}
-                            Firma del Encargado
-                            {% endif %}
-                        </h3>
-                    </div>
-                    <div class="p-6 space-y-4">
-                        <!-- Mensaje informativo -->
-                        <div id="firma-mensaje-info" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 hidden">
-                            <p class="text-sm text-blue-800 dark:text-blue-400">
-                                <span id="firma-mensaje-texto"></span>
-                            </p>
+                <div id="firma-encargado-area" class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-5 flex flex-col h-full">
+                    <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-4 uppercase tracking-wider flex items-center">
+                        <i class="fas fa-pen-nib mr-2"></i> {% if user_role in ['Encargado', 'Jefe de Establecimiento'] %}Su Firma{% else %}Firma del Encargado{% endif %}
+                    </h3>
+                    <div class="flex-grow flex flex-col">
+                        <div id="firma-mensaje-info" class="hidden text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-2 rounded-md mb-3 font-medium">
+                            <span id="firma-mensaje-texto"></span>
                         </div>
 
-                        <!-- Selector para Inspector/Admin (múltiples firmas) -->
-                        <div id="firma-selector-container" class="hidden">
-                            <label for="firma-encargado-select" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                Seleccionar Firma del Encargado
-                            </label>
-                            <select id="firma-encargado-select"
-                                    class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 text-slate-900 dark:text-white">
+                        <div id="firma-selector-container" class="hidden mb-3">
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1.5">Seleccionar Firma</label>
+                            <select id="firma-encargado-select" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500">
                                 <option value="">-- Seleccione una firma --</option>
                             </select>
                         </div>
 
-                        <!-- Información de firma propia para Encargado -->
-                        <div id="firma-info-propia" class="hidden">
-                            <p class="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                Su firma ha sido cargada por el jefe del establecimiento
-                            </p>
+                        <div id="firma-info-propia" class="hidden text-xs font-medium text-slate-700 dark:text-slate-300 mb-3">
+                            Su firma ha sido cargada por el jefe del establecimiento.
                         </div>
 
                         {% if editor_inspeccion %}
-                        <div id="firma-temporal-encargado-ayuda"
-                             class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
-                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div id="firma-temporal-encargado-ayuda" class="mb-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                 <div>
-                                    <p class="font-semibold">Firma temporal del encargado en esta pantalla</p>
-                                    <p class="mt-1 text-amber-800 dark:text-amber-300">
-                                        Úselo cuando el encargado no tenga su teléfono. Esta firma solo servirá para esta inspección.
-                                    </p>
+                                    <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">Firma en pantalla</p>
+                                    <p class="text-[11px] text-slate-500 mt-0.5">Úselo si el encargado no tiene su teléfono.</p>
                                 </div>
-                                <button type="button"
-                                        id="btn-firma-encargado-canvas"
-                                        class="inline-flex items-center justify-center rounded-xl bg-amber-600 px-4 py-3 font-semibold text-white shadow-lg transition-all duration-200 hover:bg-amber-700 hover:shadow-xl">
-                                    Firmar aquí con el encargado
+                                <button type="button" id="btn-firma-encargado-canvas" class="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors">
+                                    Firmar aquí
                                 </button>
                             </div>
                         </div>
                         {% endif %}
 
-                        <!-- Preview de firma -->
-                        <div id="preview-firma-encargado" class="min-h-[100px] border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl flex items-center justify-center">
-                            <p class="text-slate-400 text-sm">Vista previa de la firma</p>
+                        <div id="preview-firma-encargado" class="min-h-[120px] flex-grow border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 rounded-lg flex items-center justify-center p-4">
+                            <p class="text-slate-400 text-xs font-medium uppercase tracking-wider">Vista previa</p>
                         </div>
-
                         <input type="hidden" id="firma-encargado-hidden" name="firma_encargado_id" value="">
                     </div>
                 </div>
             </div>
-
             <!-- ===== BOTONES DE ACCIÓN ===== -->
             {% if editor_inspeccion %}
-            <div class="flex flex-col sm:flex-row gap-4 justify-end">
+            <div class="flex flex-col sm:flex-row gap-3 justify-end border-t border-slate-200 dark:border-slate-800 pt-6">
                 <button id="btn-guardar-borrador" type="submit" name="accion" value="guardar"
-                        class="px-8 py-4 bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
-                    </svg>
-                    Guardar Borrador
+                        class="px-5 py-2.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 font-semibold rounded-lg transition-colors text-sm flex items-center justify-center shadow-sm">
+                    <i class="fas fa-save mr-2"></i> Guardar Borrador
                 </button>
                 <button id="btn-completar-inspeccion" type="submit" name="accion" value="completar"
-                        class="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    Completar Inspección
+                        class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors text-sm flex items-center justify-center shadow-sm">
+                    <i class="fas fa-check-circle mr-2"></i> Completar Inspección
                 </button>
             </div>
             {% elif user_role in ['Encargado', 'Jefe de Establecimiento'] %}
-            <div class="flex justify-end">
-                <button type="button" onclick="confirmarInspeccionEncargado()"
-                        class="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    Confirmar Inspección
-                </button>
+            <div class="flex justify-end border-t border-slate-200 dark:border-slate-800 pt-6">
+                <div id="firma-encargado-container">
+                    <button type="button" onclick="confirmarInspeccionEncargado()"
+                            class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors text-sm flex items-center justify-center shadow-sm">
+                        <i class="fas fa-check-circle mr-2"></i> Confirmar Inspección
+                    </button>
+                </div>
             </div>
             {% endif %}
         </form>
@@ -857,79 +787,63 @@
     <div id="modal-firma-encargado-temporal"
          class="fixed inset-0 z-[120] hidden items-center justify-center p-4"
          aria-hidden="true">
-        <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"
+        <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm"
              data-cerrar-modal-firma-encargado="true"></div>
-        <div class="relative z-10 w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
-            <div class="border-b border-slate-200 bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-5 text-white dark:border-slate-700">
-                <div class="flex items-start justify-between gap-4">
-                    <div>
-                        <h3 class="text-xl font-semibold">Firma del encargado en esta pantalla</h3>
-                        <p class="mt-1 text-sm text-amber-100">
-                            El encargado puede firmar aquí mismo sin usar su teléfono. Esta firma no se guardará como firma de perfil.
-                        </p>
-                    </div>
-                    <button type="button"
-                            id="btn-cerrar-modal-firma-encargado"
-                            class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25"
-                            aria-label="Cerrar modal de firma del encargado">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+        <div class="relative z-10 w-full max-w-2xl overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl">
+            <div class="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 px-5 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider">Firma en Pantalla</h3>
                 </div>
+                <button type="button"
+                        id="btn-cerrar-modal-firma-encargado"
+                        class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
             </div>
-            <div class="space-y-5 px-6 py-6">
-                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300">
-                    Pida al encargado que firme dentro del recuadro. Luego marque la confirmación antes de registrar la aprobación.
+            <div class="p-5 space-y-5">
+                <div class="rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 p-3 text-xs text-indigo-700 dark:text-indigo-300">
+                    Pida al encargado que firme dentro del recuadro. Esta firma no se guardará en su perfil, solo para esta inspección.
                 </div>
 
-                <div class="space-y-2">
-                    <label for="select-firmante-encargado-temporal"
-                           class="block text-sm font-semibold text-slate-700 dark:text-slate-200">
-                        Seleccione quién está firmando
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1.5">
+                        Seleccione quién firma
                     </label>
                     <select id="select-firmante-encargado-temporal"
-                            class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm transition-all duration-200 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 dark:border-slate-600 dark:bg-slate-800 dark:text-white">
-                        <option value="">Seleccione un encargado o jefe</option>
+                            class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">Seleccione encargado</option>
                     </select>
-                    <p id="ayuda-firmante-encargado-temporal"
-                       class="text-xs text-slate-500 dark:text-slate-400">
-                        Debe elegir explícitamente qué encargado o jefe del establecimiento está autorizando esta inspección.
-                    </p>
                 </div>
 
-                <div class="overflow-hidden rounded-2xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950">
+                <div class="border border-slate-300 dark:border-slate-600 rounded-lg overflow-hidden bg-white">
                     <canvas id="canvas-firma-encargado-temporal"
-                            class="block h-72 w-full touch-none bg-white dark:bg-slate-950"></canvas>
+                            class="block h-64 w-full touch-none bg-white cursor-crosshair"></canvas>
                 </div>
 
-                <div id="estado-firma-encargado-temporal"
-                     class="hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300"></div>
-
-                <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
+                <label class="flex items-start gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 cursor-pointer">
                     <input type="checkbox"
                            id="check-confirmo-firma-encargado"
-                           class="mt-1 h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500">
-                    <span>
-                        Confirmo que el encargado está firmando esta inspección desde la pantalla del inspector y autoriza registrar esta aprobación.
+                           class="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                    <span class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                        Confirmo que el encargado está firmando presencialmente y autoriza esta inspección.
                     </span>
                 </label>
 
-                <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <div class="flex justify-end gap-3 pt-2">
                     <button type="button"
                             id="btn-limpiar-firma-encargado-temporal"
-                            class="inline-flex items-center justify-center rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
-                        Limpiar firma
+                            class="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors">
+                        Limpiar
                     </button>
                     <button type="button"
                             id="btn-cancelar-firma-encargado-temporal"
-                            class="inline-flex items-center justify-center rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
+                            class="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors">
                         Cancelar
                     </button>
                     <button type="button"
                             id="btn-confirmar-firma-encargado-temporal"
-                            class="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 font-semibold text-white shadow-lg transition-all duration-200 hover:bg-emerald-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60">
-                        Registrar firma del encargado
+                            class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors shadow-sm disabled:opacity-50">
+                        Registrar Firma
                     </button>
                 </div>
             </div>

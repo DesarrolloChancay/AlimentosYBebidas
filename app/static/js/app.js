@@ -246,9 +246,20 @@ function actualizarMensajeCategoriasSinSeleccion() {
     }
 
     const tipoSeleccionado = obtenerTipoSeleccionadoActual();
-    categoriasContainer.innerHTML = tipoSeleccionado
-        ? '<p class="text-gray-500">Seleccione un establecimiento para ver los items de evaluación</p>'
-        : '<p class="text-gray-500">Seleccione un tipo de establecimiento y luego un establecimiento para ver los items de evaluación</p>';
+    const msj = tipoSeleccionado
+        ? 'Seleccione un establecimiento para ver los items de evaluación'
+        : 'Seleccione un tipo de establecimiento y luego un establecimiento para ver los items de evaluación';
+        
+    categoriasContainer.innerHTML = `
+        <div class="text-center py-16">
+            <div class="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-200 dark:border-slate-700">
+                <i class="fas fa-clipboard-list text-xl text-slate-400"></i>
+            </div>
+            <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                ${msj}
+            </p>
+        </div>
+    `;
 }
 
 async function cargarTiposEstablecimientoDisponibles() {
@@ -2339,7 +2350,16 @@ async function cargarItemsEstablecimiento(establecimientoId) {
                 // Configurar eventos para actualización en tiempo real
                 configurarEventosItems();
             } else {
-                container.innerHTML = '<p class="text-gray-500">No hay items configurados para este establecimiento</p>';
+                container.innerHTML = `
+                    <div class="text-center py-16">
+                        <div class="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-200 dark:border-slate-700">
+                            <i class="fas fa-clipboard-list text-xl text-slate-400"></i>
+                        </div>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                            No hay items configurados para este establecimiento
+                        </p>
+                    </div>
+                `;
             }
         }
 
@@ -2667,17 +2687,14 @@ function crearCategoriaHTML(categoria) {
     });
 
     div.innerHTML = `
-        <!-- Header de la categoría -->
-        <div class="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 px-6 py-4 border-b border-slate-200 dark:border-slate-600">
+        <div class="bg-slate-50 dark:bg-slate-800/80 px-5 py-3 border-b border-slate-200 dark:border-slate-800">
             <div class="flex items-center justify-between">
-                <h3 class="text-xl font-bold text-slate-900 dark:text-white">${categoria.nombre}</h3>
-                <span class="text-sm text-slate-500 dark:text-slate-400">${categoria.items.length} item(s)</span>
+                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wide">${categoria.nombre}</h3>
+                <span class="text-xs font-medium text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-md">${categoria.items.length} items</span>
             </div>
-            ${categoria.descripcion ? `<p class="text-sm text-slate-600 dark:text-slate-300 mt-1">${categoria.descripcion}</p>` : ''}
+            ${categoria.descripcion ? `<p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5">${categoria.descripcion}</p>` : ''}
         </div>
-
-        <!-- Items en formato de cards -->
-        <div class="divide-y divide-slate-200 dark:divide-slate-700">
+        <div class="divide-y divide-slate-100 dark:divide-slate-800">
             ${itemsHTML}
         </div>
     `;
@@ -5157,7 +5174,7 @@ function mostrarPreviewFirmaInspector(pathFirma) {
     const imageHtml = `
         <img src="${imageUrl}"
              alt="Firma del inspector"
-             class="max-w-full max-h-[200px] object-contain rounded-lg border border-gray-300"
+             class="max-w-full max-h-[200px] object-contain rounded-lg border border-gray-300 bg-white"
 
 >
     `;
@@ -5743,7 +5760,7 @@ function mostrarPreviewFirmaEncargado(pathFirma) {
             ${etiquetaFirma}
             <img src="${srcFirma}" 
                  alt="Firma del encargado" 
-                 class="max-w-full max-h-[200px] object-contain rounded-lg"
+                 class="max-w-full max-h-[200px] object-contain rounded-lg bg-white"
                  onerror="this.src='/static/img/placeholder-firma.png'">
         </div>
     `;
@@ -5826,12 +5843,11 @@ function deshabilitarBotonConfirmar(confirmador, rol) {
     const rolConfirmador = rol ? ` (${rol})` : '';
 
     boton.disabled = true;
-    boton.classList.remove('bg-gradient-to-r', 'from-green-500', 'to-emerald-600', 'hover:from-green-600', 'hover:to-emerald-700');
-    boton.classList.add('bg-slate-400', 'cursor-not-allowed', 'opacity-60');
+    boton.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+    boton.classList.add('bg-slate-200', 'dark:bg-slate-800', 'text-slate-500', 'dark:text-slate-400', 'cursor-not-allowed', 'border', 'border-slate-300', 'dark:border-slate-700');
+    boton.classList.remove('text-white', 'shadow-sm');
     boton.innerHTML = `
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
+        <i class="fas fa-check-double mr-2"></i>
         Ya confirmada por ${nombreConfirmador}${rolConfirmador}
     `;
 }
@@ -5850,12 +5866,10 @@ function restaurarBotonConfirmarEncargado() {
     }
 
     boton.disabled = false;
-    boton.className = 'px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center';
+    boton.className = 'px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors text-sm flex items-center justify-center shadow-sm';
     boton.innerHTML = `
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        Confirmar Inspecci&oacute;n
+        <i class="fas fa-check-circle mr-2"></i>
+        Confirmar Inspección
     `;
 }
 
