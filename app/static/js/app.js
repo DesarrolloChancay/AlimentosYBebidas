@@ -5204,6 +5204,7 @@ function resolverSrcFirmaEncargado(firma) {
         || limpia.startsWith('http://')
         || limpia.startsWith('https://')
         || limpia.startsWith('blob:')
+        || limpia.startsWith('static/')
     ) {
         return limpia;
     }
