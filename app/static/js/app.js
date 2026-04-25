@@ -3951,7 +3951,7 @@ function actualizarInterfazFirmas() {
                 if (inputEncargado) inputEncargado.style.display = 'none';
             } else {
                 const h3 = firmaEncargadoArea.querySelector('h3');
-                if (h3) h3.innerHTML = '<span class="text-orange-600">⏳ Esperando firma o aprobación del encargado</span>';
+                if (h3) h3.innerHTML = '<span class="text-orange-600">Esperando firma o aprobación del encargado</span>';
             }
         }
 
