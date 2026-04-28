@@ -125,6 +125,7 @@ class CSRFManager {
 // ===== FETCH SEGURO CENTRALIZADO =====
 const NATIVE_FETCH = window.fetch ? window.fetch.bind(window) : null;
 const SAFE_HTTP_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'TRACE']);
+let isRedirectingToLogin = false;
 
 function isSameOriginRequest(input) {
     try {
@@ -141,6 +142,30 @@ function mergeHeaders(input, options) {
     const optionHeaders = new Headers(options.headers || {});
     optionHeaders.forEach((value, key) => headers.set(key, value));
     return headers;
+}
+
+function isLoginUrl(url) {
+    try {
+        const parsed = new URL(url, window.location.origin);
+        return parsed.origin === window.location.origin && parsed.pathname === '/login';
+    } catch (error) {
+        return false;
+    }
+}
+
+function redirectToLogin(reason = 'session-expired') {
+    if (isRedirectingToLogin || isLoginUrl(window.location.href)) {
+        return;
+    }
+
+    isRedirectingToLogin = true;
+
+    try {
+        sessionStorage.setItem('auth_redirect_reason', reason);
+    } catch (error) {
+    }
+
+    window.location.replace('/login');
 }
 
 async function secureFetch(input, options = {}) {
@@ -194,10 +219,22 @@ async function secureFetch(input, options = {}) {
         }
     }
 
+    if (response.redirected && isLoginUrl(response.url)) {
+        window.dispatchEvent(new CustomEvent('secure-fetch-auth-error', {
+            detail: { status: 401, url: response.url, redirected: true }
+        }));
+        redirectToLogin('session-expired');
+        return response;
+    }
+
     if (response.status === 401 || response.status === 403) {
         window.dispatchEvent(new CustomEvent('secure-fetch-auth-error', {
             detail: { status: response.status, url: response.url }
         }));
+
+        if (response.status === 401) {
+            redirectToLogin('session-expired');
+        }
     }
 
     return response;
@@ -265,7 +302,7 @@ class SessionManager {
         // Validar sesión periódicamente
         setInterval(async () => {
             try {
-                const response = await this.secureRequest('/api/auth/validate-session', {
+                const response = await this.secureRequest('/api/auth/verificar-timeout', {
                     method: 'POST',
                     body: JSON.stringify({ fingerprint: this.fingerprint })
                 });
@@ -279,13 +316,11 @@ class SessionManager {
     }
     
     static handleSessionTimeout() {
-        alert('Su sesión ha expirado por inactividad. Será redirigido al login.');
-        window.location.href = '/login';
+        redirectToLogin('session-timeout');
     }
     
     static handleSessionInvalid() {
-        alert('Su sesión ha sido invalidada por motivos de seguridad.');
-        window.location.href = '/login';
+        redirectToLogin('session-invalid');
     }
     
     static async secureRequest(url, options = {}) {

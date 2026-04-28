@@ -117,16 +117,17 @@ def create_app():
 
     @app.route('/api/auth/check', methods=['GET'])
     def check_auth():
-        if 'user_id' in session:
-            return jsonify({
-                'authenticated': True,
-                'user': {
-                    'id': session['user_id'],
-                    'name': session.get('user_name'),
-                    'role': session.get('user_role')
-                }
-            })
-        return jsonify({'authenticated': False}), 401
+        if 'user_id' not in session:
+            return jsonify({'authenticated': False}), 401
+
+        resultado = AuthController.verificar_timeout_sesion()
+        if isinstance(resultado, tuple):
+            respuesta, status = resultado
+            if status != 200:
+                return jsonify({'authenticated': False}), 401
+            return respuesta, status
+
+        return resultado
 
     @app.route('/api/auth/csrf-token', methods=['GET'])
     def csrf_token():
