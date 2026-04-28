@@ -10,7 +10,7 @@ from app.controllers.usuarios_controller import usuarios_bp
 from app.controllers.auth_controller import AuthController
 from app.controllers.admin_controller import admin_bp
 from app.controllers.reglamento_controller import reglamento_bp
-from app.utils.security import register_security
+from app.utils.security import generate_csrf_token, refresh_csrf_token, register_security
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 def create_app():
@@ -127,6 +127,15 @@ def create_app():
                 }
             })
         return jsonify({'authenticated': False}), 401
+
+    @app.route('/api/auth/csrf-token', methods=['GET'])
+    def csrf_token():
+        if not session.get('user_id'):
+            return jsonify({'error': 'No autenticado'}), 401
+
+        force_refresh = request.args.get('refresh') in {'1', 'true', 'True'}
+        token = refresh_csrf_token() if force_refresh else generate_csrf_token()
+        return jsonify({'csrf_token': token})
 
     @app.get('/healthz')
     def healthz():

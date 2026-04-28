@@ -3982,7 +3982,7 @@ function actualizarInterfazFirmas() {
                         Aprobar Inspección
                     </button>
                     <p class="text-sm text-gray-600 mt-2">Al aprobar, confirma que está de acuerdo con las puntuaciones.</p>
-                    
+
                     <!-- Botón de prueba temporal -->
                     <button onclick="socket.emit('test_evento', {test: true})" 
                             class="bg-yellow-600 text-white px-2 py-1 rounded text-xs mt-2">

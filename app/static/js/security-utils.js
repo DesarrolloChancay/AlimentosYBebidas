@@ -46,6 +46,19 @@ class CSRFManager {
         const cookieToken = this.getCookie('csrf_token');
         return cookieToken;
     }
+
+    static setToken(token) {
+        if (!token) return;
+
+        let metaToken = document.querySelector(`meta[name="${SECURITY_CONFIG.CSRF_TOKEN_META}"]`);
+        if (!metaToken) {
+            metaToken = document.createElement('meta');
+            metaToken.setAttribute('name', SECURITY_CONFIG.CSRF_TOKEN_META);
+            document.head.appendChild(metaToken);
+        }
+
+        metaToken.setAttribute('content', token);
+    }
     
     static getCookie(name) {
         const value = `; ${document.cookie}`;
@@ -78,6 +91,34 @@ class CSRFManager {
             input.value = token;
             form.appendChild(input);
         }
+    }
+
+    static async refreshToken(forceRefresh = true) {
+        if (!NATIVE_FETCH) {
+            return null;
+        }
+
+        const suffix = forceRefresh ? '?refresh=1' : '';
+        const response = await NATIVE_FETCH(`/api/auth/csrf-token${suffix}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const data = await response.json().catch(() => ({}));
+        if (!data || !data.csrf_token) {
+            return null;
+        }
+
+        this.setToken(data.csrf_token);
+        return data.csrf_token;
     }
 }
 
@@ -119,11 +160,39 @@ async function secureFetch(input, options = {}) {
         }
     }
 
-    const response = await NATIVE_FETCH(input, {
+    const requestOptions = {
         ...options,
         credentials: options.credentials || 'same-origin',
         headers
-    });
+    };
+    const response = await NATIVE_FETCH(input, requestOptions);
+
+    if (
+        response.status === 403 &&
+        !SAFE_HTTP_METHODS.has(method) &&
+        isSameOriginRequest(input) &&
+        !options._csrfRetried
+    ) {
+        const errorData = await response.clone().json().catch(() => null);
+        const isCsrfError = Boolean(
+            errorData &&
+            typeof errorData.error === 'string' &&
+            errorData.error.toLowerCase().includes('csrf')
+        );
+
+        if (isCsrfError) {
+            const newToken = await CSRFManager.refreshToken(true);
+            if (newToken) {
+                const retryHeaders = mergeHeaders(input, requestOptions);
+                retryHeaders.set(SECURITY_CONFIG.CSRF_TOKEN_HEADER, newToken);
+                return NATIVE_FETCH(input, {
+                    ...requestOptions,
+                    _csrfRetried: true,
+                    headers: retryHeaders
+                });
+            }
+        }
+    }
 
     if (response.status === 401 || response.status === 403) {
         window.dispatchEvent(new CustomEvent('secure-fetch-auth-error', {
@@ -136,6 +205,9 @@ async function secureFetch(input, options = {}) {
 
 if (NATIVE_FETCH) {
     window.fetch = secureFetch;
+    window.addEventListener('pageshow', () => {
+        CSRFManager.refreshToken(false).catch(() => null);
+    });
 }
 
 document.addEventListener('submit', (event) => {
