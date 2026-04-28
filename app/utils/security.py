@@ -56,6 +56,12 @@ def generate_csrf_token():
     return token
 
 
+def refresh_csrf_token():
+    token = secrets.token_urlsafe(32)
+    session[CSRF_SESSION_KEY] = token
+    return token
+
+
 def validate_csrf_request():
     if request.method not in UNSAFE_METHODS:
         return None
@@ -118,6 +124,11 @@ def set_security_headers(response):
             "Strict-Transport-Security",
             "max-age=31536000; includeSubDomains",
         )
+
+    if session.get("user_id") and response.mimetype == "text/html":
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
 
     for cookie_name in request.cookies:
         if cookie_name.startswith("inspeccion_form_data_"):

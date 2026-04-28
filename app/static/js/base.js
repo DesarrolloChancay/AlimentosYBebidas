@@ -91,7 +91,8 @@ function verificarSesionAlRetroceder() {
     }
     
     // Verificación simple cuando se navega de vuelta
-    fetch('/api/auth/verificar-sesion-unica', {
+    const requestFn = typeof window.secureFetch === 'function' ? window.secureFetch : window.fetch;
+    requestFn('/api/auth/verificar-sesion-unica', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
