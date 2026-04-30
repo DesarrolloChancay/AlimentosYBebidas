@@ -1256,11 +1256,12 @@ class InspeccionesController:
                 # Verificar si hay cambios reales
                 items_actuales = data.get("items", {})
                 observaciones_actuales = data.get("observaciones", "")
-
-                hay_cambios = (
-                    items_actuales != items_anteriores
-                    or observaciones_actuales != observaciones_anteriores
+                items_cambiaron = items_actuales != items_anteriores
+                observaciones_cambiaron = (
+                    observaciones_actuales != observaciones_anteriores
                 )
+
+                hay_cambios = items_cambiaron or observaciones_cambiaron
 
                 if hay_cambios:
                     if clave_tiempo_real not in datos_tiempo_real:
@@ -1268,8 +1269,8 @@ class InspeccionesController:
 
                     estado_actual_tiempo_real = datos_tiempo_real[clave_tiempo_real]
 
-                    # Reiniciar confirmacion del encargado cuando el inspector realiza cambios
-                    if estado_actual_tiempo_real.get("confirmada_por_encargado"):
+                    # Reiniciar confirmacion del encargado solo cuando cambian items/puntajes del checklist
+                    if items_cambiaron and estado_actual_tiempo_real.get("confirmada_por_encargado"):
                         estado_actual_tiempo_real["confirmada_por_encargado"] = False
                         estado_actual_tiempo_real["confirmador_id"] = None
                         estado_actual_tiempo_real["confirmador_nombre"] = None
