@@ -1275,9 +1275,6 @@ class InspeccionesController:
                         estado_actual_tiempo_real["confirmador_nombre"] = None
                         estado_actual_tiempo_real["confirmador_rol"] = None
                         estado_actual_tiempo_real["fecha_confirmacion"] = None
-                        estado_actual_tiempo_real["firma_encargado_id"] = None
-                        estado_actual_tiempo_real["firma_encargado"] = None
-                        estado_actual_tiempo_real["firma_temporal"] = False
 
                     # Calcular resumen automáticamente basado en los items
                     resumen_calculado = {}
