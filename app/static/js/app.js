@@ -5955,15 +5955,12 @@ function reiniciarConfirmacionEncargadoPorCambio() {
     };
 
     window.inspeccionEstado.confirmada_por_encargado = false;
+    window.inspeccionEstado.encargado_aprobo = false;
     window.inspeccionEstado.confirmador_id = null;
     window.inspeccionEstado.confirmador_nombre = null;
     window.inspeccionEstado.confirmador_rol = null;
     window.inspeccionEstado.firmante_temporal_id = null;
     window.inspeccionEstado.firmante_temporal_rol = null;
-
-    if (window.inspeccionEstado.firma_encargado_temporal) {
-        limpiarPreviewFirmaEncargado();
-    }
 
     const yaPendiente = estadoPrevio
         && estadoPrevio.confirmada_por_encargado === false
@@ -6010,21 +6007,20 @@ function actualizarEstadoTiempoRealInspector(data) {
 
     if (window.inspeccionEstado.establecimiento_id === establecimientoId) {
         window.inspeccionEstado.confirmada_por_encargado = Boolean(data.confirmada_por_encargado);
+        window.inspeccionEstado.encargado_aprobo = Boolean(data.confirmada_por_encargado);
         window.inspeccionEstado.confirmador_id = data.confirmador_id || null;
         window.inspeccionEstado.confirmador_nombre = data.confirmador_nombre || null;
         window.inspeccionEstado.confirmador_rol = data.confirmador_rol || null;
 
-        if (data.confirmada_por_encargado && data.firma_data) {
+        if (data.firma_data) {
             const firmaEncargado = data.firma_data.ruta || data.firma_data;
             window.inspeccionEstado.firma_encargado = firmaEncargado;
             window.inspeccionEstado.firma_encargado_temporal = Boolean(data.firma_temporal);
-            window.inspeccionEstado.firma_encargado_id = data.firma_data.id || null;
+            window.inspeccionEstado.firma_encargado_id = data.firma_data.id || window.inspeccionEstado.firma_encargado_id || null;
             mostrarPreviewFirmaEncargado(firmaEncargado);
         } else if (!data.confirmada_por_encargado && window.inspeccionEstado.firma_encargado_temporal) {
             limpiarPreviewFirmaEncargado();
         }
-
-        window.inspeccionEstado.encargado_aprobo = Boolean(data.confirmada_por_encargado);
         actualizarInterfazFirmas();
         deshabilitarBotonCompletarInspector();
     }
