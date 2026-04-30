@@ -709,6 +709,27 @@ const IMMEDIATE_SAVE_DELAY = 500; // 500ms de delay para batch de cambios múlti
 // Control de autosave inmediato
 let immediateSaveTimeout = null;
 
+function consolidarEstadoTrasConfirmacionEncargado() {
+    if (immediateSaveTimeout) {
+        clearTimeout(immediateSaveTimeout);
+        immediateSaveTimeout = null;
+    }
+
+    if (window.emitTimeout) {
+        clearTimeout(window.emitTimeout);
+        window.emitTimeout = null;
+    }
+
+    hayCambiosPendientes = false;
+    window.hayCambiosPendientes = false;
+
+    ultimoEstadoEmitido = {
+        items: JSON.parse(JSON.stringify(window.inspeccionEstado?.items || {})),
+        observaciones: window.inspeccionEstado?.observaciones || '',
+        resumen: JSON.parse(JSON.stringify(window.inspeccionEstado?.resumen || {}))
+    };
+}
+
 // Función para marcar que hay cambios pendientes
 function marcarCambiosPendientes() {
     hayCambiosPendientes = true;
@@ -5637,6 +5658,7 @@ async function confirmarFirmaTemporalEncargadoDesdeInspector() {
             confirmador_rol: window.inspeccionEstado.confirmador_rol
         };
 
+        consolidarEstadoTrasConfirmacionEncargado();
         guardarEstadoConfirmaciones();
         const hiddenInputFirmaEncargado = document.getElementById('firma-encargado-hidden');
         if (hiddenInputFirmaEncargado) {

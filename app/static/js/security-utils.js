@@ -95,6 +95,7 @@ class CSRFManager {
 
     static async refreshToken(forceRefresh = true) {
         if (!NATIVE_FETCH) {
+            this.lastRefreshStatus = null;
             return null;
         }
 
@@ -107,6 +108,8 @@ class CSRFManager {
                 'X-Requested-With': 'XMLHttpRequest'
             }
         });
+
+        this.lastRefreshStatus = response.status;
 
         if (!response.ok) {
             return null;
@@ -126,6 +129,8 @@ class CSRFManager {
 const NATIVE_FETCH = window.fetch ? window.fetch.bind(window) : null;
 const SAFE_HTTP_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'TRACE']);
 let isRedirectingToLogin = false;
+let isRecoveringFromCsrf = false;
+CSRFManager.lastRefreshStatus = null;
 
 function isSameOriginRequest(input) {
     try {
@@ -168,6 +173,61 @@ function redirectToLogin(reason = 'session-expired') {
     window.location.replace('/login');
 }
 
+function notifyUserSecurityRecovery(message, type = 'warning') {
+    if (typeof window.mostrarNotificacion === 'function') {
+        window.mostrarNotificacion(message, type);
+        return;
+    }
+
+    if (typeof window.notificarEvidencias === 'function') {
+        window.notificarEvidencias(message, type);
+        return;
+    }
+
+    if (type === 'error' || type === 'warning') {
+        alert(message);
+    }
+}
+
+async function isCsrfFailureResponse(response) {
+    if (!response || response.status !== 403) {
+        return false;
+    }
+
+    const errorData = await response.clone().json().catch(() => null);
+    return Boolean(
+        errorData &&
+        typeof errorData.error === 'string' &&
+        errorData.error.toLowerCase().includes('csrf')
+    );
+}
+
+function recoverFromCsrfFailure(reason = 'csrf-expired') {
+    if (isRecoveringFromCsrf || isLoginUrl(window.location.href)) {
+        return;
+    }
+
+    isRecoveringFromCsrf = true;
+
+    try {
+        sessionStorage.setItem('auth_redirect_reason', reason);
+    } catch (error) {
+    }
+
+    window.dispatchEvent(new CustomEvent('secure-fetch-csrf-error', {
+        detail: { reason }
+    }));
+
+    notifyUserSecurityRecovery(
+        'La validación de seguridad expiró. La página se recargará para continuar.',
+        'warning'
+    );
+
+    window.setTimeout(() => {
+        window.location.reload();
+    }, 1200);
+}
+
 async function secureFetch(input, options = {}) {
     if (!NATIVE_FETCH) {
         throw new Error('Fetch no está disponible en este navegador.');
@@ -190,7 +250,7 @@ async function secureFetch(input, options = {}) {
         credentials: options.credentials || 'same-origin',
         headers
     };
-    const response = await NATIVE_FETCH(input, requestOptions);
+    let response = await NATIVE_FETCH(input, requestOptions);
 
     if (
         response.status === 403 &&
@@ -198,25 +258,35 @@ async function secureFetch(input, options = {}) {
         isSameOriginRequest(input) &&
         !options._csrfRetried
     ) {
-        const errorData = await response.clone().json().catch(() => null);
-        const isCsrfError = Boolean(
-            errorData &&
-            typeof errorData.error === 'string' &&
-            errorData.error.toLowerCase().includes('csrf')
-        );
-
-        if (isCsrfError) {
+        if (await isCsrfFailureResponse(response)) {
             const newToken = await CSRFManager.refreshToken(true);
             if (newToken) {
                 const retryHeaders = mergeHeaders(input, requestOptions);
                 retryHeaders.set(SECURITY_CONFIG.CSRF_TOKEN_HEADER, newToken);
-                return NATIVE_FETCH(input, {
+                response = await NATIVE_FETCH(input, {
                     ...requestOptions,
                     _csrfRetried: true,
                     headers: retryHeaders
                 });
+            } else if (CSRFManager.lastRefreshStatus === 401) {
+                redirectToLogin('session-expired');
+                return response;
+            } else {
+                recoverFromCsrfFailure('csrf-expired');
+                return response;
             }
         }
+    }
+
+    if (
+        response.status === 403 &&
+        !SAFE_HTTP_METHODS.has(method) &&
+        isSameOriginRequest(input) &&
+        options._csrfRetried &&
+        await isCsrfFailureResponse(response)
+    ) {
+        recoverFromCsrfFailure('csrf-retry-failed');
+        return response;
     }
 
     if (response.redirected && isLoginUrl(response.url)) {
