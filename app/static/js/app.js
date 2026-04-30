@@ -157,10 +157,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         let observacionesTimeout = null;
 
         observacionesTextarea.addEventListener('input', function () {
-            if (esRolEditorChecklist()) {
-                reiniciarConfirmacionEncargadoPorCambio();
-            }
-
             // Marcar que hay cambios pendientes
             marcarCambiosPendientes();
 
@@ -180,10 +176,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         observacionesTextarea.addEventListener('blur', function () {
             // Marcar que hay cambios pendientes si el valor cambió realmente
             if (window.inspeccionEstado.observaciones !== this.value) {
-                if (esRolEditorChecklist()) {
-                    reiniciarConfirmacionEncargadoPorCambio();
-                }
-
                 marcarCambiosPendientes();
                 window.inspeccionEstado.observaciones = this.value;
 
