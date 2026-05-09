@@ -3,12 +3,27 @@
 {% block title %}Gestión de Encargados{% endblock %}
 
 {% block content %}
+{% set agregar_encargado_url = agregar_encargado_url|default('/jefe/agregar-encargado', true) %}
+{% set gestionar_encargado_url = gestionar_encargado_url|default('/jefe/gestionar-encargado', true) %}
+{% set eliminar_encargado_url = eliminar_encargado_url|default('/jefe/eliminar-encargado', true) %}
+{% set restablecer_encargado_url = restablecer_encargado_url|default('/jefe/restablecer-contrasena-encargado', true) %}
+{% set subir_firma_url = subir_firma_url|default('/jefe/firmas/subir', true) %}
+{% set volver_url = volver_url|default(None, true) %}
+{% set mostrar_acciones = mostrar_acciones|default(true, true) %}
+{% set mostrar_columna_registrador = mostrar_columna_registrador|default(true, true) %}
 <div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
     <div class="container mx-auto px-4 py-8">
         <!-- Encabezado -->
         <div class="mb-8">
             <div class="flex items-center justify-between">
                 <div>
+                    {% if volver_url %}
+                    <a href="{{ volver_url }}"
+                       class="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mb-3">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Volver
+                    </a>
+                    {% endif %}
                     <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-2">
                         Gestión de Encargados
                     </h1>
@@ -106,9 +121,16 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                 Fecha Asignación
                             </th>
+                            {% if mostrar_columna_registrador %}
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Registrado por
+                            </th>
+                            {% endif %}
+                            {% if mostrar_acciones %}
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                 Acciones
                             </th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -167,6 +189,17 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                                 {{ encargado.fecha_asignacion.strftime('%d/%m/%Y') if encargado.fecha_asignacion else 'N/A' }}
                             </td>
+                            {% if mostrar_columna_registrador %}
+                            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">
+                                {% if encargado.registrado_por_nombre %}
+                                <div class="font-medium text-gray-900 dark:text-white">{{ encargado.registrado_por_nombre }}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">{{ encargado.registrado_por_rol or 'Usuario interno' }}</div>
+                                {% else %}
+                                <span class="text-xs text-gray-400 dark:text-gray-500">Sin registro interno</span>
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                            {% if mostrar_acciones %}
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <div class="flex items-center space-x-2">
                                     {% if encargado.activo %}
@@ -199,6 +232,7 @@
                                     </button>
                                 </div>
                             </td>
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -607,6 +641,11 @@ function mostrarAlerta(tipo, mensaje) {
 }
 
 // Variables globales
+const AGREGAR_ENCARGADO_URL = {{ agregar_encargado_url|tojson }};
+const GESTIONAR_ENCARGADO_URL = {{ gestionar_encargado_url|tojson }};
+const ELIMINAR_ENCARGADO_URL = {{ eliminar_encargado_url|tojson }};
+const RESTABLECER_ENCARGADO_URL = {{ restablecer_encargado_url|tojson }};
+const SUBIR_FIRMA_URL = {{ subir_firma_url|tojson }};
 let encargadoIdParaHabilitar = null;
 let encargadoIdParaDeshabilitar = null;
 let encargadoIdParaEliminar = null;
@@ -729,7 +768,7 @@ async function confirmarHabilitarEncargado() {
     cerrarModalConfirmarHabilitar();
 
     try {
-        const response = await fetch('/jefe/gestionar-encargado', {
+        const response = await fetch(GESTIONAR_ENCARGADO_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -782,7 +821,7 @@ async function confirmarDeshabilitarEncargado() {
     cerrarModalConfirmarDeshabilitar();
 
     try {
-        const response = await fetch('/jefe/gestionar-encargado', {
+        const response = await fetch(GESTIONAR_ENCARGADO_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -835,7 +874,7 @@ async function confirmarEliminarEncargado() {
     cerrarModalConfirmarEliminar();
 
     try {
-        const response = await fetch('/jefe/eliminar-encargado', {
+        const response = await fetch(ELIMINAR_ENCARGADO_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -907,7 +946,7 @@ async function confirmarRestablecerContrasenaEncargado() {
         };
         console.log('Enviando datos:', requestData);
 
-        const response = await fetch('/jefe/restablecer-contrasena-encargado', {
+        const response = await fetch(RESTABLECER_ENCARGADO_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1005,7 +1044,7 @@ document.getElementById('form-agregar-encargado').addEventListener('submit', asy
             throw new Error('El DNI debe tener exactamente 8 dígitos');
         }
 
-        const response = await fetch('/jefe/agregar-encargado', {
+        const response = await fetch(AGREGAR_ENCARGADO_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1055,7 +1094,7 @@ document.getElementById('form-subir-firma').addEventListener('submit', async fun
         formData.append('encargado_id', encargadoId);
         formData.append('firma_data', firmaGestionEncargadoPad.toDataURL('image/png'));
 
-        const response = await fetch('/jefe/firmas/subir', {
+        const response = await fetch(SUBIR_FIRMA_URL, {
             method: 'POST',
             body: formData
         });

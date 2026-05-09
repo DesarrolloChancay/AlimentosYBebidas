@@ -215,3 +215,23 @@ def api_obtener_estadisticas_jefes():
         JSON con estadísticas
     """
     return InspectorController.obtener_estadisticas_jefes()
+
+
+@inspector_bp.route('/establecimientos/<int:establecimiento_id>/encargados', methods=['GET'])
+@login_required
+@role_required(ROL_INSPECTOR, ROL_ADMINISTRADOR)
+def gestionar_encargados_establecimiento(establecimiento_id):
+    """
+    Vista para que inspectores principales gestionen encargados de un establecimiento.
+    """
+    return InspectorController.gestionar_encargados_establecimiento(establecimiento_id)
+
+
+@inspector_bp.route('/api/establecimientos/<int:establecimiento_id>/encargados', methods=['POST'])
+@login_required
+@role_required(ROL_INSPECTOR, ROL_ADMINISTRADOR)
+def api_agregar_encargado_establecimiento(establecimiento_id):
+    """
+    API para que inspectores principales agreguen encargados a un establecimiento.
+    """
+    return InspectorController.api_agregar_encargado_establecimiento(establecimiento_id)
