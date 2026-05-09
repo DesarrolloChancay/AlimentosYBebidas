@@ -1,11 +1,12 @@
 """
 Controlador para funcionalidades del Inspector
 """
-from flask import render_template, request, jsonify, session
+from flask import render_template, request, jsonify, session, url_for
 from werkzeug.utils import secure_filename
 from app.models.Usuario_models import Usuario, Rol, TipoEstablecimiento
 from app.models.Inspecciones_models import (
-    Establecimiento, JefeEstablecimiento
+    Establecimiento, JefeEstablecimiento, EncargadoEstablecimiento,
+    FirmaEncargadoPorJefe
 )
 from app.extensions import db
 from sqlalchemy import and_
@@ -220,6 +221,17 @@ class InspectorController:
             if not usuario_id:
                 return jsonify({'success': False, 'message': 'No autenticado'}), 401
 
+            usuario_actual = Usuario.query.get(usuario_id)
+            establecimientos_con_acceso_encargados = []
+            if usuario_actual and usuario_actual.rol:
+                if usuario_actual.rol.nombre in (ROL_ADMINISTRADOR, ROL_INSPECTOR):
+                    establecimientos_con_acceso_encargados = [
+                        establecimiento_id
+                        for (establecimiento_id,) in db.session.query(Establecimiento.id)
+                        .filter(Establecimiento.activo == True)
+                        .all()
+                    ]
+
             # Obtener jefes con información de establecimiento
             jefes = db.session.query(
                 JefeEstablecimiento.id,
@@ -259,11 +271,173 @@ class InspectorController:
 
             return render_template('admin/jefes_establecimiento.html', 
                                  jefes=jefes,
-                                 establecimientos=establecimientos_disponibles)
+                                 establecimientos=establecimientos_disponibles,
+                                 establecimientos_con_acceso_encargados=establecimientos_con_acceso_encargados)
 
         except Exception as e:
             import traceback
             return jsonify({'success': False, 'message': f'Error al cargar jefes: {str(e)}'}), 500
+
+    @staticmethod
+    def _puede_gestionar_encargados(usuario_id, establecimiento_id):
+        usuario = Usuario.query.get(usuario_id)
+        if not usuario or not usuario.rol:
+            return False
+
+        if usuario.rol.nombre == ROL_ADMINISTRADOR:
+            return Establecimiento.query.filter_by(id=establecimiento_id, activo=True).first() is not None
+
+        if usuario.rol.nombre != ROL_INSPECTOR:
+            return False
+
+        return Establecimiento.query.filter_by(id=establecimiento_id, activo=True).first() is not None
+
+    @staticmethod
+    def gestionar_encargados_establecimiento(establecimiento_id):
+        try:
+            usuario_id = session.get('user_id')
+            if not usuario_id:
+                return jsonify({'success': False, 'message': 'No autenticado'}), 401
+
+            if not InspectorController._puede_gestionar_encargados(usuario_id, establecimiento_id):
+                return jsonify({'success': False, 'message': 'No tienes acceso a este establecimiento'}), 403
+
+            establecimiento = Establecimiento.query.filter_by(
+                id=establecimiento_id,
+                activo=True,
+            ).first()
+            if not establecimiento:
+                return jsonify({'success': False, 'message': 'Establecimiento no encontrado'}), 404
+
+            from app.controllers.jefe_controller import obtener_encargados_establecimiento
+
+            encargados = obtener_encargados_establecimiento(establecimiento_id)
+            encargados_activos = sum(1 for encargado in encargados if encargado['activo'])
+            encargados_inactivos = len(encargados) - encargados_activos
+            encargados_con_firma = 0
+
+            for encargado in encargados:
+                firma = FirmaEncargadoPorJefe.query.filter(
+                    FirmaEncargadoPorJefe.encargado_id == encargado['usuario_id'],
+                    FirmaEncargadoPorJefe.establecimiento_id == establecimiento_id,
+                    FirmaEncargadoPorJefe.activa == True,
+                ).first()
+                encargado['tiene_firma'] = firma is not None
+                if firma:
+                    encargados_con_firma += 1
+
+            establecimiento_payload = {
+                'id': establecimiento.id,
+                'nombre': establecimiento.nombre,
+                'direccion': establecimiento.direccion,
+            }
+
+            return render_template(
+                'jefe_gestionar_encargados.html',
+                establecimiento=establecimiento_payload,
+                encargados=encargados,
+                encargados_activos=encargados_activos,
+                encargados_inactivos=encargados_inactivos,
+                encargados_con_firma=encargados_con_firma,
+                agregar_encargado_url=url_for(
+                    'inspector.api_agregar_encargado_establecimiento',
+                    establecimiento_id=establecimiento_id,
+                ),
+                volver_url=url_for('inspector.gestionar_jefes_establecimiento'),
+                mostrar_acciones=False,
+                mostrar_columna_registrador=True,
+            )
+
+        except Exception as e:
+            return jsonify({'success': False, 'message': f'Error al cargar encargados: {str(e)}'}), 500
+
+    @staticmethod
+    def api_agregar_encargado_establecimiento(establecimiento_id):
+        try:
+            usuario_id = session.get('user_id')
+            if not usuario_id:
+                return jsonify({'success': False, 'message': 'No autenticado'}), 401
+
+            if not InspectorController._puede_gestionar_encargados(usuario_id, establecimiento_id):
+                return jsonify({'success': False, 'message': 'No tienes acceso a este establecimiento'}), 403
+
+            data = request.get_json() or {}
+            nombre = data.get('nombre', '').strip()
+            apellido = data.get('apellido', '').strip()
+            dni = data.get('dni', '').strip()
+            telefono = data.get('telefono', '').strip()
+            correo = (data.get('correo') or data.get('email') or '').strip()
+
+            if not all([nombre, apellido, dni]):
+                return jsonify({'success': False, 'message': 'Nombre, apellido y DNI son obligatorios'}), 400
+
+            if len(dni) != 8 or not dni.isdigit():
+                return jsonify({'success': False, 'message': 'El DNI debe tener 8 dígitos'}), 400
+
+            establecimiento = Establecimiento.query.filter_by(
+                id=establecimiento_id,
+                activo=True,
+            ).first()
+            if not establecimiento:
+                return jsonify({'success': False, 'message': 'Establecimiento no encontrado'}), 404
+
+            usuario_existente = Usuario.query.filter_by(dni=dni).first()
+
+            contrasena_temporal = None
+            if usuario_existente:
+                usuario_registrado_id = usuario_existente.id
+                encargado_existente = EncargadoEstablecimiento.query.filter_by(
+                    usuario_id=usuario_registrado_id,
+                    establecimiento_id=establecimiento_id,
+                ).first()
+                if encargado_existente:
+                    return jsonify({'success': False, 'message': 'Este usuario ya es encargado de este establecimiento'}), 400
+            else:
+                nombre_usuario = Usuario.generar_nombre_usuario_unico(nombre, apellido)
+                contrasena_temporal = generar_contrasena_temporal()
+                rol_encargado = Rol.query.filter_by(nombre='Encargado').first()
+                if not rol_encargado:
+                    return jsonify({'success': False, 'message': 'Rol de Encargado no encontrado'}), 500
+
+                nuevo_usuario = Usuario(
+                    nombre=nombre,
+                    apellido=apellido,
+                    nombre_usuario=nombre_usuario,
+                    dni=dni,
+                    telefono=telefono,
+                    correo=correo,
+                    rol_id=rol_encargado.id,
+                    activo=True,
+                    cambiar_contrasena=True,
+                )
+                nuevo_usuario.set_password(contrasena_temporal)
+                db.session.add(nuevo_usuario)
+                db.session.flush()
+                usuario_registrado_id = nuevo_usuario.id
+
+            nuevo_encargado = EncargadoEstablecimiento(
+                usuario_id=usuario_registrado_id,
+                establecimiento_id=establecimiento_id,
+                fecha_inicio=datetime.now().date(),
+                registrado_por=usuario_id,
+                activo=True,
+            )
+            db.session.add(nuevo_encargado)
+            db.session.commit()
+
+            usuario_credenciales = Usuario.query.get(usuario_registrado_id)
+            return jsonify({
+                'success': True,
+                'message': 'Encargado agregado exitosamente',
+                'usuario_id': usuario_registrado_id,
+                'nombre_usuario': usuario_credenciales.nombre_usuario if usuario_credenciales else None,
+                'correo': usuario_credenciales.correo if usuario_credenciales else correo,
+                'contrasena_temporal': contrasena_temporal,
+            })
+
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'success': False, 'message': f'Error al agregar encargado: {str(e)}'}), 500
 
     @staticmethod
     def crear_jefe_establecimiento():

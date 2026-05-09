@@ -232,6 +232,7 @@ def agregar_encargado():
             usuario_id=usuario_id,
             establecimiento_id=establecimiento_id,
             fecha_inicio=datetime.now().date(),
+            registrado_por=session['user_id'],
             activo=True
         )
         
@@ -651,7 +652,10 @@ def obtener_encargados_establecimiento(establecimiento_id):
     try:
         # ✅ Usando ORM con join y order_by
         encargados = EncargadoEstablecimiento.query\
-            .options(joinedload(EncargadoEstablecimiento.usuario))\
+            .options(
+                joinedload(EncargadoEstablecimiento.usuario),
+                joinedload(EncargadoEstablecimiento.registrador).joinedload(Usuario.rol),
+            )\
             .filter(EncargadoEstablecimiento.establecimiento_id == establecimiento_id)\
             .order_by(
                 EncargadoEstablecimiento.activo.desc(),
@@ -661,13 +665,26 @@ def obtener_encargados_establecimiento(establecimiento_id):
         return [
             {
                 'id': enc.id,
+                'usuario_id': enc.usuario_id,
                 'nombre': enc.usuario.nombre,
                 'apellido': enc.usuario.apellido,
                 'nombre_usuario': enc.usuario.nombre_usuario,
                 'correo': enc.usuario.correo,
+                'telefono': enc.usuario.telefono,
                 'activo': enc.activo,
                 'observaciones_jefe': enc.observaciones_jefe,
-                'fecha_habilitacion': enc.fecha_habilitacion
+                'fecha_habilitacion': enc.fecha_habilitacion,
+                'fecha_asignacion': enc.fecha_inicio,
+                'registrado_por_nombre': (
+                    f"{enc.registrador.nombre} {enc.registrador.apellido or ''}".strip()
+                    if enc.registrador
+                    else None
+                ),
+                'registrado_por_rol': (
+                    enc.registrador.rol.nombre
+                    if enc.registrador and enc.registrador.rol
+                    else None
+                ),
             }
             for enc in encargados
         ]
@@ -1242,7 +1259,7 @@ def gestionar_encargados():
         encargados_con_firma = 0
         for encargado in encargados:
             firma = FirmaEncargadoPorJefe.query.filter(
-                FirmaEncargadoPorJefe.encargado_id == encargado['id'],
+                FirmaEncargadoPorJefe.encargado_id == encargado['usuario_id'],
                 FirmaEncargadoPorJefe.establecimiento_id == establecimiento_id,
                 FirmaEncargadoPorJefe.activa == True
             ).first()

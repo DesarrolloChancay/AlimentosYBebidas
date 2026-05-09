@@ -55,12 +55,18 @@ class EncargadoEstablecimiento(db.Model):
     comentario = db.Column(db.String(255))
     activo = db.Column(db.Boolean, default=True)
     habilitado_por = db.Column(db.Integer, db.ForeignKey("usuarios.id"))
+    registrado_por = db.Column(db.Integer, db.ForeignKey("usuarios.id"))
     fecha_habilitacion = db.Column(db.TIMESTAMP)
     observaciones_jefe = db.Column(db.Text)
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
 
     # Relación usando string para evitar importaciones circulares
     usuario = db.relationship("Usuario", foreign_keys=[usuario_id], backref="encargos", lazy=True)
+    registrador = db.relationship(
+        "Usuario",
+        foreign_keys=[registrado_por],
+        lazy=True,
+    )
 
 
 class JefeEstablecimiento(db.Model):

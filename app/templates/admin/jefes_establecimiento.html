@@ -3,6 +3,7 @@
 {% block title %}Gestión de Jefes de Establecimiento{% endblock %}
 
 {% block content %}
+{% set establecimientos_con_acceso_encargados = establecimientos_con_acceso_encargados|default([], true) %}
 <div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
     <div class="container mx-auto px-4 py-8">
         <!-- Encabezado -->
@@ -167,6 +168,13 @@
                                             class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
                                         <i class="fas fa-edit"></i>
                                     </button>
+                                    {% if jefe.establecimiento_id in establecimientos_con_acceso_encargados %}
+                                    <a href="{{ url_for('inspector.gestionar_encargados_establecimiento', establecimiento_id=jefe.establecimiento_id) }}"
+                                       class="text-teal-600 hover:text-teal-900 dark:text-teal-400 dark:hover:text-teal-300 transition-colors"
+                                       title="Gestionar encargados">
+                                        <i class="fas fa-users"></i>
+                                    </a>
+                                    {% endif %}
                                     <button onclick="toggleJefe({{ jefe.id }}, {{ jefe.activo|tojson }})"
                                             class="{% if jefe.activo %}text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300{% else %}text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300{% endif %} transition-colors"
                                             title="{% if jefe.activo %}Desactivar jefe{% else %}Activar jefe{% endif %}">
