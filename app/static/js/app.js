@@ -2362,6 +2362,20 @@ async function cargarItemsEstablecimiento(establecimientoId) {
 
                 // Configurar eventos para actualización en tiempo real
                 configurarEventosItems();
+
+                // Inicializar items con puntaje máximo por defecto (solo los que no tienen estado guardado)
+                data.categorias.forEach(categoria => {
+                    categoria.items.forEach(item => {
+                        if (!window.inspeccionEstado.items[item.id]) {
+                            window.inspeccionEstado.items[item.id] = {
+                                rating: 1,
+                                puntaje_maximo: obtenerPuntajeMaximoPorRiesgo(item.riesgo),
+                                riesgo: item.riesgo,
+                                observacion: ''
+                            };
+                        }
+                    });
+                });
             } else {
                 container.innerHTML = `
                     <div class="text-center py-16">
@@ -2665,6 +2679,7 @@ function crearCategoriaHTML(categoria) {
                        data-item-id="${item.id}"
                        data-puntaje-maximo="${configuracionCalificacion.puntajeMaximo}"
                        data-riesgo="${item.riesgo}"
+                       ${valor === 1 ? 'checked' : ''}
                        ${(userRole === 'Encargado' || userRole === 'Jefe de Establecimiento') ? 'disabled' : ''}>
                 <span class="text-lg font-bold text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mb-1">${valor}</span>
                 <span class="text-xs text-slate-600 dark:text-slate-400 text-center">${etiquetasCalificacion[valor]}</span>
