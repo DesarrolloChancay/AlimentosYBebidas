@@ -5409,10 +5409,16 @@ function ajustarCanvasFirmaTemporalEncargado(canvas, signaturePad) {
         return;
     }
 
+    const width = canvas.offsetWidth;
+    const height = canvas.offsetHeight;
+
+    if (!width || !height) {
+        requestAnimationFrame(() => ajustarCanvasFirmaTemporalEncargado(canvas, signaturePad));
+        return;
+    }
+
     const firmaActual = signaturePad && !signaturePad.isEmpty() ? signaturePad.toData() : null;
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
-    const width = canvas.offsetWidth || 900;
-    const height = canvas.offsetHeight || 288;
 
     canvas.width = width * ratio;
     canvas.height = height * ratio;
@@ -5527,10 +5533,12 @@ async function abrirModalFirmaTemporalEncargado() {
     modal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('overflow-hidden');
 
-    setTimeout(() => {
-        inicializarPadFirmaTemporalEncargado();
-        limpiarFirmaTemporalEncargado({ resetFirmante: true });
-    }, 0);
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            inicializarPadFirmaTemporalEncargado();
+            limpiarFirmaTemporalEncargado({ resetFirmante: true });
+        });
+    });
 
     const firmantes = await cargarFirmantesHabilitadosEstablecimiento(
         establecimientoId,
@@ -5556,6 +5564,11 @@ function cerrarModalFirmaTemporalEncargado() {
     modal.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('overflow-hidden');
     limpiarFirmaTemporalEncargado({ resetFirmante: true });
+
+    if (firmaTemporalEncargadoPad) {
+        firmaTemporalEncargadoPad.off();
+        firmaTemporalEncargadoPad = null;
+    }
 }
 
 async function confirmarFirmaTemporalEncargadoDesdeInspector() {
