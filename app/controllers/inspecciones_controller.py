@@ -4795,6 +4795,11 @@ class InspeccionesController:
                         'es_actual': es_propia
                     },
                     'fecha': inspeccion.fecha.strftime('%Y-%m-%d'),
+                    'hora_inicio': (
+                        inspeccion.hora_inicio.strftime('%H:%M')
+                        if inspeccion.hora_inicio
+                        else inspeccion.created_at.strftime('%H:%M')
+                    ),
                     'created_at': inspeccion.created_at.strftime('%Y-%m-%d %H:%M'),
                     'progreso': {
                         'completados': items_completados,

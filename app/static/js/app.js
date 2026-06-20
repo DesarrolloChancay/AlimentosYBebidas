@@ -4787,7 +4787,7 @@ function mostrarInterfazInspeccionesPendientes(inspecciones) {
                                 <i class="fa-solid fa-building"></i> ${inspeccion.establecimiento.nombre}
                             </h4>
                             <p class="text-sm text-gray-600 dark:text-gray-400">
-                                <i class="fa-solid fa-calendar-lines-pen"></i> ${inspeccion.fecha}
+                                <i class="fa-solid fa-calendar-lines-pen"></i> ${inspeccion.fecha}${inspeccion.hora_inicio ? ' · ' + inspeccion.hora_inicio : ''}
                             </p>
                             <p class="text-sm text-gray-600 dark:text-gray-400">
                                 <i class="fa-solid fa-user"></i> ${inspeccion.inspector_original.nombre}
