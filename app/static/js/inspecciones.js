@@ -215,7 +215,7 @@ function crearHTMLInspeccion(inspeccion, estadoClass) {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
             <div>
                 <span class="font-medium text-gray-700">Fecha:</span>
-                <span>${new Date(inspeccion.fecha).toLocaleDateString('es-ES')}</span>
+                <span>${new Date(inspeccion.fecha).toLocaleDateString('es-ES')}${inspeccion.hora_inicio ? ' · ' + inspeccion.hora_inicio : ''}</span>
             </div>
             <div>
                 <span class="font-medium text-gray-700">Inspector:</span>

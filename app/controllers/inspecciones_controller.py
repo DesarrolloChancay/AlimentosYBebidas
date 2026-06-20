@@ -2743,6 +2743,11 @@ class InspeccionesController:
                     {
                         "id": inspeccion.id,
                         "fecha": inspeccion.fecha.isoformat(),
+                        "hora_inicio": (
+                            inspeccion.hora_inicio.strftime("%H:%M")
+                            if inspeccion.hora_inicio
+                            else inspeccion.created_at.strftime("%H:%M")
+                        ),
                         "establecimiento": inspeccion.establecimiento.nombre,
                         "inspector": f"{inspeccion.inspector.nombre} {inspeccion.inspector.apellido or ''}".strip(),
                         "encargado": (
