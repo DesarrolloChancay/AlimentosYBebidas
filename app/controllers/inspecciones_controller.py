@@ -465,6 +465,20 @@ class InspeccionesController:
         }
 
     @staticmethod
+    def _calcular_calificacion_global(puntaje_total, items_calificados):
+        if not items_calificados:
+            return None
+        puntos_extra = max(0, round(puntaje_total) - items_calificados)
+        if puntos_extra == 0:
+            return "EXCELENTE"
+        elif puntos_extra <= 7:
+            return "MUY BIEN"
+        elif puntos_extra <= 15:
+            return "REGULAR"
+        else:
+            return "MALO"
+
+    @staticmethod
     def _calcular_resumen_desde_evaluaciones(evaluaciones, total_items=None):
         puntaje_total = 0.0
         suma_porcentaje_cumplimiento = 0.0
@@ -516,6 +530,9 @@ class InspeccionesController:
             "puntos_criticos_perdidos": puntos_criticos_perdidos,
             "items_calificados": items_calificados,
             "total_items": total_items,
+            "calificacion_global": InspeccionesController._calcular_calificacion_global(
+                puntaje_total, items_calificados
+            ),
         }
 
     @staticmethod
@@ -3314,6 +3331,7 @@ class InspeccionesController:
                 ],
                 "items_calificados": resumen_calculado["items_calificados"],
                 "total_items": resumen_calculado["total_items"],
+                "calificacion_global": resumen_calculado["calificacion_global"],
                 "hora_inicio": (
                     inspeccion.hora_inicio.strftime("%H:%M")
                     if inspeccion.hora_inicio
