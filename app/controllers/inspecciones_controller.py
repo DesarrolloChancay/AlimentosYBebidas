@@ -4753,15 +4753,15 @@ class InspeccionesController:
             if user_role not in [ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR, ROL_ADMINISTRADOR]:
                 return jsonify({"error": "No autorizado"}), 403
 
-            # Obtener inspecciones en_proceso de los últimos 7 días
-            fecha_limite = datetime.now().date() - timedelta(days=7)
+            # Solo mostrar inspecciones en_proceso del día actual
+            hoy = datetime.now().date()
 
             inspecciones = db.session.query(Inspeccion)\
                 .join(Establecimiento, Inspeccion.establecimiento_id == Establecimiento.id)\
                 .join(Usuario, Inspeccion.inspector_id == Usuario.id)\
                 .filter(
                     Inspeccion.estado == 'en_proceso',
-                    Inspeccion.fecha >= fecha_limite
+                    Inspeccion.fecha == hoy
                 ).order_by(Inspeccion.fecha.desc(), Inspeccion.created_at.desc()).all()
 
             inspecciones_data = []
@@ -5294,6 +5294,37 @@ class InspeccionesController:
 
         except Exception as e:
             raise Exception(f"Error obteniendo items detallados del establecimiento: {str(e)}")
+
+    @staticmethod
+    def descartar_inspeccion(inspeccion_id):
+        """Elimina una inspección en_proceso del día actual. Solo el dueño o admin."""
+        try:
+            user_role = session.get("user_role")
+            current_user_id = session.get("user_id")
+
+            inspeccion = Inspeccion.query.get(inspeccion_id)
+            if not inspeccion:
+                return jsonify({"error": "Inspección no encontrada"}), 404
+
+            if inspeccion.estado != 'en_proceso':
+                return jsonify({"error": "Solo se pueden descartar inspecciones en proceso"}), 400
+
+            hoy = datetime.now().date()
+            if inspeccion.fecha != hoy:
+                return jsonify({"error": "Solo se pueden descartar inspecciones del día actual"}), 400
+
+            if user_role != ROL_ADMINISTRADOR and inspeccion.inspector_id != current_user_id:
+                return jsonify({"error": "No tienes permiso para descartar esta inspección"}), 403
+
+            InspeccionDetalle.query.filter_by(inspeccion_id=inspeccion_id).delete()
+            db.session.delete(inspeccion)
+            db.session.commit()
+
+            return jsonify({"success": True, "message": "Inspección descartada"})
+
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": f"Error al descartar inspección: {str(e)}"}), 500
 
     @staticmethod
     def obtener_items_disponibles_para_establecimiento(establecimiento_id, query=None, plantilla_id=None):
