@@ -4121,6 +4121,21 @@ class InspeccionesController:
 
             cambios_plan_semanal = False
 
+            # Bulk query: cantidad de items calificados por inspección (evita N+1)
+            ids_periodo = [insp.id for insp in inspecciones_periodo]
+            items_por_inspeccion = {}
+            if ids_periodo:
+                conteos = (
+                    db.session.query(
+                        InspeccionDetalle.inspeccion_id,
+                        func.count(InspeccionDetalle.id)
+                    )
+                    .filter(InspeccionDetalle.inspeccion_id.in_(ids_periodo))
+                    .group_by(InspeccionDetalle.inspeccion_id)
+                    .all()
+                )
+                items_por_inspeccion = {insp_id: cnt for insp_id, cnt in conteos}
+
             for establecimiento in establecimientos:
                 nombre_sanitizado = (
                     establecimiento.nombre[:150]
@@ -4142,6 +4157,20 @@ class InspeccionesController:
                 promedio_calificacion = (
                     sum(calificaciones) / len(calificaciones) if calificaciones else 0
                 )
+
+                # Calificación de la inspección más reciente del establecimiento
+                insp_reciente = max(
+                    inspecciones_establecimiento,
+                    key=lambda i: (i.fecha, i.created_at),
+                    default=None
+                )
+                if insp_reciente and insp_reciente.puntaje_total is not None:
+                    items_calc = items_por_inspeccion.get(insp_reciente.id, 0)
+                    calificacion_reciente = InspeccionesController._calcular_calificacion_global(
+                        insp_reciente.puntaje_total, items_calc
+                    )
+                else:
+                    calificacion_reciente = None
 
                 if periodo_tipo == "mensual":
                     meta_periodo = 0
@@ -4184,6 +4213,7 @@ class InspeccionesController:
                     ),
                     "porcentaje_cumplimiento_meta": int(porcentaje_cumplimiento_meta),
                     "promedio_calificacion": int(promedio_calificacion),
+                    "calificacion_reciente": calificacion_reciente,
                     "estado": (
                         "completo"
                         if total_inspecciones >= meta_periodo
@@ -5294,6 +5324,19 @@ class InspeccionesController:
 
         except Exception as e:
             raise Exception(f"Error obteniendo items detallados del establecimiento: {str(e)}")
+
+    @staticmethod
+    def _calcular_calificacion_global(puntaje_total, items_calificados):
+        """Devuelve EXCELENTE/MUY BIEN/REGULAR/MALO según puntos extra sobre el mínimo."""
+        puntos_extra = max(0, round(puntaje_total) - items_calificados)
+        if puntos_extra == 0:
+            return "EXCELENTE"
+        elif puntos_extra <= 7:
+            return "MUY BIEN"
+        elif puntos_extra <= 15:
+            return "REGULAR"
+        else:
+            return "MALO"
 
     @staticmethod
     def descartar_inspeccion(inspeccion_id):

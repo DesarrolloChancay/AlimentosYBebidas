@@ -626,9 +626,17 @@ function actualizarVistaEstablecimientos(establecimientos) {
                     <div class="progress-bar bg-blue-500 h-2 rounded-full" style="width: ${est.porcentaje_cumplimiento_meta}%"></div>
                 </div>
                 
-                <div class="flex justify-between">
-                    <span class="text-slate-600 dark:text-slate-400">Promedio calificación:</span>
-                    <span class="font-semibold text-slate-800 dark:text-white">${est.promedio_calificacion}%</span>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-600 dark:text-slate-400">Calificación:</span>
+                    ${est.calificacion_reciente
+                        ? `<span class="px-2 py-0.5 rounded text-xs font-bold ${
+                            est.calificacion_reciente === 'EXCELENTE' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
+                            est.calificacion_reciente === 'MUY BIEN'  ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-300' :
+                            est.calificacion_reciente === 'REGULAR'   ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' :
+                                                                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                          }">${est.calificacion_reciente}</span>`
+                        : `<span class="text-slate-400 dark:text-slate-500 text-sm">Sin datos</span>`
+                    }
                 </div>
                 
                 ${est.dias_restantes > 0 ? `
