@@ -808,6 +808,17 @@ def retomar_inspeccion(inspeccion_id):
     return InspeccionesController.retomar_inspeccion(inspeccion_id)
 
 
+@inspeccion_bp.route("/api/inspecciones/<int:inspeccion_id>/descartar", methods=["DELETE"])
+@login_required
+@role_required([ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR, ROL_ADMINISTRADOR])
+def descartar_inspeccion(inspeccion_id):
+    """
+    Elimina una inspección en_proceso del día actual que no se necesita.
+    Solo el inspector dueño o un administrador pueden descartarla.
+    """
+    return InspeccionesController.descartar_inspeccion(inspeccion_id)
+
+
 # =========================
 # RUTAS CRUD PARA ESTABLECIMIENTOS
 # =========================

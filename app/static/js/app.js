@@ -4787,14 +4787,19 @@ function mostrarInterfazInspeccionesPendientes(inspecciones) {
                                 <i class="fa-solid fa-building"></i> ${inspeccion.establecimiento.nombre}
                             </h4>
                             <p class="text-sm text-gray-600 dark:text-gray-400">
-                                <i class="fa-solid fa-calendar-lines-pen"></i> ${inspeccion.fecha}
+                                <i class="fa-solid fa-calendar-lines-pen"></i> ${inspeccion.fecha}${inspeccion.hora_inicio ? ' · ' + inspeccion.hora_inicio : ''}
                             </p>
                             <p class="text-sm text-gray-600 dark:text-gray-400">
                                 <i class="fa-solid fa-user"></i> ${inspeccion.inspector_original.nombre}
                                 ${inspeccion.inspector_original.es_actual ? ' (Suya)' : ''}
                             </p>
                         </div>
-                        <div class="text-right">
+                        <div class="flex flex-col items-end gap-1">
+                            <button class="btn-descartar-inspeccion text-gray-400 hover:text-red-500 transition-colors p-1 -mt-1 -mr-1"
+                                    data-id="${inspeccion.id}"
+                                    title="Descartar inspección">
+                                <i class="fa-solid fa-xmark text-base"></i>
+                            </button>
                             <div class="text-sm font-medium ${inspeccion.progreso.porcentaje > 50 ? 'text-green-600' : 'text-yellow-600'}">
                                 ${inspeccion.progreso.porcentaje}% completo
                             </div>
@@ -4839,24 +4844,56 @@ function configurarEventosInspeccionesPendientes(inspecciones) {
         });
     }
 
+    // Botones X para descartar inspección
+    document.querySelectorAll('.btn-descartar-inspeccion').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const id = btn.getAttribute('data-id');
+            if (!confirm('¿Descartar esta inspección? Se eliminará y no podrá recuperarse.')) return;
+
+            try {
+                const res = await fetch(`/api/inspecciones/${id}/descartar`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    const card = document.querySelector(`.inspection-card[data-inspeccion-id="${id}"]`);
+                    if (card) card.remove();
+                    mostrarNotificacion('Inspección descartada', 'info');
+
+                    // Si no quedan cards, ocultar el panel completo
+                    const restantes = document.querySelectorAll('.inspection-card');
+                    if (restantes.length === 0) {
+                        ocultarInterfazInspeccionesPendientes();
+                    }
+                } else {
+                    mostrarNotificacion(data.error || 'No se pudo descartar', 'error');
+                }
+            } catch {
+                mostrarNotificacion('Error al descartar la inspección', 'error');
+            }
+        });
+    });
+
     // Cards de inspecciones - CORREGIR: usar getAttribute en lugar de dataset
     const cards = document.querySelectorAll('.inspection-card');
     console.log(`Cards de inspecciones encontradas: ${cards.length}`);
-    
+
     cards.forEach((card, index) => {
         // IMPORTANTE: HTML usa data-inspeccion-id (con guiones), no data-inspeccion-id (camelCase)
         // dataset.inspeccionId busca data-inspeccion-id, pero el HTML tiene data-inspeccion-id
         const inspeccionIdAttr = card.getAttribute('data-inspeccion-id');
         console.log(`Card ${index}: data-inspeccion-id = ${inspeccionIdAttr}`);
-        
+
         card.addEventListener('click', async (e) => {
+            // Ignorar clicks en el botón de descartar
+            if (e.target.closest('.btn-descartar-inspeccion')) return;
+
             console.log('Click en card de inspección');
             e.preventDefault();
             e.stopPropagation();
-            
+
             const inspeccionId = inspeccionIdAttr; // Puede ser string o número
             console.log('ID de inspección a retomar:', inspeccionId);
-            
+
             const inspeccion = inspecciones.find(i => String(i.id) === String(inspeccionId));
             console.log('Inspección encontrada:', inspeccion);
 

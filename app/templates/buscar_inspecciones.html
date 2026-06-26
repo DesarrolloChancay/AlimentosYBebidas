@@ -507,6 +507,13 @@ select:focus-visible {
 <script>
 // Mobile-first enhancements
 document.addEventListener('DOMContentLoaded', function() {
+    // Fecha de hoy por defecto en los filtros Desde y Hasta
+    const hoy = new Date().toISOString().split('T')[0];
+    const inputDesde = document.getElementById('filtro-fecha-desde');
+    const inputHasta = document.getElementById('filtro-fecha-hasta');
+    if (inputDesde && !inputDesde.value) inputDesde.value = hoy;
+    if (inputHasta && !inputHasta.value) inputHasta.value = hoy;
+
     // Toggle filtros en móvil
     const btnToggleFiltros = document.getElementById('btn-toggle-filtros');
     const seccionFiltros = document.getElementById('seccion-filtros');

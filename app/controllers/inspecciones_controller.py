@@ -2760,6 +2760,11 @@ class InspeccionesController:
                     {
                         "id": inspeccion.id,
                         "fecha": inspeccion.fecha.isoformat(),
+                        "hora_inicio": (
+                            inspeccion.hora_inicio.strftime("%H:%M")
+                            if inspeccion.hora_inicio
+                            else inspeccion.created_at.strftime("%H:%M")
+                        ),
                         "establecimiento": inspeccion.establecimiento.nombre,
                         "inspector": f"{inspeccion.inspector.nombre} {inspeccion.inspector.apellido or ''}".strip(),
                         "encargado": (
@@ -4134,6 +4139,21 @@ class InspeccionesController:
 
             cambios_plan_semanal = False
 
+            # Bulk query: cantidad de items calificados por inspección (evita N+1)
+            ids_periodo = [insp.id for insp in inspecciones_periodo]
+            items_por_inspeccion = {}
+            if ids_periodo:
+                conteos = (
+                    db.session.query(
+                        InspeccionDetalle.inspeccion_id,
+                        func.count(InspeccionDetalle.id)
+                    )
+                    .filter(InspeccionDetalle.inspeccion_id.in_(ids_periodo))
+                    .group_by(InspeccionDetalle.inspeccion_id)
+                    .all()
+                )
+                items_por_inspeccion = {insp_id: cnt for insp_id, cnt in conteos}
+
             for establecimiento in establecimientos:
                 nombre_sanitizado = (
                     establecimiento.nombre[:150]
@@ -4155,6 +4175,20 @@ class InspeccionesController:
                 promedio_calificacion = (
                     sum(calificaciones) / len(calificaciones) if calificaciones else 0
                 )
+
+                # Calificación de la inspección más reciente del establecimiento
+                insp_reciente = max(
+                    inspecciones_establecimiento,
+                    key=lambda i: (i.fecha, i.created_at),
+                    default=None
+                )
+                if insp_reciente and insp_reciente.puntaje_total is not None:
+                    items_calc = items_por_inspeccion.get(insp_reciente.id, 0)
+                    calificacion_reciente = InspeccionesController._calcular_calificacion_global(
+                        insp_reciente.puntaje_total, items_calc
+                    )
+                else:
+                    calificacion_reciente = None
 
                 if periodo_tipo == "mensual":
                     meta_periodo = 0
@@ -4197,6 +4231,7 @@ class InspeccionesController:
                     ),
                     "porcentaje_cumplimiento_meta": int(porcentaje_cumplimiento_meta),
                     "promedio_calificacion": int(promedio_calificacion),
+                    "calificacion_reciente": calificacion_reciente,
                     "estado": (
                         "completo"
                         if total_inspecciones >= meta_periodo
@@ -4766,15 +4801,15 @@ class InspeccionesController:
             if user_role not in [ROL_INSPECTOR, ROL_AYUDANTE_INSPECTOR, ROL_ADMINISTRADOR]:
                 return jsonify({"error": "No autorizado"}), 403
 
-            # Obtener inspecciones en_proceso de los últimos 7 días
-            fecha_limite = datetime.now().date() - timedelta(days=7)
+            # Solo mostrar inspecciones en_proceso del día actual
+            hoy = datetime.now().date()
 
             inspecciones = db.session.query(Inspeccion)\
                 .join(Establecimiento, Inspeccion.establecimiento_id == Establecimiento.id)\
                 .join(Usuario, Inspeccion.inspector_id == Usuario.id)\
                 .filter(
                     Inspeccion.estado == 'en_proceso',
-                    Inspeccion.fecha >= fecha_limite
+                    Inspeccion.fecha == hoy
                 ).order_by(Inspeccion.fecha.desc(), Inspeccion.created_at.desc()).all()
 
             inspecciones_data = []
@@ -4813,6 +4848,11 @@ class InspeccionesController:
                         'es_actual': es_propia
                     },
                     'fecha': inspeccion.fecha.strftime('%Y-%m-%d'),
+                    'hora_inicio': (
+                        inspeccion.hora_inicio.strftime('%H:%M')
+                        if inspeccion.hora_inicio
+                        else inspeccion.created_at.strftime('%H:%M')
+                    ),
                     'created_at': inspeccion.created_at.strftime('%Y-%m-%d %H:%M'),
                     'progreso': {
                         'completados': items_completados,
@@ -5302,6 +5342,50 @@ class InspeccionesController:
 
         except Exception as e:
             raise Exception(f"Error obteniendo items detallados del establecimiento: {str(e)}")
+
+    @staticmethod
+    def _calcular_calificacion_global(puntaje_total, items_calificados):
+        """Devuelve EXCELENTE/MUY BIEN/REGULAR/MALO según puntos extra sobre el mínimo."""
+        puntos_extra = max(0, round(puntaje_total) - items_calificados)
+        if puntos_extra == 0:
+            return "EXCELENTE"
+        elif puntos_extra <= 7:
+            return "MUY BIEN"
+        elif puntos_extra <= 15:
+            return "REGULAR"
+        else:
+            return "MALO"
+
+    @staticmethod
+    def descartar_inspeccion(inspeccion_id):
+        """Elimina una inspección en_proceso del día actual. Solo el dueño o admin."""
+        try:
+            user_role = session.get("user_role")
+            current_user_id = session.get("user_id")
+
+            inspeccion = Inspeccion.query.get(inspeccion_id)
+            if not inspeccion:
+                return jsonify({"error": "Inspección no encontrada"}), 404
+
+            if inspeccion.estado != 'en_proceso':
+                return jsonify({"error": "Solo se pueden descartar inspecciones en proceso"}), 400
+
+            hoy = datetime.now().date()
+            if inspeccion.fecha != hoy:
+                return jsonify({"error": "Solo se pueden descartar inspecciones del día actual"}), 400
+
+            if user_role != ROL_ADMINISTRADOR and inspeccion.inspector_id != current_user_id:
+                return jsonify({"error": "No tienes permiso para descartar esta inspección"}), 403
+
+            InspeccionDetalle.query.filter_by(inspeccion_id=inspeccion_id).delete()
+            db.session.delete(inspeccion)
+            db.session.commit()
+
+            return jsonify({"success": True, "message": "Inspección descartada"})
+
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": f"Error al descartar inspección: {str(e)}"}), 500
 
     @staticmethod
     def obtener_items_disponibles_para_establecimiento(establecimiento_id, query=None, plantilla_id=None):
