@@ -2094,6 +2094,33 @@ function formatearNumeroResumen(valor) {
     return Number.isInteger(numero) ? `${numero}` : numero.toFixed(1);
 }
 
+// Espejo de InspeccionesController._calcular_calificacion_global (inspecciones_controller.py)
+// Umbrales confirmados por Alfredo (llamada 10/07): Excelente 0-1, Muy bien 2-6, Regular 7-14, Malo >14.
+// Si hay algún crítico fallado, nunca puede salir Excelente ni Muy bien.
+function calcularCalificacionCualitativa(puntajeTotal, itemsCalificados, puntosCriticos) {
+    if (!itemsCalificados) return null;
+    const puntosExtra = Math.max(0, Math.round(puntajeTotal) - itemsCalificados);
+
+    if (puntosCriticos > 0) {
+        return puntosExtra <= 14 ? 'REGULAR' : 'MALO';
+    }
+
+    if (puntosExtra <= 1) return 'EXCELENTE';
+    if (puntosExtra <= 6) return 'MUY BIEN';
+    if (puntosExtra <= 14) return 'REGULAR';
+    return 'MALO';
+}
+
+function clasePorCalificacionCualitativa(calificacion) {
+    switch (calificacion) {
+        case 'EXCELENTE': return 'text-2xl font-bold text-green-600 dark:text-green-400';
+        case 'MUY BIEN': return 'text-2xl font-bold text-teal-600 dark:text-teal-400';
+        case 'REGULAR': return 'text-2xl font-bold text-yellow-600 dark:text-yellow-400';
+        case 'MALO': return 'text-2xl font-bold text-red-600 dark:text-red-400';
+        default: return 'text-2xl font-bold text-slate-800 dark:text-white';
+    }
+}
+
 // Función para actualizar el resumen basado en el total de TODOS los items
 function actualizarResumen() {
     // Los encargados NO deben calcular su propio resumen
@@ -2679,6 +2706,7 @@ function crearCategoriaHTML(categoria) {
                        data-item-id="${item.id}"
                        data-puntaje-maximo="${configuracionCalificacion.puntajeMaximo}"
                        data-riesgo="${item.riesgo}"
+                       data-codigo="${item.codigo}"
                        ${valor === 1 ? 'checked' : ''}
                        ${(userRole === 'Encargado' || userRole === 'Jefe de Establecimiento') ? 'disabled' : ''}>
                 <span class="text-lg font-bold text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mb-1">${valor}</span>
@@ -2693,9 +2721,11 @@ function crearCategoriaHTML(categoria) {
                     <div class="flex items-center space-x-3 mb-2 sm:mb-0">
                         <span class="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">${item.codigo}</span>
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${riesgoBadge[item.riesgo] || ''}">${item.riesgo}</span>
+                        <span class="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-slate-200 text-[10px] font-black leading-none text-slate-600 dark:bg-slate-600 dark:text-slate-200"
+                              title="El nivel de riesgo (Menor/Mayor/Crítico) solo clasifica la infracción para el Reglamento — no le da más o menos puntaje dentro del checklist. Menor y Mayor se califican igual (1=Excelente, 2=Bueno, 3=Regular); solo Crítico usa una escala distinta (1=Cumple, 8=No cumple).">?</span>
                     </div>
                     <div class="text-xs text-slate-500 dark:text-slate-400">
-                        ${descripcionEscala} · Tope de riesgo: <span class="font-semibold">${configuracionCalificacion.puntajeMaximo}</span>
+                        ${descripcionEscala} · Puntaje máximo de esta escala: <span class="font-semibold">${configuracionCalificacion.puntajeMaximo}</span>
                     </div>
                 </div>
 
@@ -2939,7 +2969,11 @@ function actualizarInterfazResumen() {
         puntajePromedio = puntajeTotal / itemsCalificados;
     }
 
-    if (puntajeActual) puntajeActual.textContent = formatearNumeroResumen(puntajeTotal);
+    if (puntajeActual) {
+        puntajeActual.textContent = formatearNumeroResumen(puntajeTotal);
+        const calificacion = calcularCalificacionCualitativa(puntajeTotal, itemsCalificados, puntosCriticos);
+        puntajeActual.className = clasePorCalificacionCualitativa(calificacion);
+    }
     if (puntajeMaximoEl) puntajeMaximoEl.textContent = formatearNumeroResumen(puntajePromedio);
     if (porcentajeEl) {
         porcentajeEl.textContent = porcentaje.toFixed(1) + '%';
@@ -2966,6 +3000,109 @@ function actualizarInterfazResumen() {
         barraProgreso.style.width = `${progresoPorcentaje}%`;
     }
 
+    const observadosEl = document.getElementById('items-observados-live');
+    if (observadosEl) {
+        const { observados } = obtenerDesgloseChecklistLive();
+        observadosEl.textContent = formatearNumeroResumen(observados.length);
+    }
+}
+
+// Recorre las preguntas ya contestadas en el checklist (en vivo, antes de guardar)
+// y arma las listas de críticos fallados / observados, igual que se hace en el backend
+// para la inspección ya guardada (detalle_inspeccion.html).
+function obtenerDesgloseChecklistLive() {
+    const criticos = [];
+    const observados = [];
+
+    document.querySelectorAll('input.radio-item:checked').forEach(radio => {
+        const rating = parseInt(radio.value, 10);
+        const riesgo = radio.dataset.riesgo;
+        const puntajeMaximo = parseInt(radio.dataset.puntajeMaximo, 10);
+        const codigo = radio.dataset.codigo || '';
+        const contenedor = radio.closest('.p-6');
+        const descripcionEl = contenedor ? contenedor.querySelector('p') : null;
+        const descripcion = descripcionEl ? descripcionEl.textContent.trim() : '';
+        const esCritico = riesgo === 'Crítico';
+        const etiquetas = esCritico ? { 1: 'Cumple', 8: 'No cumple' } : { 1: 'Excelente', 2: 'Bueno', 3: 'Regular' };
+        const porcentajePorRating = esCritico ? { 1: 100, 8: 0 } : { 1: 100, 2: 75, 3: 50 };
+
+        const item = {
+            codigo,
+            descripcion,
+            riesgo,
+            rating,
+            etiqueta: etiquetas[rating] || String(rating),
+            puntos_extra: rating - 1,
+            porcentaje: porcentajePorRating[rating] ?? 0,
+        };
+
+        if (esCritico && rating === puntajeMaximo) {
+            criticos.push(item);
+        } else if (!esCritico && rating !== 1) {
+            observados.push(item);
+        }
+    });
+
+    return { criticos, observados };
+}
+
+function renderListaItemsResumenLive(items) {
+    if (items.length === 0) {
+        return '<p class="text-sm text-slate-500 dark:text-slate-400">Ninguna pregunta bajó el puntaje — todo está en el mejor valor.</p>';
+    }
+    return items.map(item => `
+        <div class="flex items-start gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+            <span class="text-xs font-bold px-2 py-1 rounded ${item.riesgo === 'Crítico' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'}">
+                ${sanitizeText(item.codigo)}
+            </span>
+            <div class="flex-1">
+                <p class="text-sm font-medium text-slate-900 dark:text-white">${sanitizeText(item.descripcion)}</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${sanitizeText(item.riesgo)} · calificó: ${sanitizeText(item.etiqueta)} · +${item.puntos_extra} puntos</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Modal "¿por qué sale esto?" para el panel Resumen del checklist en vivo (antes de guardar)
+function abrirModalResumenLive(tipo) {
+    const modal = document.getElementById('modalResumenLive');
+    const titulo = document.getElementById('modalResumenLiveTitulo');
+    const contenido = document.getElementById('modalResumenLiveContenido');
+    if (!modal || !contenido) return;
+
+    const { criticos, observados } = obtenerDesgloseChecklistLive();
+    const resumen = (window.inspeccionEstado && window.inspeccionEstado.resumen) || {};
+    const base = Number(resumen.items_calificados ?? contarItemsCalificadosLocales() ?? 0) || 0;
+    const puntajeTotal = Math.round(Number(resumen.puntaje_total ?? 0)) || 0;
+    const extra = puntajeTotal - base;
+
+    let introHtml = '';
+    let items = [];
+
+    if (tipo === 'puntaje') {
+        titulo.textContent = `¿Por qué el Puntaje es ${puntajeTotal}?`;
+        introHtml = `<p class="text-sm text-slate-700 dark:text-slate-300 mb-3">La base perfecta es <strong>${base}</strong> (una por pregunta). Estas preguntas no salieron en el mejor valor y sumaron los <strong>${extra}</strong> puntos extra (${base} + ${extra} = ${puntajeTotal}):</p>`;
+        items = criticos.concat(observados);
+    } else if (tipo === 'riesgo_promedio') {
+        const promedio = base > 0 ? (puntajeTotal / base).toFixed(2) : 0;
+        titulo.textContent = `¿Por qué el Riesgo Promedio es ${promedio}?`;
+        introHtml = `<p class="text-sm text-slate-700 dark:text-slate-300 mb-3">Es el mismo Puntaje repartido entre las preguntas: ${puntajeTotal} ÷ ${base} = <strong>${promedio}</strong>. Estas preguntas subieron ese promedio:</p>`;
+        items = criticos.concat(observados);
+    } else if (tipo === 'criticos') {
+        titulo.textContent = 'Ítems críticos no conformes';
+        items = criticos;
+    } else if (tipo === 'observados') {
+        titulo.textContent = 'Ítems observados (mayores/menores sin puntaje máximo)';
+        items = observados;
+    }
+
+    contenido.innerHTML = introHtml + renderListaItemsResumenLive(items);
+    modal.classList.remove('hidden');
+}
+
+function cerrarModalResumenLive() {
+    const modal = document.getElementById('modalResumenLive');
+    if (modal) modal.classList.add('hidden');
 }
 
 // Función para cargar establecimiento y sus items si no están cargados

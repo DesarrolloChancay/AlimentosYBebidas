@@ -3290,6 +3290,35 @@ class InspeccionesController:
                 evaluaciones_unicas
             )
 
+            # Listas para los modales de "Críticos" y "Observados" (Bloque E, 10/07)
+            items_criticos_fallados = []
+            items_observados = []
+            puntos_extra_criticos = 0
+            puntos_extra_observados = 0
+            for evaluacion in evaluaciones_unicas:
+                detalle_item = evaluacion.get("detalle")
+                if not detalle_item or detalle_item.get("rating") is None:
+                    continue
+                rating = detalle_item["rating"]
+                riesgo = evaluacion.get("riesgo")
+                puntaje_minimo_item = evaluacion.get("puntaje_minimo") or 0
+                config_item = InspeccionesController._obtener_configuracion_calificacion(riesgo)
+                item_resumen = {
+                    "codigo": evaluacion.get("codigo"),
+                    "descripcion": evaluacion.get("descripcion"),
+                    "riesgo": riesgo,
+                    "rating": rating,
+                    "etiqueta": evaluacion.get("etiquetas_calificacion", {}).get(rating, str(rating)),
+                    "puntos_extra": rating - puntaje_minimo_item,
+                    "porcentaje": config_item["porcentaje_por_rating"].get(rating),
+                }
+                if riesgo == "Crítico" and rating == evaluacion.get("puntaje_maximo"):
+                    items_criticos_fallados.append(item_resumen)
+                    puntos_extra_criticos += rating - puntaje_minimo_item
+                elif riesgo != "Crítico" and rating != evaluacion.get("puntaje_minimo"):
+                    items_observados.append(item_resumen)
+                    puntos_extra_observados += rating - puntaje_minimo_item
+
             # Obtener evidencias
             evidencias = EvidenciaInspeccion.query.filter_by(
                 inspeccion_id=inspeccion_id
@@ -3319,6 +3348,16 @@ class InspeccionesController:
                 ],
                 "items_calificados": resumen_calculado["items_calificados"],
                 "total_items": resumen_calculado["total_items"],
+                "calificacion_cualitativa": InspeccionesController._calcular_calificacion_global(
+                    resumen_calculado["puntaje_total"],
+                    resumen_calculado["items_calificados"],
+                    resumen_calculado["puntos_criticos_perdidos"],
+                ),
+                "items_criticos_fallados": items_criticos_fallados,
+                "items_observados": items_observados,
+                "total_observados": len(items_observados),
+                "puntos_extra_criticos": puntos_extra_criticos,
+                "puntos_extra_observados": puntos_extra_observados,
                 "hora_inicio": (
                     inspeccion.hora_inicio.strftime("%H:%M")
                     if inspeccion.hora_inicio
@@ -4158,6 +4197,36 @@ class InspeccionesController:
                     sum(calificaciones) / len(calificaciones) if calificaciones else 0
                 )
 
+                # Detalle de cada inspección realizada en el periodo (para explicar "1/5", "20%", etc. en el dashboard)
+                inspecciones_realizadas_detalle = [
+                    {
+                        "id": insp.id,
+                        "fecha": insp.fecha.isoformat() if insp.fecha else None,
+                        "hora_inicio": (
+                            insp.hora_inicio.strftime("%H:%M")
+                            if insp.hora_inicio
+                            else None
+                        ),
+                        "puntaje_total": (
+                            round(insp.puntaje_total)
+                            if insp.puntaje_total is not None
+                            else None
+                        ),
+                        "calificacion": (
+                            InspeccionesController._calcular_calificacion_global(
+                                insp.puntaje_total,
+                                items_por_inspeccion.get(insp.id, 0),
+                                insp.puntos_criticos_perdidos or 0,
+                            )
+                            if insp.puntaje_total is not None
+                            else None
+                        ),
+                    }
+                    for insp in sorted(
+                        inspecciones_establecimiento, key=lambda i: (i.fecha, i.created_at)
+                    )
+                ]
+
                 # Calificación de la inspección más reciente del establecimiento
                 insp_reciente = max(
                     inspecciones_establecimiento,
@@ -4166,11 +4235,14 @@ class InspeccionesController:
                 )
                 if insp_reciente and insp_reciente.puntaje_total is not None:
                     items_calc = items_por_inspeccion.get(insp_reciente.id, 0)
+                    criticos_fallados = insp_reciente.puntos_criticos_perdidos or 0
                     calificacion_reciente = InspeccionesController._calcular_calificacion_global(
-                        insp_reciente.puntaje_total, items_calc
+                        insp_reciente.puntaje_total, items_calc, criticos_fallados
                     )
+                    puntaje_reciente = round(insp_reciente.puntaje_total)
                 else:
                     calificacion_reciente = None
+                    puntaje_reciente = None
 
                 if periodo_tipo == "mensual":
                     meta_periodo = 0
@@ -4214,6 +4286,9 @@ class InspeccionesController:
                     "porcentaje_cumplimiento_meta": int(porcentaje_cumplimiento_meta),
                     "promedio_calificacion": int(promedio_calificacion),
                     "calificacion_reciente": calificacion_reciente,
+                    "puntaje_reciente": puntaje_reciente,
+                    "inspeccion_reciente_id": insp_reciente.id if insp_reciente else None,
+                    "inspecciones_realizadas_detalle": inspecciones_realizadas_detalle,
                     "estado": (
                         "completo"
                         if total_inspecciones >= meta_periodo
@@ -5326,14 +5401,24 @@ class InspeccionesController:
             raise Exception(f"Error obteniendo items detallados del establecimiento: {str(e)}")
 
     @staticmethod
-    def _calcular_calificacion_global(puntaje_total, items_calificados):
-        """Devuelve EXCELENTE/MUY BIEN/REGULAR/MALO según puntos extra sobre el mínimo."""
+    def _calcular_calificacion_global(puntaje_total, items_calificados, criticos_fallados=0):
+        """Devuelve EXCELENTE/MUY BIEN/REGULAR/MALO según puntos extra sobre el mínimo.
+
+        Umbrales confirmados por Alfredo (llamada 10/07): Excelente 0-1, Muy bien 2-6,
+        Regular 7-14, Malo >14. Si hay algún ítem crítico fallado, nunca puede salir
+        Excelente ni Muy bien (bloqueo explícito, aunque un crítico fallado ya suma +7
+        y empuja a Regular/Malo por el umbral solo).
+        """
         puntos_extra = max(0, round(puntaje_total) - items_calificados)
-        if puntos_extra == 0:
+
+        if criticos_fallados > 0:
+            return "REGULAR" if puntos_extra <= 14 else "MALO"
+
+        if puntos_extra <= 1:
             return "EXCELENTE"
-        elif puntos_extra <= 7:
+        elif puntos_extra <= 6:
             return "MUY BIEN"
-        elif puntos_extra <= 15:
+        elif puntos_extra <= 14:
             return "REGULAR"
         else:
             return "MALO"

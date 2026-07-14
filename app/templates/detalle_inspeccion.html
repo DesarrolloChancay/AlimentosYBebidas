@@ -518,29 +518,36 @@
             <!-- Columna 1: Resumen de Calificación -->
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden print:shadow-none print:border-none print:rounded-none print:bg-white print:p-1">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 print:px-1 print:py-0 print:border-b print:border-gray-300">
-                    <div class="flex items-center space-x-3 print:space-x-1">
-                        <div class="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center print:w-4 print:h-4 print:rounded">
-                            <svg class="w-5 h-5 text-white print:w-3 print:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                            </svg>
+                    <div class="flex items-center justify-between print:space-x-1">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center print:w-4 print:h-4 print:rounded">
+                                <svg class="w-5 h-5 text-white print:w-3 print:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white print:text-xs print:font-bold">RESUMEN</h3>
                         </div>
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white print:text-xs print:font-bold">RESUMEN</h3>
+                        <button type="button" onclick="abrirModalExplicacionResumen()"
+                                class="print:hidden w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 text-xs font-bold"
+                                title="¿Qué significan estos números?">
+                            ?
+                        </button>
                     </div>
                 </div>
 
                 <div class="p-6 print:p-1">
-                    <!-- Estadísticas ultra compactas en 2x2 grid -->
-                    <div class="grid grid-cols-2 gap-2 mb-3 print:gap-0 print:mb-1">
-                        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 text-center print:p-1 print:rounded print:bg-white print:border print:border-gray-300">
-                            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1 print:text-sm print:mb-0 print:font-bold">
+                    <!-- Estadísticas ultra compactas en grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 print:gap-0 print:mb-1">
+                        <div onclick="abrirModalItemsInspeccion('puntaje')" class="cursor-pointer hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-700 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 text-center print:p-1 print:rounded print:bg-white print:border print:border-gray-300 print:pointer-events-none">
+                            <div class="text-2xl font-bold {% if inspeccion.calificacion_cualitativa == 'EXCELENTE' %}text-green-600 dark:text-green-400{% elif inspeccion.calificacion_cualitativa == 'MUY BIEN' %}text-teal-600 dark:text-teal-400{% elif inspeccion.calificacion_cualitativa == 'REGULAR' %}text-yellow-600 dark:text-yellow-400{% else %}text-red-600 dark:text-red-400{% endif %} mb-1 print:text-sm print:mb-0 print:font-bold">
                                 {{ (inspeccion.puntaje_total or 0) | sin_decimales }}
                             </div>
                             <div class="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide print:text-xs">
-                                Riesgo acumulado
+                                Puntaje
                             </div>
                         </div>
 
-                        <div class="bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 text-center print:p-1 print:rounded print:bg-white print:border print:border-gray-300">
+                        <div onclick="abrirModalItemsInspeccion('riesgo_promedio')" class="cursor-pointer hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-500 bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 text-center print:p-1 print:rounded print:bg-white print:border print:border-gray-300 print:pointer-events-none">
                             <div class="text-2xl font-bold text-gray-900 dark:text-white mb-1 print:text-sm print:mb-0 print:font-bold">
                                 {{ (inspeccion.puntaje_promedio_item or 0) | round(2) }}
                             </div>
@@ -549,7 +556,7 @@
                             </div>
                         </div>
 
-                        <div class="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 text-center print:p-1 print:rounded print:bg-white print:border print:border-gray-300">
+                        <div onclick="abrirModalItemsInspeccion('indice_sanitario')" class="cursor-pointer hover:ring-2 hover:ring-green-300 dark:hover:ring-green-700 bg-gradient-to-br from-emerald-50 to-green-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 text-center print:p-1 print:rounded print:bg-white print:border print:border-gray-300 print:pointer-events-none">
                             <div class="text-2xl font-bold {% if inspeccion.porcentaje_cumplimiento >= 85 %}text-green-600 dark:text-green-400{% elif inspeccion.porcentaje_cumplimiento >= 70 %}text-yellow-600 dark:text-yellow-400{% else %}text-red-600 dark:text-red-400{% endif %} mb-1 print:text-sm print:mb-0 print:font-bold">
                                 {{ (inspeccion.porcentaje_cumplimiento or 0) | sin_decimales }}%
                             </div>
@@ -558,12 +565,21 @@
                             </div>
                         </div>
 
-                        <div class="bg-gradient-to-br from-red-50 to-pink-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 text-center print:p-1 print:rounded print:bg-white print:border print:border-gray-300">
+                        <div onclick="abrirModalItemsInspeccion('criticos')" class="bg-gradient-to-br from-red-50 to-pink-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 text-center print:p-1 print:rounded print:bg-white print:border print:border-gray-300 {% if (inspeccion.puntos_criticos_perdidos or 0) > 0 %}cursor-pointer hover:ring-2 hover:ring-red-300 dark:hover:ring-red-700{% endif %} print:pointer-events-none">
                             <div class="text-2xl font-bold {% if (inspeccion.puntos_criticos_perdidos or 0) > 0 %}text-red-600 dark:text-red-400{% else %}text-green-600 dark:text-green-400{% endif %} mb-1 print:text-sm print:mb-0 print:font-bold">
                                 {{ (inspeccion.puntos_criticos_perdidos or 0) | sin_decimales }}
                             </div>
                             <div class="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide print:text-xs">
-                                Críticos no conformes
+                                Críticos
+                            </div>
+                        </div>
+
+                        <div onclick="abrirModalItemsInspeccion('observados')" class="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 text-center print:p-1 print:rounded print:bg-white print:border print:border-gray-300 {% if (inspeccion.total_observados or 0) > 0 %}cursor-pointer hover:ring-2 hover:ring-amber-300 dark:hover:ring-amber-700{% endif %} print:pointer-events-none">
+                            <div class="text-2xl font-bold {% if (inspeccion.total_observados or 0) > 0 %}text-amber-600 dark:text-amber-400{% else %}text-green-600 dark:text-green-400{% endif %} mb-1 print:text-sm print:mb-0 print:font-bold">
+                                {{ (inspeccion.total_observados or 0) | sin_decimales }}
+                            </div>
+                            <div class="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide print:text-xs">
+                                Observados
                             </div>
                         </div>
                     </div>
@@ -903,6 +919,70 @@
     </div>
 </div>
 
+<!-- Datos de items críticos/observados para el modal (Bloque E, 10/07) -->
+<script type="application/json" id="items-criticos-data">{{ inspeccion.items_criticos_fallados | default([]) | tojson }}</script>
+<script type="application/json" id="items-observados-data">{{ inspeccion.items_observados | default([]) | tojson }}</script>
+<script type="application/json" id="resumen-metricas-data">{{ {
+    "base": inspeccion.items_calificados or 0,
+    "puntaje_total": inspeccion.puntaje_total or 0,
+    "puntaje_promedio_item": inspeccion.puntaje_promedio_item or 0,
+    "porcentaje_cumplimiento": inspeccion.porcentaje_cumplimiento or 0,
+} | tojson }}</script>
+
+<!-- Modal de items críticos / observados -->
+<div id="modalItemsInspeccion" class="fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 id="modalItemsInspeccionTitulo" class="text-lg font-semibold text-gray-900 dark:text-white"></h3>
+            <button onclick="cerrarModalItemsInspeccion()" class="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div id="modalItemsInspeccionContenido" class="p-4 max-h-96 overflow-y-auto space-y-2"></div>
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700 text-right">
+            <button onclick="cerrarModalItemsInspeccion()" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de explicación de RESUMEN -->
+<div id="modalExplicacionResumen" class="fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-lg shadow-lg rounded-md bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">¿Qué significan estos números?</h3>
+            <button onclick="cerrarModalExplicacionResumen()" class="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="p-4 max-h-[28rem] overflow-y-auto space-y-3 text-sm text-gray-700 dark:text-gray-300">
+            <p><span class="font-semibold text-gray-900 dark:text-white">Puntaje:</span> total acumulado del checklist. La base perfecta es {{ inspeccion.items_calificados }} (una por cada pregunta). Mientras más bajo, mejor.</p>
+            <p><span class="font-semibold text-gray-900 dark:text-white">Riesgo promedio:</span> el mismo Puntaje dividido entre la cantidad de preguntas ({{ inspeccion.puntaje_total | sin_decimales }} ÷ {{ inspeccion.items_calificados }} = {{ inspeccion.puntaje_promedio_item }}).</p>
+            <p><span class="font-semibold text-gray-900 dark:text-white">Índice sanitario / Progreso:</span> promedio de cumplimiento por pregunta (Excelente=100%, Bueno=75%, Regular=50%, Crítico fallado=0%).</p>
+            <p><span class="font-semibold text-gray-900 dark:text-white">Críticos:</span> preguntas de riesgo Crítico que fallaron.</p>
+            <p><span class="font-semibold text-gray-900 dark:text-white">Observados:</span> preguntas Menor/Mayor que no salieron en el mejor valor.</p>
+            <div class="pt-3 border-t border-gray-200 dark:border-gray-700">
+                <p class="font-semibold text-gray-900 dark:text-white mb-1">En esta inspección:</p>
+                <p>{{ inspeccion.items_calificados }} (base perfecta) + {{ (inspeccion.puntaje_total - inspeccion.items_calificados) | sin_decimales }} puntos extra = {{ inspeccion.puntaje_total | sin_decimales }}</p>
+                <ul class="list-disc list-inside mt-1 space-y-0.5">
+                    <li>{{ inspeccion.puntos_criticos_perdidos or 0 }} crítico(s) fallado(s) &rarr; {{ inspeccion.puntos_extra_criticos or 0 }} puntos</li>
+                    <li>{{ inspeccion.total_observados or 0 }} observado(s) (Bueno/Regular) &rarr; {{ inspeccion.puntos_extra_observados or 0 }} puntos</li>
+                </ul>
+            </div>
+        </div>
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700 text-right">
+            <button onclick="cerrarModalExplicacionResumen()" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Modal de Generación de PDF -->
 <div id="modalPDF" class="fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 overflow-y-auto h-full w-full hidden z-50">
     <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-sm shadow-lg rounded-md bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
@@ -1177,6 +1257,107 @@ function cerrarModalPDF() {
     document.getElementById('modalPDF').classList.add('hidden');
 }
 
+function escapeHtmlModalItems(texto) {
+    const div = document.createElement('div');
+    div.textContent = texto ?? '';
+    return div.innerHTML;
+}
+
+// Modal de items críticos / observados (Bloque E, 10/07)
+// Extendido (13/07) para explicar Puntaje / Riesgo promedio / Índice sanitario con el detalle real de ítems
+function abrirModalItemsInspeccion(tipo) {
+    let items = [];
+    try {
+        items = JSON.parse((document.getElementById('items-criticos-data') || {}).textContent || '[]')
+            .map(i => ({ ...i, _origen: 'critico' }));
+        items = items.concat(
+            JSON.parse((document.getElementById('items-observados-data') || {}).textContent || '[]')
+                .map(i => ({ ...i, _origen: 'observado' }))
+        );
+    } catch (e) {
+        items = [];
+    }
+
+    let metricas = {};
+    try {
+        metricas = JSON.parse((document.getElementById('resumen-metricas-data') || {}).textContent || '{}');
+    } catch (e) {
+        metricas = {};
+    }
+
+    const titulo = document.getElementById('modalItemsInspeccionTitulo');
+    const contenido = document.getElementById('modalItemsInspeccionContenido');
+
+    if (tipo === 'criticos' || tipo === 'observados') {
+        const itemsFiltrados = items.filter(i => i._origen === (tipo === 'criticos' ? 'critico' : 'observado'));
+        titulo.textContent = tipo === 'criticos'
+            ? 'Ítems críticos no conformes'
+            : 'Ítems observados (mayores/menores sin puntaje máximo)';
+        contenido.innerHTML = renderListaItemsModal(itemsFiltrados, tipo);
+        document.getElementById('modalItemsInspeccion').classList.remove('hidden');
+        return;
+    }
+
+    const base = metricas.base ?? 0;
+    const puntajeTotal = Math.round(metricas.puntaje_total ?? 0);
+    const extra = puntajeTotal - base;
+    let introHtml = '';
+
+    if (tipo === 'puntaje') {
+        titulo.textContent = '¿Por qué el Puntaje es ' + puntajeTotal + '?';
+        introHtml = `<p class="text-sm text-gray-700 dark:text-gray-300 mb-3">La base perfecta es <strong>${base}</strong> (una por pregunta). Estas preguntas no salieron en el mejor valor y sumaron los <strong>${extra}</strong> puntos extra (${base} + ${extra} = ${puntajeTotal}):</p>`;
+    } else if (tipo === 'riesgo_promedio') {
+        titulo.textContent = '¿Por qué el Riesgo promedio es ' + (metricas.puntaje_promedio_item ?? 0) + '?';
+        introHtml = `<p class="text-sm text-gray-700 dark:text-gray-300 mb-3">Es el mismo Puntaje repartido entre las preguntas: ${puntajeTotal} ÷ ${base} = <strong>${metricas.puntaje_promedio_item ?? 0}</strong>. Estas preguntas son las que subieron ese promedio:</p>`;
+    } else if (tipo === 'indice_sanitario') {
+        titulo.textContent = '¿Por qué el Índice sanitario es ' + (metricas.porcentaje_cumplimiento ?? 0) + '%?';
+        introHtml = `<p class="text-sm text-gray-700 dark:text-gray-300 mb-3">Es el promedio del % de cada pregunta (Excelente=100%, Bueno=75%, Regular=50%, Crítico fallado=0%). Estas preguntas bajaron el promedio de ${base} preguntas a <strong>${metricas.porcentaje_cumplimiento ?? 0}%</strong>:</p>`;
+    }
+
+    contenido.innerHTML = introHtml + (items.length === 0
+        ? '<p class="text-sm text-gray-500 dark:text-gray-400">Ninguna pregunta bajó el puntaje — todo salió en el mejor valor.</p>'
+        : renderListaItemsModal(items, tipo));
+    document.getElementById('modalItemsInspeccion').classList.remove('hidden');
+}
+
+function renderListaItemsModal(items, tipo) {
+    if (items.length === 0) {
+        return '<p class="text-sm text-gray-500 dark:text-gray-400">No hay ítems que mostrar.</p>';
+    }
+    return items.map(item => {
+        const esCritico = item._origen === 'critico' || item.riesgo === 'Crítico';
+        let extra = '';
+        if (tipo === 'indice_sanitario') {
+            extra = `· aportó ${escapeHtmlModalItems(item.porcentaje)}%`;
+        } else if (tipo === 'puntaje' || tipo === 'riesgo_promedio') {
+            extra = `· +${escapeHtmlModalItems(item.puntos_extra)} puntos`;
+        }
+        return `
+            <div class="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
+                <span class="text-xs font-bold px-2 py-1 rounded ${esCritico ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'}">
+                    ${escapeHtmlModalItems(item.codigo)}
+                </span>
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">${escapeHtmlModalItems(item.descripcion)}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">${escapeHtmlModalItems(item.riesgo)} · calificó: ${escapeHtmlModalItems(item.etiqueta || item.rating)} ${extra}</p>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function cerrarModalItemsInspeccion() {
+    document.getElementById('modalItemsInspeccion').classList.add('hidden');
+}
+
+function abrirModalExplicacionResumen() {
+    document.getElementById('modalExplicacionResumen').classList.remove('hidden');
+}
+
+function cerrarModalExplicacionResumen() {
+    document.getElementById('modalExplicacionResumen').classList.add('hidden');
+}
+
 // Función para generar PDF directo (único método)
 async function generarPDFDirecto() {
 
@@ -1193,8 +1374,6 @@ async function generarPDFDirecto() {
         const establecimientoNombre = "{{ inspeccion.establecimiento.nombre }}".replace(/[^a-zA-Z0-9\s]/g, '').trim();
         const fechaInspeccion = "{{ inspeccion.fecha }}";
         const nombreArchivo = `${establecimientoNombre}_${fechaInspeccion}.pdf`;
-
-        );
 
         // Detectar dispositivo y usar método apropiado
         if (esDispositivoMovil()) {
@@ -1392,6 +1571,7 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         cerrarVistaPrevia();
         cerrarModalPDF();
+        cerrarModalItemsInspeccion();
     }
 });
 </script>

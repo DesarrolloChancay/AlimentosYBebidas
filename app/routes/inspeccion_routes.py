@@ -301,6 +301,28 @@ def api_detalle_inspeccion(inspeccion_id):
     return InspeccionesController.obtener_detalle_inspeccion(inspeccion_id)
 
 
+@inspeccion_bp.route("/api/inspecciones/<int:inspeccion_id>/resumen-calificacion")
+@login_required
+@role_required([ROL_INSPECTOR, ROL_ENCARGADO, ROL_ADMINISTRADOR, ROL_JEFE_ESTABLECIMIENTO])
+def api_resumen_calificacion_inspeccion(inspeccion_id):
+    """API liviana para explicar por qué salió tal puntaje/calificación (dashboard)"""
+    detalle, error = InspeccionesController.obtener_inspeccion_completa(
+        inspeccion_id, return_json=False
+    )
+    if error or not detalle:
+        return jsonify({"error": error or "Inspección no encontrada"}), 404
+
+    return jsonify({
+        "puntaje_total": detalle.get("puntaje_total"),
+        "items_calificados": detalle.get("items_calificados"),
+        "puntos_criticos_perdidos": detalle.get("puntos_criticos_perdidos"),
+        "puntos_extra_criticos": detalle.get("puntos_extra_criticos"),
+        "total_observados": detalle.get("total_observados"),
+        "puntos_extra_observados": detalle.get("puntos_extra_observados"),
+        "calificacion_cualitativa": detalle.get("calificacion_cualitativa"),
+    })
+
+
 @inspeccion_bp.route("/api/inspecciones/temporal", methods=["POST"])
 @login_required
 def guardar_inspeccion_temporal():
