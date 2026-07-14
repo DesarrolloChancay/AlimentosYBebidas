@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Personal mínimo requerido{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-6 lg:px-8 max-w-4xl mx-auto">
+    <div class="flex items-start justify-between gap-4 mb-2">
+        <h1 class="text-xl font-semibold text-slate-800 dark:text-white">Personal mínimo requerido</h1>
+        <a href="{{ url_for('registro_personal.nuevo') }}" class="flex-shrink-0 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">
+            Volver a Registro de Personal
+        </a>
+    </div>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">
+        Define cuántas personas se requieren como mínimo por rol y día de la semana, para cada establecimiento.
+        Si el establecimiento todavía no tiene configuración propia, se muestra la plantilla base como punto de partida.
+    </p>
+
+    <div class="mb-6 max-w-xs">
+        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1.5">Establecimiento</label>
+        <select id="config-establecimiento" class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl">
+            <option value="">-- Seleccione --</option>
+            {% for e in establecimientos %}
+            <option value="{{ e.id }}" {% if establecimiento_id_preseleccionado|string == e.id|string %}selected{% endif %}>{{ e.nombre }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    {% if establecimiento_id_preseleccionado %}
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="bg-orange-500 text-white">
+                    <th class="text-left p-2 whitespace-nowrap">Rol</th>
+                    {% for dia in dias %}
+                    <th class="p-2 text-center whitespace-nowrap">{{ dia }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for rol in roles %}
+                <tr class="border-t border-slate-200 dark:border-slate-700">
+                    <td class="p-2 font-semibold text-slate-700 dark:text-slate-200 bg-orange-50 dark:bg-slate-700/50 whitespace-nowrap">{{ rol }}</td>
+                    {% for dia_idx in range(7) %}
+                    {% set valor = minimos.get((rol, dia_idx), {"cantidad_minima": 0, "opcional": False}) %}
+                    <td class="p-2 text-center">
+                        <input type="number" min="0"
+                               class="fila-minimo w-14 text-center px-1 py-1 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700"
+                               data-rol="{{ rol }}" data-dia="{{ dia_idx }}" value="{{ valor.cantidad_minima }}">
+                        <label class="flex items-center justify-center gap-1 mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                            <input type="checkbox" class="check-opcional" data-rol="{{ rol }}" data-dia="{{ dia_idx }}" {% if valor.opcional %}checked{% endif %}>
+                            opcional
+                        </label>
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="flex justify-end mt-6">
+        <button type="button" id="btn-guardar-configuracion" class="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors">
+            Guardar configuración
+        </button>
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-400 italic">Selecciona un establecimiento para ver y editar su configuración.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/registro-personal-config.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Historial de Personal{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tabla-personal-form h2 {
+        background-color: #d97736;
+        color: white;
+        text-align: center;
+        padding: 10px;
+        margin-bottom: 0;
+        text-transform: uppercase;
+        font-size: 1.05rem;
+        letter-spacing: 0.03em;
+        border-radius: 0.75rem 0.75rem 0 0;
+    }
+    .tabla-personal-form table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .tabla-personal-form th,
+    .tabla-personal-form td {
+        border: 1px solid #e2e8f0;
+        padding: 10px;
+        text-align: left;
+        font-size: 0.9rem;
+    }
+    .dark .tabla-personal-form th,
+    .dark .tabla-personal-form td {
+        border-color: #334155;
+    }
+    .tabla-personal-form th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+    }
+    .dark .tabla-personal-form th {
+        background-color: #1e293b;
+        color: #e2e8f0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-6 lg:px-8 max-w-3xl mx-auto">
+    <div class="flex items-start justify-between gap-4 mb-2">
+        <h1 class="text-xl font-semibold text-slate-800 dark:text-white">Historial de personal</h1>
+        <a href="{{ url_for('registro_personal.nuevo') }}" class="flex-shrink-0 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">
+            + Nuevo registro
+        </a>
+    </div>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">
+        Solo lectura — para corregir un día ya guardado, usa el botón "Editar" de esa fila.
+    </p>
+
+    <form method="get" class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6 items-end">
+        <div class="sm:col-span-1">
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1.5">Establecimiento</label>
+            <select name="establecimiento_id" class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl">
+                <option value="">Todos</option>
+                {% for e in establecimientos %}
+                <option value="{{ e.id }}" {% if filtro_establecimiento_id|string == e.id|string %}selected{% endif %}>{{ e.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1.5">Desde</label>
+            <input type="date" name="desde" value="{{ filtro_desde }}" class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl">
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1.5">Hasta</label>
+            <input type="date" name="hasta" value="{{ filtro_hasta }}" class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl">
+        </div>
+        <div>
+            <button type="submit" class="w-full px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white text-sm font-medium rounded-xl">Filtrar</button>
+        </div>
+    </form>
+
+    <div class="tabla-personal-form bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 mb-6 overflow-hidden">
+        <h2>Días registrados</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Establecimiento</th>
+                    <th>Registrado por</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for registro in registros %}
+                <tr>
+                    <td>{{ registro.fecha.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ registro.establecimiento.nombre if registro.establecimiento else '—' }}</td>
+                    <td>{{ registro.registrador.nombre if registro.registrador else '—' }}</td>
+                    <td>
+                        <a href="{{ url_for('registro_personal.nuevo', establecimiento_id=registro.establecimiento_id, fecha=registro.fecha.strftime('%Y-%m-%d')) }}"
+                           class="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium">
+                            Editar
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center text-slate-400 dark:text-slate-500 italic py-6">
+                        Todavía no hay registros guardados con estos filtros.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
