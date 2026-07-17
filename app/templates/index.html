@@ -513,11 +513,11 @@
                     </div>
                     <div class="p-6 space-y-4">
                         <div class="grid grid-cols-2 gap-4">
-                            <div class="text-center p-3 bg-slate-50 dark:bg-slate-700 rounded-xl">
+                            <div onclick="abrirModalResumenLive('puntaje')" class="cursor-pointer hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-700 text-center p-3 bg-slate-50 dark:bg-slate-700 rounded-xl" title="Ver por qué sale este número">
                                 <div class="text-2xl font-bold text-slate-800 dark:text-white" id="puntaje-actual">0</div>
-                                <div class="text-xs text-slate-500 dark:text-slate-400">Riesgo Acumulado</div>
+                                <div class="text-xs text-slate-500 dark:text-slate-400">Puntaje</div>
                             </div>
-                            <div class="text-center p-3 bg-slate-50 dark:bg-slate-700 rounded-xl">
+                            <div onclick="abrirModalResumenLive('riesgo_promedio')" class="cursor-pointer hover:ring-2 hover:ring-slate-300 dark:hover:ring-slate-500 text-center p-3 bg-slate-50 dark:bg-slate-700 rounded-xl" title="Ver por qué sale este número">
                                 <div class="text-2xl font-bold text-slate-800 dark:text-white" id="puntaje-maximo">0</div>
                                 <div class="text-xs text-slate-500 dark:text-slate-400">Riesgo Promedio</div>
                             </div>
@@ -529,9 +529,14 @@
                                 <span class="font-bold text-lg text-blue-600" id="porcentaje-cumplimiento">0%</span>
                             </div>
 
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm text-slate-600 dark:text-slate-400">Críticos No Conformes</span>
+                            <div onclick="abrirModalResumenLive('criticos')" class="cursor-pointer hover:underline flex justify-between items-center" title="Ver qué preguntas fallaron">
+                                <span class="text-sm text-slate-600 dark:text-slate-400">Críticos</span>
                                 <span class="font-bold text-red-600" id="puntos-criticos">0</span>
+                            </div>
+
+                            <div onclick="abrirModalResumenLive('observados')" class="cursor-pointer hover:underline flex justify-between items-center" title="Ver qué preguntas no salieron en el mejor valor">
+                                <span class="text-sm text-slate-600 dark:text-slate-400">Observados</span>
+                                <span class="font-bold text-amber-600" id="items-observados-live">0</span>
                             </div>
 
                             <div class="flex justify-between items-center">
@@ -783,6 +788,26 @@
             {% endif %}
         </form>
     </main>
+
+    <!-- Modal "¿por qué sale esto?" para el Resumen del checklist en vivo (antes de guardar) -->
+    <div id="modalResumenLive" class="fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+            <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 id="modalResumenLiveTitulo" class="text-lg font-semibold text-slate-800 dark:text-white"></h3>
+                <button onclick="cerrarModalResumenLive()" class="text-slate-400 hover:text-slate-600 dark:text-slate-300 dark:hover:text-slate-100">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="modalResumenLiveContenido" class="p-4 max-h-96 overflow-y-auto space-y-2"></div>
+            <div class="p-4 border-t border-slate-200 dark:border-slate-700 text-right">
+                <button onclick="cerrarModalResumenLive()" class="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md hover:bg-slate-200 dark:hover:bg-slate-600">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div id="modal-firma-encargado-temporal"
          class="fixed inset-0 z-[120] hidden items-center justify-center p-4"

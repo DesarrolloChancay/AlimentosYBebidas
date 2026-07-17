@@ -26,12 +26,12 @@ from app.utils.security import safe_text, save_validated_upload_image
 reglamento_bp = Blueprint("reglamento", __name__, url_prefix="/reglamento")
 ROLES_GESTION_REGLAMENTO = {"Inspector", "Administrador"}
 RIESGOS_REGLAMENTO = {"Menor", "Mayor", "Crítico"}
-TIPOS_VALIDACION_REGLAMENTO = {"si_no", "numerico", "porcentaje"}
+TIPOS_VALIDACION_REGLAMENTO = {"si_no", "numerico", "porcentaje", "automatico_semanal"}
 TIPOS_VIGENCIA_REGLAMENTO = {"temporal", "permanente"}
 ALCANCES_ITEM_REGLAMENTO = {"global", "establecimiento", "reunion"}
 OPERADORES_VALIDOS = {"<", "<=", ">", ">=", "="}
 CATEGORIAS_REGLAMENTO = [
-    "Checklist (3 veces por semana)",
+    "Checklist (5 veces por semana)",
     "Satisfacción al cliente - Encuestas",
     "Incumplimientos Laborales",
     "Otros incumplimientos",
@@ -185,6 +185,65 @@ def _item_logica_inversa(item):
     if codigo == "A-19":
         return True
     return bool(getattr(item, "logica_inversa", False))
+
+
+def _calcular_calificacion_semanal_establecimiento(establecimiento_id, fecha_inicio, fecha_fin):
+    """Agrega todas las inspecciones completadas de un establecimiento en un rango de
+    fechas (puntaje_total, items_calificados, críticos) y calcula UNA calificación
+    cualitativa (EXCELENTE/MUY BIEN/REGULAR/MALO) para toda la semana, reutilizando la
+    misma fórmula del Bloque C (una inspección crítica fallada suma +7 igual que en un
+    solo checklist). Usado para automatizar A-01/A-02 del reglamento (Bloque F, 10/07)."""
+    from app.models.Inspecciones_models import InspeccionDetalle
+    from app.controllers.inspecciones_controller import InspeccionesController
+
+    inspecciones = Inspeccion.query.filter(
+        Inspeccion.establecimiento_id == establecimiento_id,
+        Inspeccion.estado == "completada",
+        Inspeccion.fecha >= fecha_inicio,
+        Inspeccion.fecha <= fecha_fin,
+    ).all()
+
+    if not inspecciones:
+        return None
+
+    ids_inspecciones = [insp.id for insp in inspecciones]
+    conteos = dict(
+        db.session.query(
+            InspeccionDetalle.inspeccion_id, db.func.count(InspeccionDetalle.id)
+        )
+        .filter(InspeccionDetalle.inspeccion_id.in_(ids_inspecciones))
+        .group_by(InspeccionDetalle.inspeccion_id)
+        .all()
+    )
+
+    puntaje_total_sum = sum(float(insp.puntaje_total or 0) for insp in inspecciones)
+    items_calificados_sum = sum(conteos.get(insp.id, 0) for insp in inspecciones)
+    criticos_sum = sum(int(insp.puntos_criticos_perdidos or 0) for insp in inspecciones)
+
+    calificacion = InspeccionesController._calcular_calificacion_global(
+        puntaje_total_sum, items_calificados_sum, criticos_sum
+    )
+
+    return {
+        "calificacion": calificacion,
+        "num_inspecciones": len(inspecciones),
+        "puntaje_total_sum": puntaje_total_sum,
+        "items_calificados_sum": items_calificados_sum,
+        "criticos_sum": criticos_sum,
+    }
+
+
+def _evaluar_item_automatico_semanal(codigo, calificacion_semanal):
+    """A-01 (Regular) y A-02 (Malo) son mutuamente excluyentes por construcción: una
+    calificación semanal solo puede ser una de las 4 etiquetas a la vez."""
+    codigo_norm = (codigo or "").strip().upper()
+    if not calificacion_semanal:
+        return True  # sin inspecciones completadas esa semana: no se sanciona sin datos
+    if codigo_norm == "A-01":
+        return calificacion_semanal != "REGULAR"
+    if codigo_norm == "A-02":
+        return calificacion_semanal != "MALO"
+    return True
 
 
 def _calcular_resumen_reunion_desde_evaluaciones(evaluaciones):
@@ -1126,6 +1185,7 @@ def dashboard():
             return render_template(
                 "reglamento/dashboard.html",
                 establecimiento=establecimiento,
+                establecimientos=establecimientos,
                 reuniones=reuniones,
                 total_reuniones=len(reuniones_totales),
                 pendientes_count=pendientes_count,
@@ -1307,10 +1367,25 @@ def ver_reunion(reunion_id):
                 "observacion": evaluacion.observacion or "",
             }
 
+        resultado_calificacion_semanal = None
+        if any(
+            (item.tipo_validacion or "si_no").strip().lower() == "automatico_semanal"
+            for item in items_reunion
+        ):
+            resultado_calificacion_semanal = _calcular_calificacion_semanal_establecimiento(
+                reunion.establecimiento_id, reunion.fecha_inicio_semana, reunion.fecha_fin_semana
+            )
+
         items_por_tipo = {}
         acuerdos_reunion = []
         for item in items_reunion:
             item.logica_inversa_efectiva = _item_logica_inversa(item)
+            if (item.tipo_validacion or "si_no").strip().lower() == "automatico_semanal":
+                item.resultado_automatico_semanal = resultado_calificacion_semanal
+                item.cumple_automatico_semanal = _evaluar_item_automatico_semanal(
+                    item.codigo,
+                    resultado_calificacion_semanal["calificacion"] if resultado_calificacion_semanal else None,
+                )
             item.categoria = _normalizar_categoria_reglamento(item.categoria, permitir_desconocida=True) or item.categoria
             if item.es_adicional:
                 acuerdos_reunion.append(item)
@@ -1505,7 +1580,21 @@ def guardar_evaluacion():
                 )
                 continue
 
-            if tipo_validacion in ["numerico", "porcentaje"]:
+            if tipo_validacion == "automatico_semanal":
+                resultado_semanal = _calcular_calificacion_semanal_establecimiento(
+                    reunion.establecimiento_id,
+                    reunion.fecha_inicio_semana,
+                    reunion.fecha_fin_semana,
+                )
+                calificacion_semanal = (
+                    resultado_semanal["calificacion"] if resultado_semanal else None
+                )
+                cumple = _evaluar_item_automatico_semanal(
+                    reunion_item.codigo, calificacion_semanal
+                )
+                incumplimiento = not cumple
+                valor_medido_limpio = None
+            elif tipo_validacion in ["numerico", "porcentaje"]:
                 if valor_medido in (None, ""):
                     errores_validacion.append(
                         f"{reunion_item.codigo}: debe ingresar un valor medido."

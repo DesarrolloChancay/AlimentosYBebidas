@@ -587,9 +587,7 @@ function actualizarResumenGeneral(resumen) {
 function actualizarVistaEstablecimientos(establecimientos) {
     const container = document.getElementById('vista-tarjetas');
     if (!container || !establecimientos) return;
-    const esMensual = dashboardData?.periodo?.tipo === 'mensual';
-    const etiquetaPendiente = esMensual ? 'días restantes en el mes' : 'días restantes en la semana';
-    
+
     const sanitizeTextSafe = (text) => {
         if (typeof sanitizeText === 'function') {
             return sanitizeText(text);
@@ -614,14 +612,18 @@ function actualizarVistaEstablecimientos(establecimientos) {
             <div class="space-y-3">
                 <div class="flex justify-between">
                     <span class="text-slate-600 dark:text-slate-400">Inspecciones realizadas:</span>
-                    <span class="font-semibold text-slate-800 dark:text-white">${est.inspecciones_realizadas}/${est.meta_periodo ?? est.meta_semanal}</span>
+                    <span onclick="mostrarExplicacionProgreso(${est.establecimiento_id})"
+                          class="cursor-pointer font-semibold text-slate-800 dark:text-white hover:underline"
+                          title="Ver por qué salió este número">${est.inspecciones_realizadas}/${est.meta_periodo ?? est.meta_semanal}</span>
                 </div>
-                
+
                 <div class="flex justify-between">
-                    <span class="text-slate-600 dark:text-slate-400">Cumplimiento de meta:</span>
-                    <span class="font-semibold text-slate-800 dark:text-white">${est.porcentaje_cumplimiento_meta}%</span>
+                    <span class="text-slate-600 dark:text-slate-400">Progreso de inspecciones:</span>
+                    <span onclick="mostrarExplicacionProgreso(${est.establecimiento_id})"
+                          class="cursor-pointer font-semibold text-slate-800 dark:text-white hover:underline"
+                          title="Ver por qué salió este número">${est.porcentaje_cumplimiento_meta}%</span>
                 </div>
-                
+
                 <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                     <div class="progress-bar bg-blue-500 h-2 rounded-full" style="width: ${est.porcentaje_cumplimiento_meta}%"></div>
                 </div>
@@ -629,24 +631,113 @@ function actualizarVistaEstablecimientos(establecimientos) {
                 <div class="flex justify-between items-center">
                     <span class="text-slate-600 dark:text-slate-400">Calificación:</span>
                     ${est.calificacion_reciente
-                        ? `<span class="px-2 py-0.5 rounded text-xs font-bold ${
-                            est.calificacion_reciente === 'EXCELENTE' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
-                            est.calificacion_reciente === 'MUY BIEN'  ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-300' :
-                            est.calificacion_reciente === 'REGULAR'   ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' :
-                                                                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
-                          }">${est.calificacion_reciente}</span>`
+                        ? `<span onclick="mostrarExplicacionCalificacion(${est.inspeccion_reciente_id}, '${sanitizeTextSafe(est.nombre)}')"
+                                class="cursor-pointer px-2 py-0.5 rounded text-xs font-bold hover:ring-2 hover:ring-offset-1 dark:ring-offset-slate-800 ${
+                            est.calificacion_reciente === 'EXCELENTE' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 hover:ring-green-300' :
+                            est.calificacion_reciente === 'MUY BIEN'  ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-300 hover:ring-teal-300' :
+                            est.calificacion_reciente === 'REGULAR'   ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 hover:ring-yellow-300' :
+                                                                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300 hover:ring-red-300'
+                          }" title="Ver por qué salió este número">${est.calificacion_reciente}${est.puntaje_reciente !== null && est.puntaje_reciente !== undefined ? ` (${est.puntaje_reciente})` : ''}</span>`
                         : `<span class="text-slate-400 dark:text-slate-500 text-sm">Sin datos</span>`
                     }
                 </div>
                 
-                ${est.dias_restantes > 0 ? `
+                ${est.inspecciones_pendientes > 0 ? `
                 <div class="text-sm text-slate-500 dark:text-slate-400">
-                    ${est.dias_restantes} ${etiquetaPendiente}
+                    ${est.inspecciones_pendientes} inspecciones por hacer
                 </div>
                 ` : ''}
             </div>
         </div>
     `).join('');
+}
+
+async function mostrarExplicacionCalificacion(inspeccionId, nombreEstablecimiento) {
+    const modal = document.getElementById('modalExplicacionCalificacion');
+    const titulo = document.getElementById('explicacionCalificacionTitulo');
+    const contenido = document.getElementById('explicacionCalificacionContenido');
+    if (!modal || !contenido) return;
+
+    titulo.textContent = `¿Por qué ${nombreEstablecimiento} salió este número?`;
+    contenido.innerHTML = '<p>Cargando...</p>';
+    modal.classList.remove('hidden');
+
+    if (!inspeccionId) {
+        contenido.innerHTML = '<p>No hay una inspección reciente para mostrar el detalle.</p>';
+        return;
+    }
+
+    try {
+        const respuesta = await fetch(`/api/inspecciones/${inspeccionId}/resumen-calificacion`);
+        const datos = await respuesta.json();
+        if (!respuesta.ok || datos.error) {
+            contenido.innerHTML = '<p>No se pudo cargar el detalle de esta inspección.</p>';
+            return;
+        }
+
+        const base = datos.items_calificados ?? 0;
+        const puntajeTotal = Math.round(datos.puntaje_total ?? 0);
+        const extra = puntajeTotal - base;
+        const criticos = datos.puntos_criticos_perdidos ?? 0;
+        const puntosCriticos = datos.puntos_extra_criticos ?? 0;
+        const observados = datos.total_observados ?? 0;
+        const puntosObservados = datos.puntos_extra_observados ?? 0;
+
+        contenido.innerHTML = `
+            <p>La base perfecta es <span class="font-semibold text-slate-800 dark:text-white">${base}</span> (una por cada pregunta del checklist) — mientras más bajo el puntaje, mejor.</p>
+            <p><span class="font-semibold text-slate-800 dark:text-white">${base} (base) + ${extra} puntos extra = ${puntajeTotal}</span></p>
+            <ul class="list-disc list-inside space-y-0.5">
+                <li>${criticos} crítico(s) fallado(s) &rarr; ${puntosCriticos} puntos</li>
+                <li>${observados} observado(s) (Bueno/Regular) &rarr; ${puntosObservados} puntos</li>
+            </ul>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Basado en la inspección más reciente de este restaurante. Para ver cuáles preguntas específicas fueron, entra al detalle de esa inspección.</p>
+        `;
+    } catch (e) {
+        contenido.innerHTML = '<p>No se pudo cargar el detalle de esta inspección.</p>';
+    }
+}
+
+function cerrarModalExplicacionCalificacion() {
+    const modal = document.getElementById('modalExplicacionCalificacion');
+    if (modal) modal.classList.add('hidden');
+}
+
+function mostrarExplicacionProgreso(establecimientoId) {
+    const modal = document.getElementById('modalExplicacionCalificacion');
+    const titulo = document.getElementById('explicacionCalificacionTitulo');
+    const contenido = document.getElementById('explicacionCalificacionContenido');
+    if (!modal || !contenido) return;
+
+    const est = (dashboardData && dashboardData.establecimientos || [])
+        .find(e => e.establecimiento_id === establecimientoId);
+    if (!est) {
+        titulo.textContent = '¿Por qué salió este número?';
+        contenido.innerHTML = '<p>No se encontró información de este establecimiento.</p>';
+        modal.classList.remove('hidden');
+        return;
+    }
+
+    const meta = est.meta_periodo ?? est.meta_semanal ?? 0;
+    const realizadas = est.inspecciones_realizadas ?? 0;
+    const pendientes = est.inspecciones_pendientes ?? Math.max(0, meta - realizadas);
+    const detalle = est.inspecciones_realizadas_detalle || [];
+
+    titulo.textContent = `¿Por qué ${est.nombre} tiene ${realizadas}/${meta} (${est.porcentaje_cumplimiento_meta}%)?`;
+
+    const listaHtml = detalle.length === 0
+        ? '<p class="text-sm text-slate-500 dark:text-slate-400">Todavía no se ha completado ninguna inspección en este periodo.</p>'
+        : `<ul class="list-disc list-inside space-y-0.5">${detalle.map(insp => `
+            <li>${insp.fecha ?? ''}${insp.hora_inicio ? ' ' + insp.hora_inicio : ''}${insp.calificacion ? ' — ' + insp.calificacion : ''}${insp.puntaje_total !== null && insp.puntaje_total !== undefined ? ' (' + insp.puntaje_total + ')' : ''}</li>
+        `).join('')}</ul>`;
+
+    contenido.innerHTML = `
+        <p>La meta de este periodo es <span class="font-semibold text-slate-800 dark:text-white">${meta}</span> inspecciones.</p>
+        <p><span class="font-semibold text-slate-800 dark:text-white">${realizadas}</span> ya se hicieron:</p>
+        ${listaHtml}
+        <p>Faltan <span class="font-semibold text-slate-800 dark:text-white">${pendientes}</span> por hacer.</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400 pt-1">El ${est.porcentaje_cumplimiento_meta}% sale de ${realizadas} ÷ ${meta} × 100.</p>
+    `;
+    modal.classList.remove('hidden');
 }
 
 // ===== GRÁFICOS =====

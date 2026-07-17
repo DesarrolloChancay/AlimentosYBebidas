@@ -10,6 +10,7 @@ from app.controllers.usuarios_controller import usuarios_bp
 from app.controllers.auth_controller import AuthController
 from app.controllers.admin_controller import admin_bp
 from app.controllers.reglamento_controller import reglamento_bp
+from app.controllers.registro_personal_controller import registro_personal_bp
 from app.utils.security import generate_csrf_token, refresh_csrf_token, register_security
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -61,7 +62,8 @@ def create_app():
     app.register_blueprint(usuarios_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(reglamento_bp)
-    
+    app.register_blueprint(registro_personal_bp)
+
     # Registrar filtros personalizados
     from app.template_filters import register_filters
     register_filters(app)
