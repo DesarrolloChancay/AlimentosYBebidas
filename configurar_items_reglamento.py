@@ -13,9 +13,6 @@ app = create_app()
 with app.app_context():
     # Items con lógica inversa (SI es malo, NO es bueno)
     items_logica_inversa = [
-        'A-01',  # Obtener calificación Regular (SI obtuve Regular = malo)
-        'A-02',  # Obtener calificación Mala (SI obtuve Mala = malo)
-        'A-03',  # Incumplir 2 veces (SI incumplí = malo)
         'A-04',  # Incumplir observaciones (SI incumplí = malo)
         'A-09',  # No entregar libro (SI no entregué = malo)
         'A-10',  # Quejas graves (SI hubo quejas = malo)
@@ -71,6 +68,9 @@ with app.app_context():
             'logica_inversa': False
         },
     }
+
+    # Items calculados a partir de los checklists completados de la semana.
+    items_automaticos = ['A-01', 'A-02', 'A-03']
     
     # Items con cumplimiento programado (lógica NORMAL: SI=bueno)
     items_normal = []
@@ -94,6 +94,13 @@ with app.app_context():
             item.operador_comparacion = config['operador_comparacion']
             item.logica_inversa = config['logica_inversa']
             print(f"  ✓ {codigo}: {config['tipo_validacion']} (umbral: {config['operador_comparacion']}{config['valor_umbral']})")
+
+    for codigo in items_automaticos:
+        item = ItemReglamentoRestaurante.query.filter_by(codigo=codigo).first()
+        if item:
+            item.tipo_validacion = 'automatico_semanal'
+            item.logica_inversa = True
+            print(f"  ✓ {codigo}: cálculo automático semanal")
     
     # Configurar items con lógica NORMAL (SI=bueno, NO=malo)
     for codigo in items_normal:

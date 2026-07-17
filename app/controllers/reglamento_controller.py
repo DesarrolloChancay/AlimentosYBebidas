@@ -18,6 +18,9 @@ from app.models.Inspecciones_models import (
     EvaluacionReglamento,
     Establecimiento,
     Inspeccion,
+    InspeccionDetalle,
+    ItemEvaluacionBase,
+    ItemEvaluacionEstablecimiento,
     ReunionItemReglamento,
 )
 from app.utils.auth_decorators import login_required
@@ -27,6 +30,7 @@ reglamento_bp = Blueprint("reglamento", __name__, url_prefix="/reglamento")
 ROLES_GESTION_REGLAMENTO = {"Inspector", "Administrador"}
 RIESGOS_REGLAMENTO = {"Menor", "Mayor", "Crítico"}
 TIPOS_VALIDACION_REGLAMENTO = {"si_no", "numerico", "porcentaje", "automatico_semanal"}
+CODIGOS_AUTOMATICOS_SEMANALES = {"A-01", "A-02", "A-03"}
 TIPOS_VIGENCIA_REGLAMENTO = {"temporal", "permanente"}
 ALCANCES_ITEM_REGLAMENTO = {"global", "establecimiento", "reunion"}
 OPERADORES_VALIDOS = {"<", "<=", ">", ">=", "="}
@@ -182,9 +186,23 @@ def _evaluar_condicion(valor, operador, umbral):
 
 def _item_logica_inversa(item):
     codigo = (getattr(item, "codigo", "") or "").strip().upper()
-    if codigo == "A-19":
+    if codigo == "A-19" or codigo in CODIGOS_AUTOMATICOS_SEMANALES:
         return True
     return bool(getattr(item, "logica_inversa", False))
+
+
+def _es_item_automatico_semanal(item):
+    codigo = (getattr(item, "codigo", "") or "").strip().upper()
+    return codigo in CODIGOS_AUTOMATICOS_SEMANALES
+
+
+def _contar_inspecciones_completadas(establecimiento_id, fecha_inicio, fecha_fin):
+    return Inspeccion.query.filter(
+        Inspeccion.establecimiento_id == establecimiento_id,
+        Inspeccion.estado == "completada",
+        Inspeccion.fecha >= fecha_inicio,
+        Inspeccion.fecha <= fecha_fin,
+    ).count()
 
 
 def _calcular_calificacion_semanal_establecimiento(establecimiento_id, fecha_inicio, fecha_fin):
@@ -233,10 +251,58 @@ def _calcular_calificacion_semanal_establecimiento(establecimiento_id, fecha_ini
     }
 
 
-def _evaluar_item_automatico_semanal(codigo, calificacion_semanal):
+def _calcular_reincidencias_semanales(establecimiento_id, fecha_inicio, fecha_fin):
+    """Detecta items del checklist que fallaron al menos dos veces durante la semana."""
+    detalles = (
+        db.session.query(
+            ItemEvaluacionBase.id,
+            InspeccionDetalle.rating,
+            ItemEvaluacionBase.riesgo,
+        )
+        .join(Inspeccion, InspeccionDetalle.inspeccion_id == Inspeccion.id)
+        .join(
+            ItemEvaluacionEstablecimiento,
+            InspeccionDetalle.item_establecimiento_id == ItemEvaluacionEstablecimiento.id,
+        )
+        .join(
+            ItemEvaluacionBase,
+            ItemEvaluacionEstablecimiento.item_base_id == ItemEvaluacionBase.id,
+        )
+        .filter(
+            Inspeccion.establecimiento_id == establecimiento_id,
+            Inspeccion.estado == "completada",
+            Inspeccion.fecha >= fecha_inicio,
+            Inspeccion.fecha <= fecha_fin,
+            InspeccionDetalle.rating.isnot(None),
+        )
+        .all()
+    )
+
+    incumplimientos_por_item = defaultdict(int)
+    for item_base_id, rating, riesgo in detalles:
+        es_incumplimiento = (
+            int(rating) == 8 if (riesgo or "").strip() == "Crítico" else int(rating) != 1
+        )
+        if es_incumplimiento:
+            incumplimientos_por_item[item_base_id] += 1
+
+    reincidentes = {
+        item_id: cantidad
+        for item_id, cantidad in incumplimientos_por_item.items()
+        if cantidad >= 2
+    }
+    return {
+        "items_reincidentes": len(reincidentes),
+        "incumplimientos_reincidentes": sum(reincidentes.values()),
+    }
+
+
+def _evaluar_item_automatico_semanal(codigo, calificacion_semanal, reincidencias=None):
     """A-01 (Regular) y A-02 (Malo) son mutuamente excluyentes por construcción: una
     calificación semanal solo puede ser una de las 4 etiquetas a la vez."""
     codigo_norm = (codigo or "").strip().upper()
+    if codigo_norm == "A-03":
+        return not bool((reincidencias or {}).get("items_reincidentes"))
     if not calificacion_semanal:
         return True  # sin inspecciones completadas esa semana: no se sanciona sin datos
     if codigo_norm == "A-01":
@@ -473,7 +539,11 @@ def _crear_snapshot_item_reunion(
         categoria=_normalizar_categoria_reglamento(item_base.categoria, permitir_desconocida=True) or item_base.categoria,
         riesgo=item_base.riesgo,
         puntaje=(item_base.puntaje or 0) if puntaje is None else puntaje,
-        tipo_validacion=(item_base.tipo_validacion or "si_no").strip().lower(),
+        tipo_validacion=(
+            "automatico_semanal"
+            if _es_item_automatico_semanal(item_base)
+            else (item_base.tipo_validacion or "si_no").strip().lower()
+        ),
         logica_inversa=_item_logica_inversa(item_base),
         valor_umbral=item_base.valor_umbral,
         operador_comparacion=item_base.operador_comparacion,
@@ -1260,9 +1330,12 @@ def crear_reunion():
 
         data = request.get_json(silent=True) or {}
         establecimiento_id = data.get("establecimiento_id")
+        periodo = str(data.get("periodo") or "semana_anterior").strip().lower()
 
         if not establecimiento_id:
             return jsonify({"error": "Establecimiento requerido"}), 400
+        if periodo not in {"semana_anterior", "semana_actual"}:
+            return jsonify({"error": "Periodo de evaluación inválido."}), 400
 
         _, error = _resolver_establecimiento_autorizado(establecimiento_id)
         if error:
@@ -1271,10 +1344,15 @@ def crear_reunion():
         hoy = datetime.now().date()
         dias_hasta_lunes_actual = hoy.weekday()
         lunes_actual = hoy - timedelta(days=dias_hasta_lunes_actual)
-        lunes_semana_anterior = lunes_actual - timedelta(days=7)
-        domingo_semana_anterior = lunes_semana_anterior + timedelta(days=6)
-        semana = lunes_semana_anterior.isocalendar()[1]
-        ano = lunes_semana_anterior.year
+        fecha_inicio_semana = (
+            lunes_actual - timedelta(days=7)
+            if periodo == "semana_anterior"
+            else lunes_actual
+        )
+        fecha_fin_semana = fecha_inicio_semana + timedelta(days=6)
+        semana_iso = fecha_inicio_semana.isocalendar()
+        semana = semana_iso.week
+        ano = semana_iso.year
 
         reunion_existente = ReglamentoRestaurante.query.filter_by(
             establecimiento_id=establecimiento_id, semana=semana, ano=ano
@@ -1290,20 +1368,17 @@ def crear_reunion():
                 409,
             )
 
-        inspecciones = Inspeccion.query.filter(
-            Inspeccion.establecimiento_id == establecimiento_id,
-            Inspeccion.fecha >= lunes_semana_anterior,
-            Inspeccion.fecha <= domingo_semana_anterior,
-            Inspeccion.estado == "completada",
-        ).count()
+        inspecciones = _contar_inspecciones_completadas(
+            establecimiento_id, fecha_inicio_semana, fecha_fin_semana
+        )
 
         nueva_reunion = ReglamentoRestaurante(
             establecimiento_id=establecimiento_id,
             semana=semana,
             ano=ano,
             fecha_reunion=hoy,
-            fecha_inicio_semana=lunes_semana_anterior,
-            fecha_fin_semana=domingo_semana_anterior,
+            fecha_inicio_semana=fecha_inicio_semana,
+            fecha_fin_semana=fecha_fin_semana,
             total_inspecciones=inspecciones,
             estado="pendiente",
         )
@@ -1318,7 +1393,7 @@ def crear_reunion():
                 "success": True,
                 "message": "Reunión creada exitosamente",
                 "reunion_id": nueva_reunion.id,
-                "semana_evaluada": f"Semana {semana} ({lunes_semana_anterior.strftime('%d/%m')} - {domingo_semana_anterior.strftime('%d/%m/%Y')})",
+                "semana_evaluada": f"Semana {semana} ({fecha_inicio_semana.strftime('%d/%m')} - {fecha_fin_semana.strftime('%d/%m/%Y')})",
             }
         )
 
@@ -1335,6 +1410,15 @@ def ver_reunion(reunion_id):
         reunion, error = _resolver_reunion_autorizada(reunion_id)
         if error:
             return error[0], error[1]
+
+        total_inspecciones_actual = _contar_inspecciones_completadas(
+            reunion.establecimiento_id,
+            reunion.fecha_inicio_semana,
+            reunion.fecha_fin_semana,
+        )
+        if reunion.total_inspecciones != total_inspecciones_actual:
+            reunion.total_inspecciones = total_inspecciones_actual
+            db.session.commit()
 
         items_reunion = _asegurar_items_reunion(reunion)
         items_reunion_por_base = {item.item_id: item for item in items_reunion}
@@ -1368,11 +1452,12 @@ def ver_reunion(reunion_id):
             }
 
         resultado_calificacion_semanal = None
-        if any(
-            (item.tipo_validacion or "si_no").strip().lower() == "automatico_semanal"
-            for item in items_reunion
-        ):
+        resultado_reincidencias_semanales = None
+        if any(_es_item_automatico_semanal(item) for item in items_reunion):
             resultado_calificacion_semanal = _calcular_calificacion_semanal_establecimiento(
+                reunion.establecimiento_id, reunion.fecha_inicio_semana, reunion.fecha_fin_semana
+            )
+            resultado_reincidencias_semanales = _calcular_reincidencias_semanales(
                 reunion.establecimiento_id, reunion.fecha_inicio_semana, reunion.fecha_fin_semana
             )
 
@@ -1380,11 +1465,17 @@ def ver_reunion(reunion_id):
         acuerdos_reunion = []
         for item in items_reunion:
             item.logica_inversa_efectiva = _item_logica_inversa(item)
-            if (item.tipo_validacion or "si_no").strip().lower() == "automatico_semanal":
-                item.resultado_automatico_semanal = resultado_calificacion_semanal
+            item.es_automatico_semanal = _es_item_automatico_semanal(item)
+            if item.es_automatico_semanal:
+                item.resultado_automatico_semanal = (
+                    resultado_reincidencias_semanales
+                    if item.codigo == "A-03"
+                    else resultado_calificacion_semanal
+                )
                 item.cumple_automatico_semanal = _evaluar_item_automatico_semanal(
                     item.codigo,
                     resultado_calificacion_semanal["calificacion"] if resultado_calificacion_semanal else None,
+                    resultado_reincidencias_semanales,
                 )
             item.categoria = _normalizar_categoria_reglamento(item.categoria, permitir_desconocida=True) or item.categoria
             if item.es_adicional:
@@ -1479,6 +1570,12 @@ def guardar_evaluacion():
                 409,
             )
 
+        reunion.total_inspecciones = _contar_inspecciones_completadas(
+            reunion.establecimiento_id,
+            reunion.fecha_inicio_semana,
+            reunion.fecha_fin_semana,
+        )
+
         if not isinstance(evaluaciones_data, list) or not evaluaciones_data:
             return jsonify({"error": "Debe enviar la configuración de la reunión."}), 400
 
@@ -1497,6 +1594,23 @@ def guardar_evaluacion():
         }
         if not items_reunion:
             return jsonify({"error": "No hay items configurados para esta reunión."}), 400
+
+        hay_items_automaticos = any(
+            _es_item_automatico_semanal(item) for item in items_reunion.values()
+        )
+        resultado_calificacion_semanal = None
+        resultado_reincidencias_semanales = None
+        if hay_items_automaticos:
+            resultado_calificacion_semanal = _calcular_calificacion_semanal_establecimiento(
+                reunion.establecimiento_id,
+                reunion.fecha_inicio_semana,
+                reunion.fecha_fin_semana,
+            )
+            resultado_reincidencias_semanales = _calcular_reincidencias_semanales(
+                reunion.establecimiento_id,
+                reunion.fecha_inicio_semana,
+                reunion.fecha_fin_semana,
+            )
 
         evaluaciones_limpias = []
         errores_validacion = []
@@ -1580,19 +1694,35 @@ def guardar_evaluacion():
                 )
                 continue
 
-            if tipo_validacion == "automatico_semanal":
-                resultado_semanal = _calcular_calificacion_semanal_establecimiento(
-                    reunion.establecimiento_id,
-                    reunion.fecha_inicio_semana,
-                    reunion.fecha_fin_semana,
+            if _es_item_automatico_semanal(reunion_item):
+                correccion_manual = _normalizar_booleano(
+                    eval_data.get("override_automatico")
                 )
-                calificacion_semanal = (
-                    resultado_semanal["calificacion"] if resultado_semanal else None
-                )
-                cumple = _evaluar_item_automatico_semanal(
-                    reunion_item.codigo, calificacion_semanal
-                )
-                incumplimiento = not cumple
+                if correccion_manual:
+                    estado = (eval_data.get("estado") or "").strip().lower()
+                    if estado not in {"cumple", "no_cumple"}:
+                        errores_validacion.append(
+                            f"{reunion_item.codigo}: debe seleccionar SI o NO para corregir el cálculo automático."
+                        )
+                        continue
+
+                    seleccion_si = estado == "cumple"
+                    cumple = (not logica_inversa and seleccion_si) or (
+                        logica_inversa and not seleccion_si
+                    )
+                    incumplimiento = not cumple
+                else:
+                    calificacion_semanal = (
+                        resultado_calificacion_semanal["calificacion"]
+                        if resultado_calificacion_semanal
+                        else None
+                    )
+                    cumple = _evaluar_item_automatico_semanal(
+                        reunion_item.codigo,
+                        calificacion_semanal,
+                        resultado_reincidencias_semanales,
+                    )
+                    incumplimiento = not cumple
                 valor_medido_limpio = None
             elif tipo_validacion in ["numerico", "porcentaje"]:
                 if valor_medido in (None, ""):
@@ -2182,10 +2312,9 @@ def subir_evidencia_reunion(reunion_id):
         if reunion.estado != "pendiente":
             return jsonify({"error": "No se puede subir evidencia a una reunión que ya está cerrada."}), 409
 
-        if "evidencia" not in request.files:
+        archivo = request.files.get("foto") or request.files.get("evidencia")
+        if not archivo:
             return jsonify({"error": "No se ha seleccionado ningún archivo para subir."}), 400
-
-        archivo = request.files["evidencia"]
         if archivo.filename == "":
             return jsonify({"error": "No se ha seleccionado ningún archivo para subir."}), 400
 
@@ -2230,6 +2359,17 @@ def subir_evidencia_reunion(reunion_id):
 
         evidencia_id = getattr(resultado_insert, "lastrowid", None)
         db.session.commit()
+        if not evidencia_id:
+            evidencia_id = db.session.execute(
+                text("""
+                    SELECT id
+                    FROM evidencias_reunion_reglamento
+                    WHERE reunion_id = :reunion_id AND filename = :filename
+                    ORDER BY id DESC
+                    LIMIT 1
+                """),
+                {"reunion_id": reunion.id, "filename": filename},
+            ).scalar()
         foto_url = (
             url_for("reglamento.ver_evidencia_reunion", evidencia_id=evidencia_id)
             if evidencia_id
@@ -2240,6 +2380,8 @@ def subir_evidencia_reunion(reunion_id):
             {
                 "success": True,
                 "message": "Evidencia subida correctamente.",
+                "evidencia_id": evidencia_id,
+                "filename": filename,
                 "foto": foto_url,
             }
         )
@@ -2248,3 +2390,58 @@ def subir_evidencia_reunion(reunion_id):
         db.session.rollback()
         current_app.logger.exception("Error subiendo evidencia para reunión de reglamento")
         return jsonify({"error": "Error interno al subir la evidencia."}), 500
+
+
+@reglamento_bp.route(
+    "/reunion/<int:reunion_id>/evidencias/<int:evidencia_id>", methods=["DELETE"]
+)
+@login_required
+def eliminar_evidencia_reunion(reunion_id, evidencia_id):
+    try:
+        if not _usuario_puede_gestionar_reglamento():
+            return jsonify({"error": "No autorizado para eliminar evidencias."}), 403
+
+        reunion, error = _resolver_reunion_autorizada(reunion_id)
+        if error:
+            return jsonify({"error": error[0]}), error[1]
+        if reunion.estado != "pendiente":
+            return jsonify({"error": "No se puede eliminar evidencia de una reunión cerrada."}), 409
+
+        evidencia = db.session.execute(
+            text("""
+                SELECT id, ruta_archivo
+                FROM evidencias_reunion_reglamento
+                WHERE id = :evidencia_id AND reunion_id = :reunion_id
+            """),
+            {"evidencia_id": evidencia_id, "reunion_id": reunion.id},
+        ).mappings().first()
+        if not evidencia:
+            return jsonify({"error": "La evidencia no existe en esta reunión."}), 404
+
+        ruta_relativa = (evidencia["ruta_archivo"] or "").replace("\\", "/").lstrip("/")
+        if ".." in ruta_relativa or not ruta_relativa.startswith("evidencias_reglamento/"):
+            return jsonify({"error": "Ruta de evidencia inválida."}), 403
+
+        base_dir = os.path.abspath(
+            os.path.join(current_app.root_path, "static", "evidencias_reglamento")
+        )
+        archivo_path = os.path.abspath(
+            os.path.join(current_app.root_path, "static", ruta_relativa)
+        )
+        if not archivo_path.startswith(base_dir + os.sep):
+            return jsonify({"error": "Ruta de evidencia inválida."}), 403
+
+        if os.path.exists(archivo_path):
+            os.remove(archivo_path)
+
+        db.session.execute(
+            text("DELETE FROM evidencias_reunion_reglamento WHERE id = :evidencia_id"),
+            {"evidencia_id": evidencia_id},
+        )
+        db.session.commit()
+        return jsonify({"success": True, "message": "Evidencia eliminada correctamente."})
+
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Error eliminando evidencia de reunión de reglamento")
+        return jsonify({"error": "Error interno al eliminar la evidencia."}), 500
