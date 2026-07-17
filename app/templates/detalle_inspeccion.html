@@ -584,6 +584,39 @@
                         </div>
                     </div>
 
+                    <!-- Calificación global -->
+                    {% set cal = inspeccion.calificacion_global %}
+                    {% if cal %}
+                    <div class="rounded-xl p-4 mb-3 print:p-1 print:rounded print:bg-white print:border print:border-gray-300
+                        {% if cal == 'EXCELENTE' %}bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20
+                        {% elif cal == 'MUY BIEN' %}bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20
+                        {% elif cal == 'REGULAR' %}bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20
+                        {% else %}bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20
+                        {% endif %}">
+                        <div class="flex items-center justify-between mb-1 print:mb-0">
+                            <span class="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide print:text-xs">CALIFICACIÓN</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400 print:text-xs">puntaje: {{ (inspeccion.puntaje_total or 0) | sin_decimales }}</span>
+                        </div>
+                        <div class="text-2xl font-bold print:text-sm print:font-bold
+                            {% if cal == 'EXCELENTE' %}text-green-600 dark:text-green-400
+                            {% elif cal == 'MUY BIEN' %}text-teal-600 dark:text-teal-400
+                            {% elif cal == 'REGULAR' %}text-yellow-600 dark:text-yellow-400
+                            {% else %}text-red-600 dark:text-red-400
+                            {% endif %}">
+                            {{ cal }}
+                        </div>
+                        <div class="mt-2 flex gap-2 text-xs text-gray-500 dark:text-gray-400 print:hidden">
+                            <span class="text-green-600 dark:text-green-400 font-medium">EXCELENTE: 52</span>
+                            <span>·</span>
+                            <span class="text-teal-600 dark:text-teal-400 font-medium">MUY BIEN: 53-59</span>
+                            <span>·</span>
+                            <span class="text-yellow-600 dark:text-yellow-400 font-medium">REGULAR: 60-67</span>
+                            <span>·</span>
+                            <span class="text-red-600 dark:text-red-400 font-medium">MALO: 68+</span>
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <!-- Barra de progreso mínima -->
                     <div class="bg-gray-100 dark:bg-gray-700 rounded-xl p-4 print:p-1 print:rounded print:bg-white print:border print:border-gray-300">
                         <div class="flex items-center justify-between mb-2 print:mb-0 print:flex print:flex-col print:items-start">
