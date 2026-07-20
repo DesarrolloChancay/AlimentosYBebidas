@@ -91,6 +91,152 @@
         border-color: #475569;
         color: #e2e8f0;
     }
+    .tag-input {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        min-height: 42px;
+        padding: 8px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        background: white;
+        cursor: text;
+        overflow: visible;
+    }
+    .dark .tag-input {
+        background: #1e293b;
+        border-color: #475569;
+    }
+    .tag-input.is-readonly {
+        cursor: default;
+        opacity: 0.9;
+    }
+    .tag-input:focus-within {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+    .tag-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        max-width: 100%;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        background: #ffedd5;
+        color: #9a3412;
+        font-size: 0.8rem;
+        font-weight: 500;
+        line-height: 1.4;
+        position: relative;
+        transition: box-shadow 0.15s ease, background 0.15s ease, padding 0.15s ease;
+    }
+    .dark .tag-chip {
+        background: #7c2d12;
+        color: #fed7aa;
+    }
+    .tag-chip-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        cursor: text;
+        padding: 1px 0;
+    }
+    .tag-chip.is-editing {
+        flex: 1 1 100%;
+        width: 100%;
+        max-width: 100%;
+        min-height: 42px;
+        padding: 6px 8px 6px 10px;
+        gap: 8px;
+        border-radius: 12px;
+        background: #fff7ed;
+        box-shadow: 0 0 0 2px #fb923c, 0 4px 14px rgba(249, 115, 22, 0.18);
+        z-index: 2;
+    }
+    .dark .tag-chip.is-editing {
+        background: #431407;
+        box-shadow: 0 0 0 2px #ea580c, 0 4px 14px rgba(234, 88, 12, 0.28);
+    }
+    .tag-chip-edit {
+        flex: 1 1 auto;
+        width: 100%;
+        min-width: 0;
+        min-height: 30px;
+        border: 1px solid #fdba74;
+        outline: none;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #9a3412;
+        font: inherit;
+        font-size: 0.875rem;
+        font-weight: 500;
+        line-height: 1.4;
+        padding: 6px 10px;
+        margin: 0;
+        box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+    }
+    .tag-chip-edit:focus {
+        border-color: #f97316;
+        box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+    }
+    .dark .tag-chip-edit {
+        background: #1e293b;
+        border-color: #ea580c;
+        color: #fed7aa;
+        box-shadow: none;
+    }
+    .dark .tag-chip-edit:focus {
+        border-color: #fb923c;
+        box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.25);
+    }
+    .tag-chip.is-editing .tag-chip-remove {
+        width: 28px;
+        height: 28px;
+        font-size: 1rem;
+        border-radius: 8px;
+        background: rgba(154, 52, 18, 0.08);
+    }
+    .dark .tag-chip.is-editing .tag-chip-remove {
+        background: rgba(254, 215, 170, 0.12);
+    }
+    .tag-chip-remove {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border: none;
+        border-radius: 9999px;
+        background: transparent;
+        color: inherit;
+        font-size: 0.85rem;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0;
+        flex-shrink: 0;
+    }
+    .tag-chip-remove:hover {
+        background: rgba(0, 0, 0, 0.1);
+    }
+    .dark .tag-chip-remove:hover {
+        background: rgba(255, 255, 255, 0.15);
+    }
+    .tag-input-field {
+        flex: 1 1 120px;
+        min-width: 120px;
+        border: none !important;
+        outline: none;
+        box-shadow: none !important;
+        padding: 2px 0 !important;
+        background: transparent !important;
+        font-size: 0.875rem;
+        color: inherit;
+    }
+    .tag-input-field:disabled {
+        cursor: default;
+    }
 </style>
 {% endblock %}
 
@@ -111,7 +257,7 @@
     </div>
     <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">
         Lunes a viernes usan la misma plantilla; sábado y domingo usan otra (con el menú del día),
-        también igual entre sí. Todos los campos son de texto libre.
+        también igual entre sí. Escribe un nombre y pulsa tecla Space o Enter para agregarlo como etiqueta.
     </p>
 
     {% if es_fecha_pasada %}
@@ -149,35 +295,67 @@
             <tbody id="registro-roles-container">
                 <tr data-rol="Encargado">
                     <td class="puesto-col">Encargado<span class="minimo-alerta" data-rol="Encargado"></span></td>
-                    <td><textarea rows="1" placeholder="Nombres. Ej: Wesly / Joselyn / Stiv (?)" {% if es_fecha_pasada %}readonly{% endif %}>{{ datos_guardados.get('Encargado', '') }}</textarea></td>
+                    <td>
+                        <div class="tag-input" data-initial="{{ datos_guardados.get('Encargado', '') }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ingresar nombres" {% if es_fecha_pasada %}disabled{% endif %}>
+                        </div>
+                    </td>
                 </tr>
                 <tr data-rol="Caja">
                     <td class="puesto-col">Caja<span class="minimo-alerta" data-rol="Caja"></span></td>
-                    <td><textarea rows="1" placeholder="Nombres. Ej: Wesly / Joselyn / Stiv (?)" {% if es_fecha_pasada %}readonly{% endif %}>{{ datos_guardados.get('Caja', '') }}</textarea></td>
+                    <td>
+                        <div class="tag-input" data-initial="{{ datos_guardados.get('Caja', '') }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ingresar nombres" {% if es_fecha_pasada %}disabled{% endif %}>
+                        </div>
+                    </td>
                 </tr>
                 <tr data-rol="Jalador">
                     <td class="puesto-col">Jalador (1) opcional<span class="minimo-alerta" data-rol="Jalador"></span></td>
-                    <td><textarea rows="1" placeholder="Nombres. Ej: Wesly / Joselyn / Stiv (?)" {% if es_fecha_pasada %}readonly{% endif %}>{{ datos_guardados.get('Jalador', '') }}</textarea></td>
+                    <td>
+                        <div class="tag-input" data-initial="{{ datos_guardados.get('Jalador', '') }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ingresar nombres" {% if es_fecha_pasada %}disabled{% endif %}>
+                        </div>
+                    </td>
                 </tr>
                 <tr data-rol="Mozos">
                     <td class="puesto-col">Mozos (3-4)<span class="minimo-alerta" data-rol="Mozos"></span></td>
-                    <td><textarea rows="1" placeholder="Nombres. Ej: Wesly / Joselyn / Stiv (?)" {% if es_fecha_pasada %}readonly{% endif %}>{{ datos_guardados.get('Mozos', '') }}</textarea></td>
+                    <td>
+                        <div class="tag-input" data-initial="{{ datos_guardados.get('Mozos', '') }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ingresar nombres" {% if es_fecha_pasada %}disabled{% endif %}>
+                        </div>
+                    </td>
                 </tr>
                 <tr data-rol="Cocina">
                     <td class="puesto-col">Cocina (3-4)<span class="minimo-alerta" data-rol="Cocina"></span></td>
-                    <td><textarea rows="1" placeholder="Ej: Fabian, Alberto" {% if es_fecha_pasada %}readonly{% endif %}>{{ datos_guardados.get('Cocina', '') }}</textarea></td>
+                    <td>
+                        <div class="tag-input" data-initial="{{ datos_guardados.get('Cocina', '') }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ingresar nombres" {% if es_fecha_pasada %}disabled{% endif %}>
+                        </div>
+                    </td>
                 </tr>
                 <tr data-rol="Cantante">
                     <td class="puesto-col">Cantante<span class="minimo-alerta" data-rol="Cantante"></span></td>
-                    <td><textarea rows="1" placeholder="X" {% if es_fecha_pasada %}readonly{% endif %}>{{ datos_guardados.get('Cantante', '') }}</textarea></td>
+                    <td>
+                        <div class="tag-input" data-initial="{{ datos_guardados.get('Cantante', '') }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ingresar nombres" {% if es_fecha_pasada %}disabled{% endif %}>
+                        </div>
+                    </td>
                 </tr>
                 <tr data-rol="Dueño">
                     <td class="puesto-col">Dueño<span class="minimo-alerta" data-rol="Dueño"></span></td>
-                    <td><textarea rows="1" placeholder="Ej: Silvio" {% if es_fecha_pasada %}readonly{% endif %}>{{ datos_guardados.get('Dueño', '') }}</textarea></td>
+                    <td>
+                        <div class="tag-input" data-initial="{{ datos_guardados.get('Dueño', '') }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ingresar nombres" {% if es_fecha_pasada %}disabled{% endif %}>
+                        </div>
+                    </td>
                 </tr>
                 <tr data-rol="Preventa">
                     <td class="puesto-col">Preventa (1)<span class="minimo-alerta" data-rol="Preventa"></span></td>
-                    <td><textarea rows="1" placeholder="Ej: Jean Pier" {% if es_fecha_pasada %}readonly{% endif %}>{{ datos_guardados.get('Preventa', '') }}</textarea></td>
+                    <td>
+                        <div class="tag-input" data-initial="{{ datos_guardados.get('Preventa', '') }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ingresar nombres" {% if es_fecha_pasada %}disabled{% endif %}>
+                        </div>
+                    </td>
                 </tr>
                 {% for libre in roles_libres %}
                 <tr data-rol-libre="true">
@@ -189,7 +367,11 @@
                             {% endif %}
                         </div>
                     </td>
-                    <td><textarea rows="1" placeholder="Nombres. Ej: Wesly / Joselyn / Stiv (?)" {% if es_fecha_pasada %}readonly{% endif %}>{{ libre.nombres }}</textarea></td>
+                    <td>
+                        <div class="tag-input" data-initial="{{ libre.nombres }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ingresar nombres" {% if es_fecha_pasada %}disabled{% endif %}>
+                        </div>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
