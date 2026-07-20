@@ -289,7 +289,12 @@
             <thead>
                 <tr>
                     <th class="text-left text-xs uppercase text-slate-500 dark:text-slate-400 p-2">Puesto / Detalle</th>
-                    <th class="text-left text-xs uppercase text-slate-500 dark:text-slate-400 p-2">Personal Asignado</th>
+                    <th class="text-left text-xs uppercase text-slate-500 dark:text-slate-400 p-2">Personal Asignado
+                    <br>
+                    <p class="text-[10px] md:normal-case italic">
+                        <i class="fa-solid fa-circle-info"></i> (La separación de los nombres son por doble espacio.)
+                    </p>
+                    </th>
                 </tr>
             </thead>
             <tbody id="registro-roles-container">
@@ -297,7 +302,7 @@
                     <td class="puesto-col">Encargado<span class="minimo-alerta" data-rol="Encargado"></span></td>
                     <td>
                         <div class="tag-input" data-initial="{{ datos_guardados.get('Encargado', '') }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
-                            <input type="text" class="tag-input-field" placeholder="Ej: Jean Pier + espacio" {% if es_fecha_pasada %}disabled{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ej: Jhon Doe" {% if es_fecha_pasada %}disabled{% endif %}>
                         </div>
                     </td>
                 </tr>
@@ -305,7 +310,7 @@
                     <td class="puesto-col">Caja<span class="minimo-alerta" data-rol="Caja"></span></td>
                     <td>
                         <div class="tag-input" data-initial="{{ datos_guardados.get('Caja', '') }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
-                            <input type="text" class="tag-input-field" placeholder="Ej: Jean Pier + espacio" {% if es_fecha_pasada %}disabled{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ej: Jhon Doe" {% if es_fecha_pasada %}disabled{% endif %}>
                         </div>
                     </td>
                 </tr>
@@ -313,7 +318,7 @@
                     <td class="puesto-col">Jalador (1) opcional<span class="minimo-alerta" data-rol="Jalador"></span></td>
                     <td>
                         <div class="tag-input" data-initial="{{ datos_guardados.get('Jalador', '') }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
-                            <input type="text" class="tag-input-field" placeholder="Ej: Jean Pier + espacio" {% if es_fecha_pasada %}disabled{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ej: Jhon Doe" {% if es_fecha_pasada %}disabled{% endif %}>
                         </div>
                     </td>
                 </tr>
@@ -321,7 +326,7 @@
                     <td class="puesto-col">Mozos (3-4)<span class="minimo-alerta" data-rol="Mozos"></span></td>
                     <td>
                         <div class="tag-input" data-initial="{{ datos_guardados.get('Mozos', '') }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
-                            <input type="text" class="tag-input-field" placeholder="Ej: Jean Pier + espacio" {% if es_fecha_pasada %}disabled{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ej: Jhon Doe" {% if es_fecha_pasada %}disabled{% endif %}>
                         </div>
                     </td>
                 </tr>
@@ -329,7 +334,7 @@
                     <td class="puesto-col">Cocina (3-4)<span class="minimo-alerta" data-rol="Cocina"></span></td>
                     <td>
                         <div class="tag-input" data-initial="{{ datos_guardados.get('Cocina', '') }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
-                            <input type="text" class="tag-input-field" placeholder="Ej: Jean Pier + espacio" {% if es_fecha_pasada %}disabled{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ej: Jhon Doe" {% if es_fecha_pasada %}disabled{% endif %}>
                         </div>
                     </td>
                 </tr>
@@ -337,7 +342,7 @@
                     <td class="puesto-col">Cantante<span class="minimo-alerta" data-rol="Cantante"></span></td>
                     <td>
                         <div class="tag-input" data-initial="{{ datos_guardados.get('Cantante', '') }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
-                            <input type="text" class="tag-input-field" placeholder="Ej: Jean Pier + espacio" {% if es_fecha_pasada %}disabled{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ej: Jhon Doe" {% if es_fecha_pasada %}disabled{% endif %}>
                         </div>
                     </td>
                 </tr>
@@ -345,7 +350,7 @@
                     <td class="puesto-col">Dueño<span class="minimo-alerta" data-rol="Dueño"></span></td>
                     <td>
                         <div class="tag-input" data-initial="{{ datos_guardados.get('Dueño', '') }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
-                            <input type="text" class="tag-input-field" placeholder="Ej: Jean Pier + espacio" {% if es_fecha_pasada %}disabled{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ej: Jhon Doe" {% if es_fecha_pasada %}disabled{% endif %}>
                         </div>
                     </td>
                 </tr>
@@ -353,7 +358,7 @@
                     <td class="puesto-col">Preventa (1)<span class="minimo-alerta" data-rol="Preventa"></span></td>
                     <td>
                         <div class="tag-input" data-initial="{{ datos_guardados.get('Preventa', '') }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
-                            <input type="text" class="tag-input-field" placeholder="Ej: Jean Pier + espacio" {% if es_fecha_pasada %}disabled{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ej: Jhon Doe" {% if es_fecha_pasada %}disabled{% endif %}>
                         </div>
                     </td>
                 </tr>
@@ -369,7 +374,7 @@
                     </td>
                     <td>
                         <div class="tag-input" data-initial="{{ libre.nombres }}" {% if es_fecha_pasada %}data-readonly="true"{% endif %}>
-                            <input type="text" class="tag-input-field" placeholder="Ej: Jean Pier + espacio" {% if es_fecha_pasada %}disabled{% endif %}>
+                            <input type="text" class="tag-input-field" placeholder="Ej: Jhon Doe" {% if es_fecha_pasada %}disabled{% endif %}>
                         </div>
                     </td>
                 </tr>

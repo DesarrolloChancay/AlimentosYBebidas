@@ -373,7 +373,7 @@ function crearFilaRolLibre(onTagsChange) {
         </td>
         <td>
             <div class="tag-input" data-initial="">
-                <input type="text" class="tag-input-field" placeholder="Ej: Jean Pier + espacio">
+                <input type="text" class="tag-input-field" placeholder="Ej: Jhon Doe">
             </div>
         </td>
     `;
