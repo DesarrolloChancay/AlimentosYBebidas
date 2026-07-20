@@ -239,11 +239,36 @@ function inicializarTagInput(tagInput, onChange) {
         });
 
         field.addEventListener('keydown', (event) => {
-            if (event.key === ' ' || event.key === 'Enter' || event.key === ',') {
+            if (event.key === 'Enter' || event.key === ',') {
                 event.preventDefault();
                 if (agregarNombreAlTagInput(tagInput, field.value)) {
                     field.value = '';
                 }
+                return;
+            }
+
+            // Confirmación por 2 espacios:
+            // - "Jean Pier" + espacio → cajita (1 espacio interno + 1 de cierre)
+            // - "Wesly" + espacio + espacio → cajita (nombre simple)
+            if (event.key === ' ') {
+                const valorActual = field.value;
+
+                if (!valorActual.trim()) {
+                    event.preventDefault();
+                    return;
+                }
+
+                const espaciosInternos = (valorActual.match(/ /g) || []).length;
+                const esEspacioDeCierre =
+                    valorActual.endsWith(' ') || espaciosInternos >= 1;
+
+                if (esEspacioDeCierre) {
+                    event.preventDefault();
+                    if (agregarNombreAlTagInput(tagInput, valorActual)) {
+                        field.value = '';
+                    }
+                }
+                // Primer espacio sobre una sola palabra: se deja pasar
                 return;
             }
 
@@ -348,7 +373,7 @@ function crearFilaRolLibre(onTagsChange) {
         </td>
         <td>
             <div class="tag-input" data-initial="">
-                <input type="text" class="tag-input-field" placeholder="Nombre + espacio">
+                <input type="text" class="tag-input-field" placeholder="Ej: Jean Pier + espacio">
             </div>
         </td>
     `;
