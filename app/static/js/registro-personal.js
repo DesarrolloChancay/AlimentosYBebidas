@@ -15,12 +15,284 @@ function leerMinimosDia() {
     }
 }
 
-function contarNombres(texto) {
-    if (!texto) return 0;
-    return texto
-        .split('/')
+function parsearNombres(texto) {
+    if (!texto) return [];
+    return String(texto)
+        .split(/[/|,]+/)
         .map((s) => s.trim())
-        .filter((s) => s.length > 0).length;
+        .filter((s) => s.length > 0);
+}
+
+function contarNombres(texto) {
+    return parsearNombres(texto).length;
+}
+
+function obtenerNombresDeCampo(fila) {
+    const tagInput = fila.querySelector('.tag-input');
+    if (tagInput) {
+        return obtenerNombresTagInput(tagInput);
+    }
+    const textarea = fila.querySelector('textarea');
+    return textarea ? textarea.value : '';
+}
+
+function obtenerNombresTagInput(tagInput) {
+    const chips = Array.from(tagInput.querySelectorAll('.tag-chip'))
+        .map((chip) => {
+            const edit = chip.querySelector('.tag-chip-edit');
+            if (edit) return edit.value.trim();
+            const label = chip.querySelector('.tag-chip-label');
+            return label ? label.textContent.trim() : (chip.dataset.value || '').trim();
+        })
+        .filter(Boolean);
+    const pendiente = tagInput.querySelector('.tag-input-field');
+    const valorPendiente = pendiente ? pendiente.value.trim() : '';
+    if (valorPendiente) {
+        chips.push(valorPendiente);
+    }
+    return chips.join(' / ');
+}
+
+function crearChip(nombre, readonly) {
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip';
+    chip.dataset.value = nombre;
+
+    const label = document.createElement('span');
+    label.className = 'tag-chip-label';
+    label.textContent = nombre;
+    label.title = readonly ? nombre : 'Clic para editar';
+    chip.appendChild(label);
+
+    if (!readonly) {
+        label.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            iniciarEdicionChip(chip);
+        });
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'tag-chip-remove';
+        removeBtn.setAttribute('aria-label', `Quitar ${nombre}`);
+        removeBtn.textContent = '×';
+        removeBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const container = chip.closest('.tag-input');
+            chip.remove();
+            if (container) {
+                container.dispatchEvent(new CustomEvent('tags:change', { bubbles: true }));
+            }
+        });
+        chip.appendChild(removeBtn);
+    }
+
+    return chip;
+}
+
+function nombresExistentesEnTagInput(tagInput, exceptChip) {
+    return Array.from(tagInput.querySelectorAll('.tag-chip'))
+        .filter((chip) => chip !== exceptChip)
+        .map((chip) => {
+            const label = chip.querySelector('.tag-chip-label');
+            return (label ? label.textContent : chip.dataset.value || '').trim().toLowerCase();
+        })
+        .filter(Boolean);
+}
+
+function iniciarEdicionChip(chip) {
+    if (!chip || chip.classList.contains('is-editing')) return;
+
+    const tagInput = chip.closest('.tag-input');
+    if (!tagInput || tagInput.dataset.readonly === 'true') return;
+
+    // Cierra otra edición abierta en el mismo campo
+    tagInput.querySelectorAll('.tag-chip.is-editing .tag-chip-edit').forEach((otro) => {
+        otro.blur();
+    });
+
+    const label = chip.querySelector('.tag-chip-label');
+    const removeBtn = chip.querySelector('.tag-chip-remove');
+    if (!label) return;
+
+    const valorOriginal = label.textContent.trim();
+    chip.classList.add('is-editing');
+
+    // Lleva el chip en edición al frente visual (última fila del wrap)
+    const field = tagInput.querySelector('.tag-input-field');
+    if (field) {
+        tagInput.insertBefore(chip, field);
+    }
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'tag-chip-edit';
+    input.value = valorOriginal;
+    input.setAttribute('aria-label', 'Editar nombre');
+    input.setAttribute('placeholder', 'Editar nombre…');
+    label.replaceWith(input);
+
+    const finalizar = (guardar) => {
+        if (!chip.classList.contains('is-editing')) return;
+
+        const nuevoValor = input.value.trim();
+        chip.classList.remove('is-editing');
+
+        if (!guardar || !nuevoValor) {
+            chip.remove();
+            tagInput.dispatchEvent(new CustomEvent('tags:change', { bubbles: true }));
+            return;
+        }
+
+        const duplicado = nombresExistentesEnTagInput(tagInput, chip).includes(nuevoValor.toLowerCase());
+        const valorFinal = duplicado ? valorOriginal : nuevoValor;
+
+        const nuevoLabel = document.createElement('span');
+        nuevoLabel.className = 'tag-chip-label';
+        nuevoLabel.textContent = valorFinal;
+        nuevoLabel.title = 'Clic para editar';
+        nuevoLabel.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            iniciarEdicionChip(chip);
+        });
+
+        input.replaceWith(nuevoLabel);
+        chip.dataset.value = valorFinal;
+        if (removeBtn) {
+            removeBtn.setAttribute('aria-label', `Quitar ${valorFinal}`);
+        }
+        tagInput.dispatchEvent(new CustomEvent('tags:change', { bubbles: true }));
+    };
+
+    input.addEventListener('keydown', (event) => {
+        // En edición, espacio forma parte del nombre; solo Enter confirma
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            event.stopPropagation();
+            finalizar(true);
+            return;
+        }
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            input.value = valorOriginal;
+            finalizar(true);
+            return;
+        }
+        event.stopPropagation();
+    });
+
+    input.addEventListener('blur', () => finalizar(true));
+    input.addEventListener('click', (event) => event.stopPropagation());
+    input.addEventListener('mousedown', (event) => event.stopPropagation());
+
+    requestAnimationFrame(() => {
+        chip.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        input.focus();
+        input.select();
+    });
+}
+
+function agregarNombreAlTagInput(tagInput, nombre) {
+    const limpio = (nombre || '').trim();
+    if (!limpio) return false;
+
+    const existentes = nombresExistentesEnTagInput(tagInput);
+    if (existentes.includes(limpio.toLowerCase())) {
+        return false;
+    }
+
+    const field = tagInput.querySelector('.tag-input-field');
+    const readonly = tagInput.dataset.readonly === 'true';
+    const chip = crearChip(limpio, readonly);
+    if (field) {
+        tagInput.insertBefore(chip, field);
+    } else {
+        tagInput.appendChild(chip);
+    }
+    tagInput.dispatchEvent(new CustomEvent('tags:change', { bubbles: true }));
+    return true;
+}
+
+function inicializarTagInput(tagInput, onChange) {
+    if (!tagInput || tagInput.dataset.ready === 'true') return;
+
+    const readonly = tagInput.dataset.readonly === 'true';
+    const field = tagInput.querySelector('.tag-input-field');
+    if (!field) return;
+
+    if (readonly) {
+        tagInput.classList.add('is-readonly');
+        field.disabled = true;
+    }
+
+    parsearNombres(tagInput.dataset.initial || '').forEach((nombre) => {
+        agregarNombreAlTagInput(tagInput, nombre);
+    });
+
+    if (!readonly) {
+        tagInput.addEventListener('click', (event) => {
+            if (event.target.closest('.tag-chip')) return;
+            field.focus();
+        });
+
+        field.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ',') {
+                event.preventDefault();
+                if (agregarNombreAlTagInput(tagInput, field.value)) {
+                    field.value = '';
+                }
+                return;
+            }
+
+            // Confirmación por 2 espacios:
+            // - "Jean Pier" + espacio → cajita (1 espacio interno + 1 de cierre)
+            // - "Wesly" + espacio + espacio → cajita (nombre simple)
+            if (event.key === ' ') {
+                const valorActual = field.value;
+
+                if (!valorActual.trim()) {
+                    event.preventDefault();
+                    return;
+                }
+
+                const espaciosInternos = (valorActual.match(/ /g) || []).length;
+                const esEspacioDeCierre =
+                    valorActual.endsWith(' ') || espaciosInternos >= 1;
+
+                if (esEspacioDeCierre) {
+                    event.preventDefault();
+                    if (agregarNombreAlTagInput(tagInput, valorActual)) {
+                        field.value = '';
+                    }
+                }
+                // Primer espacio sobre una sola palabra: se deja pasar
+                return;
+            }
+
+            if (event.key === 'Backspace' && !field.value) {
+                const chips = tagInput.querySelectorAll('.tag-chip:not(.is-editing)');
+                if (chips.length) {
+                    chips[chips.length - 1].remove();
+                    tagInput.dispatchEvent(new CustomEvent('tags:change', { bubbles: true }));
+                }
+            }
+        });
+
+        field.addEventListener('blur', () => {
+            if (agregarNombreAlTagInput(tagInput, field.value)) {
+                field.value = '';
+            }
+        });
+    }
+
+    if (typeof onChange === 'function') {
+        tagInput.addEventListener('tags:change', onChange);
+    }
+
+    tagInput.dataset.ready = 'true';
 }
 
 function actualizarAlertasMinimos(minimosDia) {
@@ -43,8 +315,7 @@ function actualizarAlertasMinimos(minimosDia) {
             return;
         }
 
-        const textarea = fila.querySelector('textarea');
-        const cantidadIngresada = contarNombres(textarea ? textarea.value : '');
+        const cantidadIngresada = contarNombres(obtenerNombresDeCampo(fila));
 
         if (cantidadIngresada < minimo.cantidad_minima) {
             const faltan = minimo.cantidad_minima - cantidadIngresada;
@@ -90,7 +361,7 @@ function irAFechaSeleccionada() {
     actualizarVistaSegunFecha();
 }
 
-function crearFilaRolLibre() {
+function crearFilaRolLibre(onTagsChange) {
     const tr = document.createElement('tr');
     tr.dataset.rolLibre = 'true';
     tr.innerHTML = `
@@ -100,9 +371,14 @@ function crearFilaRolLibre() {
                 <button type="button" class="text-xs text-red-500 hover:underline btn-quitar-rol flex-shrink-0">Quitar</button>
             </div>
         </td>
-        <td><textarea rows="1" placeholder="Nombres. Ej: Wesly / Joselyn / Stiv (?)"></textarea></td>
+        <td>
+            <div class="tag-input" data-initial="">
+                <input type="text" class="tag-input-field" placeholder="Ej: Jean Pier + espacio">
+            </div>
+        </td>
     `;
     tr.querySelector('.btn-quitar-rol').addEventListener('click', () => tr.remove());
+    inicializarTagInput(tr.querySelector('.tag-input'), onTagsChange);
     return tr;
 }
 
@@ -119,27 +395,25 @@ function recolectarRolesVisibles() {
 
     if (esFinDeSemana) {
         document.querySelectorAll('#tabla-fin-de-semana tr.puesto-input-row[data-rol]').forEach((fila) => {
-            const textarea = fila.querySelector('textarea');
             roles.push({
                 rol_nombre: fila.dataset.rol,
-                nombres: textarea ? textarea.value : '',
+                nombres: obtenerNombresDeCampo(fila),
                 es_rol_libre: false,
             });
         });
     } else {
         document.querySelectorAll('#registro-roles-container tr').forEach((fila) => {
-            const textarea = fila.querySelector('textarea');
             if (fila.dataset.rolLibre === 'true') {
-                const inputNombreRol = fila.querySelector('input[type="text"]');
+                const inputNombreRol = fila.querySelector('.puesto-col input[type="text"]');
                 roles.push({
                     rol_nombre: inputNombreRol ? inputNombreRol.value : '',
-                    nombres: textarea ? textarea.value : '',
+                    nombres: obtenerNombresDeCampo(fila),
                     es_rol_libre: true,
                 });
             } else if (fila.dataset.rol) {
                 roles.push({
                     rol_nombre: fila.dataset.rol,
-                    nombres: textarea ? textarea.value : '',
+                    nombres: obtenerNombresDeCampo(fila),
                     es_rol_libre: false,
                 });
             }
@@ -208,11 +482,22 @@ document.addEventListener('DOMContentLoaded', () => {
         estSelect.addEventListener('change', irAFechaSeleccionada);
     }
 
+    const minimosDia = leerMinimosDia();
+    const refrescarAlertas = () => actualizarAlertasMinimos(minimosDia);
+
+    document.querySelectorAll('#registro-roles-container .tag-input').forEach((tagInput) => {
+        inicializarTagInput(tagInput, refrescarAlertas);
+    });
+
+    document.querySelectorAll('.tabla-personal-form textarea').forEach((textarea) => {
+        textarea.addEventListener('input', refrescarAlertas);
+    });
+
     const btnAgregarRol = document.getElementById('btn-agregar-rol');
     const container = document.getElementById('registro-roles-container');
     if (btnAgregarRol && container) {
         btnAgregarRol.addEventListener('click', () => {
-            container.appendChild(crearFilaRolLibre());
+            container.appendChild(crearFilaRolLibre(refrescarAlertas));
         });
     }
     activarBotonesQuitarRol();
@@ -222,9 +507,5 @@ document.addEventListener('DOMContentLoaded', () => {
         btnGuardar.addEventListener('click', guardarRegistro);
     }
 
-    const minimosDia = leerMinimosDia();
-    document.querySelectorAll('.tabla-personal-form textarea').forEach((textarea) => {
-        textarea.addEventListener('input', () => actualizarAlertasMinimos(minimosDia));
-    });
     actualizarAlertasMinimos(minimosDia);
 });
