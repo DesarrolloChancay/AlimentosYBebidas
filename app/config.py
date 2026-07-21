@@ -41,6 +41,45 @@ def _get_csv_env(name):
         return items[0]
     return items
 
+
+def _parse_encuestas_survey_map(raw):
+    """Parsea mapa establecimiento AyB ↔ survey_id Encuestas.
+
+    Acepta JSON ({"silvia": 3, "2": 3}) o lista "silvia:3,2:3".
+    """
+    value = (raw or '').strip()
+    if not value:
+        return {}
+
+    mapping = {}
+    if value.startswith('{'):
+        try:
+            import json
+
+            parsed = json.loads(value)
+            if isinstance(parsed, dict):
+                for key, survey_id in parsed.items():
+                    try:
+                        mapping[str(key).strip().lower()] = int(survey_id)
+                    except (TypeError, ValueError):
+                        continue
+                return mapping
+        except Exception:
+            pass
+
+    for chunk in value.split(','):
+        parte = chunk.strip()
+        if not parte or ':' not in parte:
+            continue
+        key, survey_raw = parte.split(':', 1)
+        key = key.strip().lower()
+        try:
+            mapping[key] = int(survey_raw.strip())
+        except (TypeError, ValueError):
+            continue
+    return mapping
+
+
 class Config:
     # Entorno de ejecución
     FLASK_ENV = os.getenv('FLASK_ENV', 'development')
@@ -136,3 +175,13 @@ class Config:
     else:
         USE_RELOADER = True
         LOG_LEVEL = 'DEBUG'
+
+    # API Encuestas (métricas de cumplimiento para reglamento A-05..A-08)
+    ENCUESTAS_API_URL = (os.getenv('ENCUESTAS_API_URL') or '').rstrip('/')
+    ENCUESTAS_API_TOKEN = os.getenv('ENCUESTAS_API_TOKEN') or ''
+    ENCUESTAS_TIMEOUT_SECONDS = _get_int_env('ENCUESTAS_TIMEOUT_SECONDS', 15)
+    # Override opcional (vacío = solo match por nombre normalizado vía GET /surveys?status=active)
+    # Formato: "silvia:3,2:3" o JSON {"silvia":3,"2":3}
+    ENCUESTAS_SURVEY_MAP = _parse_encuestas_survey_map(
+        os.getenv('ENCUESTAS_SURVEY_MAP', '')
+    )
