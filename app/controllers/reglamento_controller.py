@@ -25,6 +25,13 @@ from app.models.Inspecciones_models import (
 )
 from app.utils.auth_decorators import login_required
 from app.utils.security import safe_text, save_validated_upload_image
+from app.services.encuestas_client import (
+    EncuestasAPIError,
+    METRICAS_REGLAMENTO_ENCUESTAS,
+    get_compliance_metrics,
+    mapear_metricas_a_items,
+    resolve_survey_id,
+)
 
 reglamento_bp = Blueprint("reglamento", __name__, url_prefix="/reglamento")
 ROLES_GESTION_REGLAMENTO = {"Inspector", "Administrador"}
@@ -1505,6 +1512,13 @@ def ver_reunion(reunion_id):
             reunion.evaluaciones
         )
 
+        # Auto-carga en frontend si hay credenciales; el survey_id se resuelve
+        # por nombre al llamar /encuestas-metricas (GET /surveys?status=active).
+        puede_cargar_encuestas = bool(
+            current_app.config.get("ENCUESTAS_API_URL")
+            and current_app.config.get("ENCUESTAS_API_TOKEN")
+        )
+
         evidencias_reunion = db.session.execute(
             text("""
                 SELECT id, filename, ruta_archivo, descripcion, uploaded_at
@@ -1529,6 +1543,8 @@ def ver_reunion(reunion_id):
             categorias_disponibles=CATEGORIAS_REGLAMENTO,
             items_reutilizables=items_reutilizables,
             items_reunion_editables=items_reunion_editables,
+            puede_cargar_encuestas=puede_cargar_encuestas,
+            encuestas_survey_id=None,
             alcances_creables=[
                 ("establecimiento", "Plantilla para este establecimiento"),
                 ("global", "Plantilla global"),
@@ -1540,6 +1556,145 @@ def ver_reunion(reunion_id):
     except Exception:
         current_app.logger.exception("Error cargando detalle de reunión de reglamento")
         return "Error interno del módulo de reglamento.", 500
+
+
+def _http_status_error_encuestas(api_err):
+    """No reenviar 401/403 de Encuestas: el frontend los trata como sesión AyB expirada."""
+    status = api_err.status_code or 502
+    if status in (401, 403):
+        return 502
+    if status < 400 or status > 599:
+        return 502
+    return status
+
+
+@reglamento_bp.route("/reunion/<int:reunion_id>/encuestas-metricas", methods=["GET"])
+@login_required
+def cargar_metricas_encuestas(reunion_id):
+    """
+    Consume Encuestas compliance-metrics y mapea A-05..A-08 → valor_medido.
+
+    Prueba manual:
+      Encuestas en :8000, AyB local, reunión Silvia semana 2026-07-14..20
+      GET /reglamento/reunion/<id>/encuestas-metricas
+    """
+    try:
+        if not _usuario_puede_gestionar_reglamento():
+            return jsonify({"error": "No autorizado para cargar métricas de encuestas."}), 403
+
+        reunion, error = _resolver_reunion_autorizada(reunion_id)
+        if error:
+            return jsonify({"error": error[0]}), error[1]
+
+        if reunion.estado != "pendiente":
+            return (
+                jsonify(
+                    {
+                        "error": "La reunión ya está cerrada; no se pueden cargar métricas."
+                    }
+                ),
+                409,
+            )
+
+        try:
+            survey_id = resolve_survey_id(reunion.establecimiento)
+        except EncuestasAPIError as api_err:
+            return jsonify({"error": api_err.message}), _http_status_error_encuestas(api_err)
+
+        if not survey_id:
+            nombre = (reunion.establecimiento.nombre if reunion.establecimiento else "") or ""
+            return (
+                jsonify(
+                    {
+                        "error": (
+                            f"No se encontró encuesta activa en Encuestas que coincida "
+                            f"con el establecimiento «{nombre}». "
+                            "Revisa que el title (ej. «Restaurante Silvia») coincida "
+                            "con el nombre AyB tras normalizar, y que status=active."
+                        )
+                    }
+                ),
+                404,
+            )
+
+        week_start = reunion.fecha_inicio_semana.strftime("%Y-%m-%d")
+        week_end = reunion.fecha_fin_semana.strftime("%Y-%m-%d")
+
+        try:
+            metrics = get_compliance_metrics(survey_id, week_start, week_end)
+        except EncuestasAPIError as api_err:
+            return jsonify({"error": api_err.message}), _http_status_error_encuestas(api_err)
+
+        mapeo = mapear_metricas_a_items(metrics)
+        items_reunion = _asegurar_items_reunion(reunion)
+
+        valores = []
+        avisos = []
+        for item in items_reunion:
+            codigo = (item.codigo or "").strip().upper()
+            if codigo not in METRICAS_REGLAMENTO_ENCUESTAS:
+                continue
+            info = mapeo.get(codigo) or {}
+            if info.get("sin_datos"):
+                avisos.append(
+                    f"{codigo}: sin datos esa semana ({info.get('campo')})."
+                )
+                valores.append(
+                    {
+                        "reunion_item_id": item.id,
+                        "codigo": codigo,
+                        "campo": info.get("campo"),
+                        "valor": None,
+                        "sin_datos": True,
+                    }
+                )
+                continue
+
+            valores.append(
+                {
+                    "reunion_item_id": item.id,
+                    "codigo": codigo,
+                    "campo": info.get("campo"),
+                    "valor": info.get("valor"),
+                    "sin_datos": False,
+                }
+            )
+
+        if not valores:
+            return (
+                jsonify(
+                    {
+                        "error": (
+                            "La reunión no tiene ítems A-05…A-08 activos para rellenar."
+                        )
+                    }
+                ),
+                404,
+            )
+
+        return jsonify(
+            {
+                "success": True,
+                "survey_id": survey_id,
+                "week_start": week_start,
+                "week_end": week_end,
+                "metrics": metrics,
+                "valores": valores,
+                "avisos": avisos,
+                "message": (
+                    "Métricas cargadas desde Encuestas."
+                    if not avisos
+                    else "Métricas cargadas con avisos (algunos % sin datos)."
+                ),
+            }
+        )
+
+    except Exception:
+        current_app.logger.exception(
+            "Error cargando métricas de encuestas para reunión %s", reunion_id
+        )
+        return jsonify({"error": "Error interno al cargar métricas de Encuestas."}), 500
+
 
 @reglamento_bp.route("/guardar-evaluacion", methods=["POST"])
 @login_required

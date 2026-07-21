@@ -1231,6 +1231,57 @@ document.addEventListener('DOMContentLoaded', function () {
         actualizarInputNumerico(itemId);
     });
 
+    async function cargarMetricasDesdeEncuestas(reunionId) {
+        if (soloLectura || !reunionId) return;
+
+        try {
+            const response = await fetch(`/reglamento/reunion/${reunionId}/encuestas-metricas`, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json' },
+            });
+            const data = await response.json().catch(() => ({}));
+
+            // Errores de Encuestas (502/404/etc.) no deben tratarse como sesión AyB
+            if (!response.ok || !data.success) {
+                if (typeof mostrarNotificacion === 'function') {
+                    mostrarNotificacion(
+                        data.error || 'No se pudieron cargar las métricas de Encuestas.',
+                        'warning'
+                    );
+                }
+                return;
+            }
+
+            (data.valores || []).forEach((item) => {
+                const input = document.querySelector(
+                    `.input-valor-medido[data-item-id="${item.reunion_item_id}"]`
+                );
+                if (!input) return;
+
+                if (item.sin_datos || item.valor === null || item.valor === undefined) {
+                    return;
+                }
+
+                input.value = String(item.valor);
+                actualizarInputNumerico(item.reunion_item_id);
+            });
+
+            const avisos = data.avisos || [];
+            if (avisos.length && typeof mostrarNotificacion === 'function') {
+                mostrarNotificacion(avisos.join(' '), 'warning');
+            }
+        } catch (err) {
+            if (typeof mostrarNotificacion === 'function') {
+                mostrarNotificacion('Error de conexión al consultar Encuestas.', 'warning');
+            }
+        }
+    }
+
+    {% if not solo_lectura and puede_cargar_encuestas %}
+    cargarMetricasDesdeEncuestas({{ reunion.id }});
+    {% endif %}
+
     document.querySelectorAll('.toggle-item-activo').forEach((toggle) => {
         const itemId = toggle.dataset.itemId;
         toggle.addEventListener('change', function () {
