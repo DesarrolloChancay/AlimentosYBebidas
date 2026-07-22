@@ -89,6 +89,7 @@ def _http_get_json(url: str, token: str, timeout: int) -> tuple[dict[str, Any], 
         headers={
             "Authorization": f"Bearer {token}",
             "Accept": "application/json",
+            "User-Agent": "AlimentosYBebidas/1.0",
         },
         method="GET",
     )
