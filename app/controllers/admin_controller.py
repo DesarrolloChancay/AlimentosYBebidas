@@ -27,10 +27,14 @@ from app.models.ConfiguracionPermisos_models import (
     PermisosHelper, inicializar_configuraciones_basicas, inicializar_permisos_basicos
 )
 from app.utils.auth_utils import generar_contrasena_temporal
+from app.utils.employee_code import asignar_cod_colab
+from app.utils.encargados_sync import crear_usuario_encargado_pg
+from app.services.rrhh_client import lookup_colaborador_por_dni, RRHHAPIError
 from app.utils.roles import (
     ROL_ADMINISTRADOR,
     ROL_AYUDANTE_INSPECTOR,
     ROL_INSPECTOR,
+    ROL_JEFE_ESTABLECIMIENTO,
 )
 
 # Blueprint para rutas de administrador
@@ -239,6 +243,7 @@ def gestionar_usuarios():
             Usuario.correo,
             Usuario.telefono,
             Usuario.dni,
+            Usuario.cod_colab,
             Usuario.activo,
             Usuario.en_linea,
             Usuario.ultimo_acceso,
@@ -273,6 +278,7 @@ def api_obtener_usuarios():
             Usuario.correo,
             Usuario.telefono,
             Usuario.dni,
+            Usuario.cod_colab,
             Usuario.activo,
             Usuario.en_linea,
             Usuario.ultimo_acceso,
@@ -309,6 +315,7 @@ def api_obtener_usuarios():
                 'correo': usuario.correo,
                 'telefono': usuario.telefono,
                 'dni': usuario.dni,
+                'cod_colab': usuario.cod_colab,
                 'rol_nombre': usuario.rol_nombre,
                 'rol_id': usuario.rol_id,
                 'activo': usuario.activo,
@@ -743,6 +750,10 @@ def api_crear_jefe_establecimiento():
         )
 
         db.session.add(nuevo_jefe)
+
+        # Jefe de Establecimiento no está en RRHH: se refleja en la BD Postgres
+        crear_usuario_encargado_pg(nuevo_usuario, ROL_JEFE_ESTABLECIMIENTO)
+
         db.session.commit()
 
         return jsonify({
@@ -835,6 +846,7 @@ def gestionar_inspectores():
                 'correo': insp.correo,
                 'telefono': insp.telefono,
                 'dni': insp.dni,
+                'cod_colab': insp.cod_colab,
                 'rol_nombre': insp.rol_nombre,
                 'activo': insp.activo,
                 'en_linea': insp.en_linea,
@@ -883,6 +895,12 @@ def api_crear_inspector():
         if not rol_inspector:
             return jsonify({'success': False, 'message': f'Rol "{rol_objetivo}" no encontrado. Ejecute la migración del nuevo rol antes de crear usuarios.'}), 500
 
+        # Inspector y Ayudante de Inspector requieren código de colaborador RRHH
+        try:
+            rrhh_info = lookup_colaborador_por_dni(data['dni'])
+        except RRHHAPIError as exc:
+            return jsonify({'success': False, 'message': exc.message}), exc.status_code or 502
+
         nombre_usuario = Usuario.generar_nombre_usuario_unico(data['nombre'], data['apellido'])
 
         # Generar contraseña temporal robusta
@@ -903,6 +921,8 @@ def api_crear_inspector():
         nuevo_usuario.set_password(contrasena_temporal)  # Contraseña temporal generada
 
         db.session.add(nuevo_usuario)
+        db.session.flush()  # Resuelve la relación con Rol antes de asignar cod_colab
+        asignar_cod_colab(nuevo_usuario, rrhh_info.get('cod_colab'))
         db.session.commit()
 
         return jsonify({
@@ -940,6 +960,7 @@ def api_obtener_detalles_inspector(inspector_id):
             Usuario.correo,
             Usuario.telefono,
             Usuario.dni,
+            Usuario.cod_colab,
             Usuario.activo,
             Usuario.en_linea,
             Usuario.ultimo_acceso,
@@ -1029,6 +1050,7 @@ def api_obtener_detalles_inspector(inspector_id):
             'correo': inspector.correo or '',
             'telefono': inspector.telefono,
             'dni': inspector.dni or '',
+            'cod_colab': inspector.cod_colab or '',
             'rol': inspector.rol_nombre or ROL_INSPECTOR,
             'activo': inspector.activo if inspector.activo is not None else True,
             'en_linea': inspector.en_linea if inspector.en_linea is not None else False,

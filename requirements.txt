@@ -4,6 +4,7 @@ SQLAlchemy==2.0.35
 Flask-SocketIO==5.5.1
 python-dotenv==1.0.1
 PyMySQL==1.1.1
+psycopg2-binary==2.9.9
 Werkzeug==3.0.4
 python-socketio==5.12.0
 simple-websocket==1.1.0

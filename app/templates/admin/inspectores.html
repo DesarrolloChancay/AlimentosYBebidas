@@ -137,6 +137,11 @@
                                         <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                             DNI: {{ inspector.dni }}
                                         </div>
+                                        {% if inspector.cod_colab %}
+                                        <div class="text-xs text-blue-600 dark:text-blue-400" title="Código de colaborador (RRHH)">
+                                            <i class="fas fa-id-badge"></i> {{ inspector.cod_colab }}
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </td>
@@ -842,6 +847,16 @@ function mostrarModalDetallesInspector(inspector) {
                                 </label>
                                 <p class="text-sm text-gray-900 dark:text-white font-medium">
                                     ${inspector.dni}
+                                </p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Código de Colaborador (RRHH)
+                                </label>
+                                <p class="text-sm text-gray-900 dark:text-white font-medium">
+                                    <i class="fas fa-id-badge mr-1 text-gray-500"></i>
+                                    ${inspector.cod_colab || 'Sin asignar'}
                                 </p>
                             </div>
 

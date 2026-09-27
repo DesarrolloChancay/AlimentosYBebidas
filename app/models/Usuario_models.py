@@ -26,6 +26,7 @@ class Usuario(db.Model):
     ultimo_acceso = db.Column(db.TIMESTAMP, default=datetime.utcnow)  # Para timeout
     telefono = db.Column(db.String(30))
     dni = db.Column(db.String(20))
+    cod_colab = db.Column(db.String(20), unique=True, nullable=True)  # código de colaborador RRHH
     ruta_firma = db.Column(db.String(500))
     cambiar_contrasena = db.Column(db.Boolean, default=False, nullable=False)  # Indica si debe cambiar contraseña
     fecha_creacion = db.Column(db.TIMESTAMP, default=datetime.utcnow)

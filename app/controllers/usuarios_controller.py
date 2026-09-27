@@ -2,6 +2,10 @@ from flask import Blueprint, request, jsonify, session, render_template
 from app.models.Usuario_models import Usuario, Rol
 from app.controllers.auth_controller import AuthController
 from app.utils.auth_utils import generar_contrasena_temporal
+from app.utils.employee_code import asignar_cod_colab
+from app.utils.encargados_sync import crear_usuario_encargado_pg
+from app.utils.roles import ROL_ENCARGADO, ROL_JEFE_ESTABLECIMIENTO
+from app.services.rrhh_client import lookup_colaborador_por_dni, RRHHAPIError
 from app.extensions import db
 from datetime import datetime
 import re
@@ -100,6 +104,7 @@ def listar_usuarios():
                 'activo': usuario.activo,
                 'telefono': usuario.telefono,
                 'dni': usuario.dni,
+                'cod_colab': usuario.cod_colab,
                 'cambiar_contrasena': usuario.cambiar_contrasena,
                 'fecha_creacion': usuario.fecha_creacion.isoformat() if usuario.fecha_creacion else None,
                 'ultimo_acceso': usuario.ultimo_acceso.isoformat() if usuario.ultimo_acceso else None,
@@ -153,6 +158,16 @@ def crear_usuario():
         if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', data['correo']):
             return jsonify({'success': False, 'error': 'Formato de correo inválido'}), 400
 
+        rol_id = int(data['rol_id'])
+
+        # Inspector (rol_id 1): requiere código de colaborador RRHH
+        rrhh_info = None
+        if rol_id == 1:
+            try:
+                rrhh_info = lookup_colaborador_por_dni(data['dni'])
+            except RRHHAPIError as exc:
+                return jsonify({'success': False, 'error': exc.message}), exc.status_code or 502
+
         nombre_usuario = Usuario.generar_nombre_usuario_unico(data['nombre'], data['apellido'])
 
         # Generar contraseña temporal robusta y única
@@ -165,7 +180,7 @@ def crear_usuario():
             nombre_usuario=nombre_usuario,
             dni=data['dni'],
             correo=data['correo'],
-            rol_id=data['rol_id'],
+            rol_id=rol_id,
             telefono=data.get('telefono'),
             activo=True,
             cambiar_contrasena=True  # Marcar que debe cambiar contraseña
@@ -175,6 +190,16 @@ def crear_usuario():
         nuevo_usuario.set_password(contrasena_temporal)
 
         db.session.add(nuevo_usuario)
+        db.session.flush()  # Obtiene el id y resuelve la relación con Rol
+
+        if rrhh_info:
+            asignar_cod_colab(nuevo_usuario, rrhh_info.get('cod_colab'))
+
+        # Encargado (2) o Jefe de Establecimiento (4): se refleja en la BD Postgres
+        if rol_id in (2, 4):
+            rol_nombre = ROL_ENCARGADO if rol_id == 2 else ROL_JEFE_ESTABLECIMIENTO
+            crear_usuario_encargado_pg(nuevo_usuario, rol_nombre)
+
         db.session.commit()
 
         return jsonify({
@@ -223,6 +248,7 @@ def resetear_contrasena(usuario_id):
         # Resetear contraseña
         usuario.set_password(nueva_contrasena_temporal)
         usuario.cambiar_contrasena = True  # Marcar que debe cambiar contraseña
+        AuthController._sincronizar_password_pg(usuario)
         db.session.commit()
 
         return jsonify({
@@ -271,6 +297,7 @@ def cambiar_contrasena():
         # Cambiar contraseña
         usuario.set_password(contrasena_nueva)
         usuario.cambiar_contrasena = False  # Marcar que ya cambió la contraseña
+        AuthController._sincronizar_password_pg(usuario)
         db.session.commit()
 
         # Limpiar la marca de cambio obligatorio si existe
