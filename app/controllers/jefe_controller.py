@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, send_file, abort
 from functools import wraps
 from app.models.Usuario_models import Usuario, Rol
+from app.models.UsuarioEncargado_models import UsuarioEncargado
 from app.models.Inspecciones_models import Establecimiento, JefeEstablecimiento, EncargadoEstablecimiento, Inspeccion, FirmaEncargadoPorJefe
 from app.extensions import db
 from app.controllers.auth_controller import AuthController
@@ -196,12 +197,15 @@ def agregar_encargado():
 
             # Verificar que no esté ya asignado a este establecimiento
             encargado_existente = EncargadoEstablecimiento.query.filter_by(
-                usuario_id=usuario_id, 
+                usuario_id=usuario_id,
                 establecimiento_id=establecimiento_id
             ).first()
 
             if encargado_existente:
                 return jsonify({'success': False, 'message': 'Este usuario ya es encargado de este establecimiento'}), 400
+
+            # Asegura la fila espejo en Postgres (usuario preexistente que podría no tenerla aún)
+            usuario_pg = crear_usuario_encargado_pg(usuario_existente, ROL_ENCARGADO)
         else:
             nombre_usuario = Usuario.generar_nombre_usuario_unico(nombre, apellido)
 
@@ -233,9 +237,13 @@ def agregar_encargado():
             db.session.flush()  # Para obtener el ID del usuario
 
             # Encargado no está en RRHH: se refleja en la BD Postgres
-            crear_usuario_encargado_pg(nuevo_usuario, ROL_ENCARGADO)
+            usuario_pg = crear_usuario_encargado_pg(nuevo_usuario, ROL_ENCARGADO)
 
             usuario_id = nuevo_usuario.id
+
+        if not usuario_pg.cod_usuario:
+            db.session.rollback()
+            return jsonify({'success': False, 'message': 'No se pudo generar el código de encargado (CC).'}), 500
 
         # Crear relación encargado-establecimiento usando ORM
         nuevo_encargado = EncargadoEstablecimiento(
@@ -245,17 +253,18 @@ def agregar_encargado():
             registrado_por=session['user_id'],
             activo=True
         )
-        
+
         db.session.add(nuevo_encargado)
         db.session.commit()
 
         usuario_credenciales = Usuario.query.get(usuario_id)
 
         return jsonify({
-            'success': True, 
+            'success': True,
             'message': 'Encargado agregado exitosamente',
             'usuario_id': usuario_id,
             'nombre_usuario': usuario_credenciales.nombre_usuario if usuario_credenciales else None,
+            'cod_usuario': usuario_pg.cod_usuario,
             'correo': usuario_credenciales.correo if usuario_credenciales else correo,
             'contrasena_temporal': contrasena_temporal
         })
@@ -328,10 +337,13 @@ def restablecer_contrasena_encargado():
         db.session.commit()
         print("Contraseña actualizada exitosamente")
 
+        usuario_pg = UsuarioEncargado.query.filter_by(mysql_usuario_id=encargado.usuario.id).first()
+
         return jsonify({
             'success': True,
             'message': 'Contraseña restablecida exitosamente',
             'nombre_usuario': encargado.usuario.nombre_usuario,
+            'cod_usuario': usuario_pg.cod_usuario if usuario_pg else None,
             'correo': encargado.usuario.correo,
             'contrasena_temporal': nueva_contrasena
         })

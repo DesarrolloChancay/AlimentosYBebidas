@@ -761,16 +761,21 @@ def api_crear_jefe_establecimiento():
         db.session.add(nuevo_jefe)
 
         # Jefe de Establecimiento no está en RRHH: se refleja en la BD Postgres
-        crear_usuario_encargado_pg(nuevo_usuario, ROL_JEFE_ESTABLECIMIENTO)
+        usuario_pg = crear_usuario_encargado_pg(nuevo_usuario, ROL_JEFE_ESTABLECIMIENTO)
+
+        if not usuario_pg.cod_usuario:
+            db.session.rollback()
+            return jsonify({'success': False, 'message': 'No se pudo generar el código de encargado (CC).'}), 500
 
         db.session.commit()
 
         return jsonify({
             'success': True,
-            'message': f'Jefe de establecimiento creado exitosamente. Usuario: {nuevo_usuario.nombre_usuario}, Contraseña temporal: {contrasena_temporal}',
+            'message': f'Jefe de establecimiento creado exitosamente. Código: {usuario_pg.cod_usuario}, Contraseña temporal: {contrasena_temporal}',
             'usuario_id': nuevo_usuario.id,
             'jefe_id': nuevo_jefe.id,
             'nombre_usuario': nuevo_usuario.nombre_usuario,
+            'cod_usuario': usuario_pg.cod_usuario,
             'correo': nuevo_usuario.correo,
             'contrasena_temporal': contrasena_temporal
         })

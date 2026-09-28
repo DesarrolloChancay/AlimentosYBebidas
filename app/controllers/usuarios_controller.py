@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, session, render_template
 from app.models.Usuario_models import Usuario, Rol
+from app.models.UsuarioEncargado_models import UsuarioEncargado
 from app.controllers.auth_controller import AuthController
 from app.utils.auth_utils import generar_contrasena_temporal, normalizar_correo_opcional
 from app.utils.employee_code import asignar_cod_colab
@@ -210,9 +211,14 @@ def crear_usuario():
                 }), 409
 
         # Encargado (2) o Jefe de Establecimiento (4): se refleja en la BD Postgres
+        cod_usuario = None
         if rol_id in (2, 4):
             rol_nombre = ROL_ENCARGADO if rol_id == 2 else ROL_JEFE_ESTABLECIMIENTO
-            crear_usuario_encargado_pg(nuevo_usuario, rol_nombre)
+            usuario_pg = crear_usuario_encargado_pg(nuevo_usuario, rol_nombre)
+            if not usuario_pg.cod_usuario:
+                db.session.rollback()
+                return jsonify({'success': False, 'error': 'No se pudo generar el código de encargado (CC).'}), 500
+            cod_usuario = usuario_pg.cod_usuario
 
         db.session.commit()
 
@@ -222,6 +228,7 @@ def crear_usuario():
             'usuario_id': nuevo_usuario.id,
             'nombre_usuario': nuevo_usuario.nombre_usuario,
             'cod_colab': nuevo_usuario.cod_colab,
+            'cod_usuario': cod_usuario,
             'contrasena_temporal': contrasena_temporal,
             'correo': nuevo_usuario.correo
         })
@@ -266,10 +273,14 @@ def resetear_contrasena(usuario_id):
         AuthController._sincronizar_password_pg(usuario)
         db.session.commit()
 
+        usuario_pg = UsuarioEncargado.query.filter_by(mysql_usuario_id=usuario.id).first()
+
         return jsonify({
             'success': True,
             'mensaje': 'Contraseña reseteada exitosamente',
             'nombre_usuario': usuario.nombre_usuario,
+            'cod_colab': usuario.cod_colab,
+            'cod_usuario': usuario_pg.cod_usuario if usuario_pg else None,
             'contrasena_temporal': nueva_contrasena_temporal,
             'correo': usuario.correo
         })

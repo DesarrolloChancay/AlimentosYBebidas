@@ -1080,7 +1080,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.log('Cerrando modal y mostrando credenciales...');
                         cerrarModalCrearJefe();
                         setTimeout(() => {
-                            mostrarCredencialesUsuario(data.nombre_usuario, data.correo, data.contrasena_temporal);
+                            mostrarCredencialesUsuario(data.cod_usuario, data.correo, data.contrasena_temporal);
                         }, 300);
                     } else {
                         console.log('No hay contrasena_temporal, mostrando alerta...');
@@ -1716,8 +1716,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Mostrar credenciales del usuario creado
-    function mostrarCredencialesUsuario(nombreUsuario, correo, contrasena) {
-        console.log('Creando modal de credenciales para:', nombreUsuario, correo, contrasena);
+    function mostrarCredencialesUsuario(codUsuario, correo, contrasena) {
+        console.log('Creando modal de credenciales para:', codUsuario, correo, contrasena);
 
         // Deshabilitar scroll del body
         document.body.style.overflow = 'hidden';
@@ -1771,7 +1771,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="relative">
                                 <textarea id="credenciales-texto" readonly
                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-sm font-mono"
-                                          rows="4">${`Usuario: ${nombreUsuario}\nCorreo: ${correo}\nContraseña temporal: ${contrasena}`}</textarea>
+                                          rows="4">${`Código de jefe (usuario de acceso): ${codUsuario || 'No asignado'}\nCorreo: ${correo}\nContraseña temporal: ${contrasena}`}</textarea>
                                 <button onclick="copiarTextoCompleto()"
                                         class="absolute top-2 right-2 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
                                         title="Copiar todo el texto">
@@ -1791,6 +1791,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         ¡Importante!
                                     </h4>
                                     <p class="text-sm text-red-700 dark:text-red-300 mt-1">
+                                        Debe iniciar sesión con su código de jefe (no con un nombre de usuario) y la contraseña temporal.
                                         Estas credenciales no se podrán volver a visualizar una vez cerrado este modal.
                                         Copie y guarde la información de forma segura antes de continuar.
                                     </p>
@@ -1897,7 +1898,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (data.success) {
                 // Mostrar las nuevas credenciales
-                mostrarCredencialesUsuario(data.nombre_usuario, data.correo, data.contrasena_temporal);
+                mostrarCredencialesUsuario(data.cod_usuario, data.correo, data.contrasena_temporal);
                 mostrarAlerta('success', 'Contraseña restablecida exitosamente');
             } else {
                 throw new Error(data.message || 'Error al restablecer la contraseña');

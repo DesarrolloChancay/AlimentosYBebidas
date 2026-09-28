@@ -4,6 +4,7 @@ Controlador para funcionalidades del Inspector
 from flask import render_template, request, jsonify, session, url_for
 from werkzeug.utils import secure_filename
 from app.models.Usuario_models import Usuario, Rol, TipoEstablecimiento
+from app.models.UsuarioEncargado_models import UsuarioEncargado
 from app.models.Inspecciones_models import (
     Establecimiento, JefeEstablecimiento, EncargadoEstablecimiento,
     FirmaEncargadoPorJefe
@@ -17,10 +18,13 @@ from app.utils.auth_utils import generar_contrasena_temporal, normalizar_correo_
 from app.utils.media import private_signature_dir, signature_db_path, signature_public_url
 from app.utils.security import save_validated_upload_image
 from app.utils.signature_utils import delete_static_file, save_signature_data_url
+from app.utils.encargados_sync import crear_usuario_encargado_pg
+from app.controllers.auth_controller import AuthController
 from app.utils.roles import (
     ROL_ADMINISTRADOR,
     ROL_AYUDANTE_INSPECTOR,
     ROL_INSPECTOR,
+    ROL_JEFE_ESTABLECIMIENTO,
 )
 
 
@@ -551,14 +555,23 @@ class InspectorController:
             )
 
             db.session.add(nuevo_jefe)
+
+            # Jefe de Establecimiento no está en RRHH: se refleja en la BD Postgres
+            usuario_pg = crear_usuario_encargado_pg(nuevo_usuario, ROL_JEFE_ESTABLECIMIENTO)
+
+            if not usuario_pg.cod_usuario:
+                db.session.rollback()
+                return jsonify({'success': False, 'message': 'No se pudo generar el código de encargado (CC).'}), 500
+
             db.session.commit()
 
             return jsonify({
                 'success': True,
-                'message': f'Jefe de establecimiento creado exitosamente. Usuario: {nuevo_usuario.nombre_usuario}, Contraseña temporal: {contrasena_temporal}',
+                'message': f'Jefe de establecimiento creado exitosamente. Código: {usuario_pg.cod_usuario}, Contraseña temporal: {contrasena_temporal}',
                 'usuario_id': nuevo_usuario.id,
                 'jefe_id': nuevo_jefe.id,
                 'nombre_usuario': nuevo_usuario.nombre_usuario,
+                'cod_usuario': usuario_pg.cod_usuario,
                 'correo': nuevo_usuario.correo,
                 'contrasena_temporal': contrasena_temporal
             })
@@ -647,13 +660,17 @@ class InspectorController:
             usuario.set_password(nueva_contrasena)
             usuario.cambiar_contrasena = True  # Forzar cambio de contraseña
             usuario.updated_at = datetime.utcnow()
-            
+            AuthController._sincronizar_password_pg(usuario)
+
             db.session.commit()
+
+            usuario_pg = UsuarioEncargado.query.filter_by(mysql_usuario_id=usuario.id).first()
 
             return jsonify({
                 'success': True,
                 'message': 'Contraseña restablecida exitosamente',
                 'nombre_usuario': usuario.nombre_usuario,
+                'cod_usuario': usuario_pg.cod_usuario if usuario_pg else None,
                 'correo': usuario.correo,
                 'contrasena_temporal': nueva_contrasena
             })

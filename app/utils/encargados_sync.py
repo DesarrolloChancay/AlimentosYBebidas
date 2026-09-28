@@ -22,7 +22,7 @@ def crear_usuario_encargado_pg(usuario_mysql, rol_nombre):
 
     if usuario_pg:
         usuario_pg.mysql_usuario_id = usuario_mysql.id
-        usuario_pg.activo = True
+        usuario_pg.activo = usuario_mysql.activo
         return usuario_pg
 
     usuario_pg = UsuarioEncargado(
@@ -33,7 +33,7 @@ def crear_usuario_encargado_pg(usuario_mysql, rol_nombre):
         dni=usuario_mysql.dni,
         telefono=usuario_mysql.telefono,
         rol=rol_nombre,
-        activo=True,
+        activo=usuario_mysql.activo,
         mysql_usuario_id=usuario_mysql.id,
     )
     usuario_pg.cod_usuario = UsuarioEncargado.generar_cod_usuario_unico()
