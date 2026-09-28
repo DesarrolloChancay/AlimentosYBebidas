@@ -201,12 +201,11 @@
                 <div>
                     <label for="correo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         <i class="fas fa-envelope mr-1"></i>
-                        Correo Electrónico *
+                        Correo Electrónico (opcional)
                     </label>
                     <input type="email"
                            id="correo"
                            name="correo"
-                           required
                            class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                            placeholder="encargado@ejemplo.com">
                 </div>
@@ -595,7 +594,7 @@ document.getElementById('form-crear-encargado').addEventListener('submit', async
         };
 
         // Validaciones
-        if (!formData.nombre || !formData.apellido || !formData.dni || !formData.correo) {
+        if (!formData.nombre || !formData.apellido || !formData.dni) {
             throw new Error('Todos los campos obligatorios deben estar completos');
         }
 
@@ -603,7 +602,7 @@ document.getElementById('form-crear-encargado').addEventListener('submit', async
             throw new Error('El DNI debe tener exactamente 8 dígitos');
         }
 
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.correo)) {
+        if (formData.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.correo)) {
             throw new Error('Formato de correo inválido');
         }
 

@@ -115,7 +115,7 @@
                                             {{ jefe.nombre }} {{ jefe.apellido or '' }}
                                         </div>
                                         <div class="text-sm text-gray-500 dark:text-gray-400">
-                                            {{ jefe.correo }}
+                                            {{ jefe.correo or 'Sin correo' }}
                                         </div>
                                         {% if jefe.telefono %}
                                         <div class="text-sm text-gray-500 dark:text-gray-400">
@@ -237,6 +237,20 @@
                     </h4>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <label for="dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                DNI *
+                            </label>
+                            <input type="text"
+                                   id="dni"
+                                   name="dni"
+                                   required
+                                   maxlength="8"
+                                   pattern="[0-9]{8}"
+                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="12345678">
+                        </div>
+
                         <div>
                             <label for="nombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Nombre *
@@ -263,12 +277,11 @@
 
                         <div>
                             <label for="correo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Correo Electrónico *
+                                Correo Electrónico (opcional)
                             </label>
                             <input type="email"
                                    id="correo"
                                    name="correo"
-                                   required
                                    class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                                    placeholder="correo@ejemplo.com">
                         </div>
@@ -282,20 +295,6 @@
                                    name="telefono"
                                    class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                                    placeholder="+51 999 999 999">
-                        </div>
-
-                        <div class="md:col-span-2">
-                            <label for="dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                DNI *
-                            </label>
-                            <input type="text"
-                                   id="dni"
-                                   name="dni"
-                                   required
-                                   maxlength="8"
-                                   pattern="[0-9]{8}"
-                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                                   placeholder="12345678">
                         </div>
                     </div>
                 </div>
@@ -429,6 +428,20 @@
                     </h4>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <label for="editar-dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                DNI *
+                            </label>
+                            <input type="text"
+                                   id="editar-dni"
+                                   name="dni"
+                                   required
+                                   maxlength="8"
+                                   pattern="[0-9]{8}"
+                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="12345678">
+                        </div>
+
                         <div>
                             <label for="editar-nombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Nombre *
@@ -455,12 +468,11 @@
 
                         <div>
                             <label for="editar-correo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Correo Electrónico *
+                                Correo Electrónico (opcional)
                             </label>
                             <input type="email"
                                    id="editar-correo"
                                    name="correo"
-                                   required
                                    class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                                    placeholder="correo@ejemplo.com">
                         </div>
@@ -474,20 +486,6 @@
                                    name="telefono"
                                    class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                                    placeholder="+51 999 999 999">
-                        </div>
-
-                        <div class="md:col-span-2">
-                            <label for="editar-dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                DNI *
-                            </label>
-                            <input type="text"
-                                   id="editar-dni"
-                                   name="dni"
-                                   required
-                                   maxlength="8"
-                                   pattern="[0-9]{8}"
-                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                                   placeholder="12345678">
                         </div>
                     </div>
                 </div>
@@ -881,6 +879,26 @@ let jefeIdParaDesactivar = null;
 let jefeActivoActual = null;
 let jefeIdParaRestablecer = null;
 
+function urlApiJefes(suffix) {
+    const base = window.location.pathname.startsWith('/inspector/')
+        ? '/inspector/api/jefes-establecimiento'
+        : '/admin/api/jefes-establecimiento';
+    return `${base}${suffix || ''}`;
+}
+
+function textoCorreo(correo) {
+    return correo ? correo : 'Sin correo';
+}
+
+async function parseJsonResponse(response) {
+    const text = await response.text();
+    try {
+        return text ? JSON.parse(text) : {};
+    } catch (e) {
+        throw new Error('Error al procesar la solicitud');
+    }
+}
+
 // Esperar a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM cargado, inicializando JavaScript...');
@@ -973,35 +991,42 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             console.log('Cargando establecimientos disponibles...');
             
-            // Determinar la URL correcta según el contexto
-            let url = '/api/establecimientos';
-            if (window.location.pathname.startsWith('/inspector/')) {
-                url = '/inspector/api/establecimientos-disponibles';
-            }
-            
+            const url = window.location.pathname.startsWith('/inspector/')
+                ? '/inspector/api/establecimientos-disponibles'
+                : '/admin/api/establecimientos-disponibles';
+
             const response = await fetch(url);
             const data = await response.json();
+            const lista = Array.isArray(data)
+                ? data
+                : (Array.isArray(data.establecimientos) ? data.establecimientos : null);
 
-            if (data.establecimientos) {
-                establecimientosDisponibles = data.establecimientos;
-                const select = document.getElementById('establecimiento_id');
-
-                // Limpiar opciones existentes
-                select.innerHTML = '<option value="">Seleccione un establecimiento</option>';
-
-                // Agregar nuevas opciones
-                data.establecimientos.forEach(est => {
-                    const option = document.createElement('option');
-                    option.value = est.id;
-                    option.textContent = `${est.nombre} - ${est.direccion}`;
-                    select.appendChild(option);
-                });
-
-                console.log(`Cargados ${data.establecimientos.length} establecimientos`);
-            } else {
-                console.error('Error cargando establecimientos:', data.error);
-                mostrarAlerta('error', 'Error al cargar establecimientos disponibles');
+            if (!response.ok || !lista) {
+                throw new Error(data.error || 'Respuesta inválida del servidor');
             }
+
+            establecimientosDisponibles = lista;
+            const select = document.getElementById('establecimiento_id');
+            select.innerHTML = '<option value="">Seleccione un establecimiento</option>';
+
+            lista.forEach(est => {
+                const option = document.createElement('option');
+                option.value = est.id;
+                option.textContent = est.direccion
+                    ? `${est.nombre} - ${est.direccion}`
+                    : est.nombre;
+                select.appendChild(option);
+            });
+
+            if (lista.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No hay establecimientos sin jefe asignado';
+                option.disabled = true;
+                select.appendChild(option);
+            }
+
+            console.log(`Cargados ${lista.length} establecimientos`);
         } catch (error) {
             console.error('Error al cargar establecimientos:', error);
             mostrarAlerta('error', 'Error al cargar establecimientos disponibles');
@@ -1039,13 +1064,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Datos del formulario:', formData);
 
                 // Validaciones básicas
-                if (!formData.nombre || !formData.apellido || !formData.correo || !formData.dni || !formData.establecimiento_id || !formData.fecha_inicio) {
+                if (!formData.nombre || !formData.apellido || !formData.dni || !formData.establecimiento_id || !formData.fecha_inicio) {
                     throw new Error('Todos los campos marcados con * son obligatorios');
                 }
 
-                // Validar formato de email
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(formData.correo)) {
+                if (formData.correo && !emailRegex.test(formData.correo)) {
                     throw new Error('El formato del correo electrónico no es válido');
                 }
 
@@ -1057,7 +1081,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Enviando datos al servidor...');
 
                 // Enviar datos
-                const response = await fetch('/inspector/api/jefes-establecimiento', {
+                const response = await fetch(urlApiJefes(''), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1076,7 +1100,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.log('Cerrando modal y mostrando credenciales...');
                         cerrarModalCrearJefe();
                         setTimeout(() => {
-                            mostrarCredencialesUsuario(data.nombre_usuario, data.correo, data.contrasena_temporal);
+                            mostrarCredencialesUsuario(data.cod_usuario, data.correo, data.contrasena_temporal);
                         }, 300);
                     } else {
                         console.log('No hay contrasena_temporal, mostrando alerta...');
@@ -1153,13 +1177,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Datos del formulario de edición:', formData);
 
                 // Validaciones básicas
-                if (!formData.nombre || !formData.apellido || !formData.correo || !formData.dni || !formData.establecimiento_id || !formData.fecha_inicio) {
+                if (!formData.nombre || !formData.apellido || !formData.dni || !formData.establecimiento_id || !formData.fecha_inicio) {
                     throw new Error('Todos los campos marcados con * son obligatorios');
                 }
 
-                // Validar formato de email
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(formData.correo)) {
+                if (formData.correo && !emailRegex.test(formData.correo)) {
                     throw new Error('El formato del correo electrónico no es válido');
                 }
 
@@ -1170,11 +1193,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 console.log('Enviando datos de actualización al servidor...');
 
-                // Determinar la URL correcta según el contexto
-                let url = `/api/jefes-establecimiento/${jefeId}`;
-                if (window.location.pathname.startsWith('/inspector/')) {
-                    url = `/inspector/api/jefes-establecimiento/${jefeId}`;
-                }
+                const url = urlApiJefes(`/${jefeId}`);
 
                 // Enviar datos
                 const response = await fetch(url, {
@@ -1231,14 +1250,9 @@ document.addEventListener('DOMContentLoaded', function() {
             content.classList.add('hidden');
 
             try {
-                // Determinar la URL correcta según el contexto
-                let url = `/api/jefes-establecimiento/${jefeId}/detalles`;
-                if (window.location.pathname.startsWith('/inspector/')) {
-                    url = `/inspector/api/jefes-establecimiento/${jefeId}/detalles`;
-                }
-
+                const url = urlApiJefes(`/${jefeId}/detalles`);
                 const response = await fetch(url);
-                const data = await response.json();
+                const data = await parseJsonResponse(response);
 
                 if (data.success && data.jefe) {
                     // Llenar los detalles
@@ -1262,7 +1276,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function llenarDetallesJefe(jefe) {
         // Información personal
         document.getElementById('detalle-nombre-completo').textContent = `${jefe.usuario.nombre} ${jefe.usuario.apellido}`;
-        document.getElementById('detalle-correo').textContent = jefe.usuario.correo;
+        document.getElementById('detalle-correo').textContent = textoCorreo(jefe.usuario.correo);
         document.getElementById('detalle-telefono').textContent = jefe.usuario.telefono || 'No especificado';
         document.getElementById('detalle-dni').textContent = jefe.usuario.dni;
 
@@ -1359,14 +1373,9 @@ document.addEventListener('DOMContentLoaded', function() {
             form.reset();
 
             try {
-                // Determinar la URL correcta según el contexto
-                let url = `/api/jefes-establecimiento/${jefeId}/editar`;
-                if (window.location.pathname.startsWith('/inspector/')) {
-                    url = `/inspector/api/jefes-establecimiento/${jefeId}/editar`;
-                }
-
+                const url = urlApiJefes(`/${jefeId}/editar`);
                 const response = await fetch(url);
-                const data = await response.json();
+                const data = await parseJsonResponse(response);
 
                 if (data.success && data.jefe) {
                     // Llenar el formulario con los datos
@@ -1387,7 +1396,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Información personal
         document.getElementById('editar-nombre').value = jefe.usuario.nombre;
         document.getElementById('editar-apellido').value = jefe.usuario.apellido;
-        document.getElementById('editar-correo').value = jefe.usuario.correo;
+        document.getElementById('editar-correo').value = jefe.usuario.correo || '';
         document.getElementById('editar-telefono').value = jefe.usuario.telefono || '';
         document.getElementById('editar-dni').value = jefe.usuario.dni;
 
@@ -1421,11 +1430,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             console.log('Refrescando tabla de jefes...');
             
-            // Determinar la URL correcta según el contexto
-            let url = '/api/jefes-establecimiento/lista';
-            if (window.location.pathname.startsWith('/inspector/')) {
-                url = '/inspector/api/jefes-establecimiento/lista';
-            }
+            const url = urlApiJefes('/lista');
 
             const response = await fetch(url);
             const data = await response.json();
@@ -1448,11 +1453,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             console.log('Refrescando estadísticas...');
             
-            // Determinar la URL correcta según el contexto
-            let url = '/api/jefes-establecimiento/estadisticas';
-            if (window.location.pathname.startsWith('/inspector/')) {
-                url = '/inspector/api/jefes-establecimiento/estadisticas';
-            }
+            const url = urlApiJefes('/estadisticas');
 
             const response = await fetch(url);
             const data = await response.json();
@@ -1519,7 +1520,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     ${jefe.nombre} ${jefe.apellido || ''}
                                 </div>
                                 <div class="text-sm text-gray-500 dark:text-gray-400">
-                                    ${jefe.correo}
+                                    ${textoCorreo(jefe.correo)}
                                 </div>
                                 ${jefe.telefono ? `<div class="text-sm text-gray-500 dark:text-gray-400">${jefe.telefono}</div>` : ''}
                             </div>
@@ -1713,8 +1714,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Mostrar credenciales del usuario creado
-    function mostrarCredencialesUsuario(nombreUsuario, correo, contrasena) {
-        console.log('Creando modal de credenciales para:', nombreUsuario, correo, contrasena);
+    function mostrarCredencialesUsuario(codUsuario, correo, contrasena) {
+        console.log('Creando modal de credenciales para:', codUsuario, correo, contrasena);
 
         // Deshabilitar scroll del body
         document.body.style.overflow = 'hidden';
@@ -1768,7 +1769,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="relative">
                                 <textarea id="credenciales-texto" readonly
                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-sm font-mono"
-                                          rows="4">${`Usuario: ${nombreUsuario}\nCorreo: ${correo}\nContraseña temporal: ${contrasena}`}</textarea>
+                                          rows="4">${`Código de jefe (usuario de acceso): ${codUsuario || 'No asignado'}\nCorreo: ${textoCorreo(correo)}\nContraseña temporal: ${contrasena}`}</textarea>
                                 <button onclick="copiarTextoCompleto()"
                                         class="absolute top-2 right-2 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
                                         title="Copiar todo el texto">
@@ -1788,6 +1789,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         ¡Importante!
                                     </h4>
                                     <p class="text-sm text-red-700 dark:text-red-300 mt-1">
+                                        Debe iniciar sesión con su código de jefe (no con un nombre de usuario) y la contraseña temporal.
                                         Estas credenciales no se podrán volver a visualizar una vez cerrado este modal.
                                         Copie y guarde la información de forma segura antes de continuar.
                                     </p>
@@ -1894,7 +1896,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (data.success) {
                 // Mostrar las nuevas credenciales
-                mostrarCredencialesUsuario(data.nombre_usuario, data.correo, data.contrasena_temporal);
+                mostrarCredencialesUsuario(data.cod_usuario, data.correo, data.contrasena_temporal);
                 mostrarAlerta('success', 'Contraseña restablecida exitosamente');
             } else {
                 throw new Error(data.message || 'Error al restablecer la contraseña');

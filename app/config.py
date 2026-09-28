@@ -110,6 +110,26 @@ class Config:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    # Base de datos Postgres para usuarios Encargado / Jefe de Establecimiento
+    # (roles sin código de colaborador RRHH; ver app/models/UsuarioEncargado_models.py)
+    ENCARGADOS_DB_USER = os.getenv('ENCARGADOS_DB_USER')
+    ENCARGADOS_DB_PASSWORD = os.getenv('ENCARGADOS_DB_PASSWORD')
+    ENCARGADOS_DB_HOST = os.getenv('ENCARGADOS_DB_HOST')
+    ENCARGADOS_DB_PORT = os.getenv('ENCARGADOS_DB_PORT', '5432')
+    ENCARGADOS_DB_NAME = os.getenv('ENCARGADOS_DB_NAME')
+
+    if all([ENCARGADOS_DB_USER, ENCARGADOS_DB_PASSWORD, ENCARGADOS_DB_HOST, ENCARGADOS_DB_NAME]):
+        _ENCARGADOS_DATABASE_URI = (
+            f"postgresql+psycopg2://{ENCARGADOS_DB_USER}:{ENCARGADOS_DB_PASSWORD}"
+            f"@{ENCARGADOS_DB_HOST}:{ENCARGADOS_DB_PORT}/{ENCARGADOS_DB_NAME}"
+        )
+    else:
+        _ENCARGADOS_DATABASE_URI = os.getenv('ENCARGADOS_DATABASE_URL', 'sqlite:///dev_encargados.db')
+
+    SQLALCHEMY_BINDS = {
+        'encargados': _ENCARGADOS_DATABASE_URI,
+    }
+
     # Proxy reverso / HTTPS
     TRUST_PROXY_COUNT = _get_int_env('TRUST_PROXY_COUNT', 1 if FLASK_ENV == 'production' else 0)
     PREFERRED_URL_SCHEME = os.getenv(
@@ -185,3 +205,8 @@ class Config:
     ENCUESTAS_SURVEY_MAP = _parse_encuestas_survey_map(
         os.getenv('ENCUESTAS_SURVEY_MAP', '')
     )
+
+    # API RRHH (código de colaborador para Administrador/Inspector/Ayudante de Inspector)
+    RRHH_API_URL = (os.getenv('RRHH_API_URL') or '').rstrip('/')
+    RRHH_API_TOKEN = os.getenv('RRHH_API_TOKEN') or ''
+    RRHH_API_TIMEOUT_SECONDS = _get_int_env('RRHH_API_TIMEOUT_SECONDS', 8)

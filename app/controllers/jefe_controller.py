@@ -1,10 +1,14 @@
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, send_file, abort
 from functools import wraps
 from app.models.Usuario_models import Usuario, Rol
+from app.models.UsuarioEncargado_models import UsuarioEncargado
 from app.models.Inspecciones_models import Establecimiento, JefeEstablecimiento, EncargadoEstablecimiento, Inspeccion, FirmaEncargadoPorJefe
 from app.extensions import db
+from app.controllers.auth_controller import AuthController
 from app.utils.auth_decorators import login_required
-from app.utils.auth_utils import generar_contrasena_temporal
+from app.utils.auth_utils import generar_contrasena_temporal, normalizar_correo_opcional
+from app.utils.encargados_sync import crear_usuario_encargado_pg
+from app.utils.roles import ROL_ENCARGADO
 from app.utils.media import private_signature_dir, signature_db_path, signature_public_url
 from app.utils.security import save_validated_upload_image
 from app.utils.signature_utils import delete_static_file, save_signature_data_url, sanitize_signature_segment
@@ -161,6 +165,10 @@ def agregar_encargado():
         dni = data.get('dni', '').strip()
         telefono = data.get('telefono', '').strip()
         correo = (data.get('correo') or data.get('email') or '').strip()
+        try:
+            correo = normalizar_correo_opcional(correo)
+        except ValueError as exc:
+            return jsonify({'success': False, 'message': str(exc)}), 400
 
         # Validaciones básicas
         if not all([nombre, apellido, dni]):
@@ -189,12 +197,15 @@ def agregar_encargado():
 
             # Verificar que no esté ya asignado a este establecimiento
             encargado_existente = EncargadoEstablecimiento.query.filter_by(
-                usuario_id=usuario_id, 
+                usuario_id=usuario_id,
                 establecimiento_id=establecimiento_id
             ).first()
 
             if encargado_existente:
                 return jsonify({'success': False, 'message': 'Este usuario ya es encargado de este establecimiento'}), 400
+
+            # Asegura la fila espejo en Postgres (usuario preexistente que podría no tenerla aún)
+            usuario_pg = crear_usuario_encargado_pg(usuario_existente, ROL_ENCARGADO)
         else:
             nombre_usuario = Usuario.generar_nombre_usuario_unico(nombre, apellido)
 
@@ -221,11 +232,18 @@ def agregar_encargado():
             
             # Usar el método del modelo para hashear la contraseña
             nuevo_usuario.set_password(contrasena_temporal)
-            
+
             db.session.add(nuevo_usuario)
             db.session.flush()  # Para obtener el ID del usuario
-            
+
+            # Encargado no está en RRHH: se refleja en la BD Postgres
+            usuario_pg = crear_usuario_encargado_pg(nuevo_usuario, ROL_ENCARGADO)
+
             usuario_id = nuevo_usuario.id
+
+        if not usuario_pg.cod_usuario:
+            db.session.rollback()
+            return jsonify({'success': False, 'message': 'No se pudo generar el código de encargado (CC).'}), 500
 
         # Crear relación encargado-establecimiento usando ORM
         nuevo_encargado = EncargadoEstablecimiento(
@@ -235,17 +253,18 @@ def agregar_encargado():
             registrado_por=session['user_id'],
             activo=True
         )
-        
+
         db.session.add(nuevo_encargado)
         db.session.commit()
 
         usuario_credenciales = Usuario.query.get(usuario_id)
 
         return jsonify({
-            'success': True, 
+            'success': True,
             'message': 'Encargado agregado exitosamente',
             'usuario_id': usuario_id,
             'nombre_usuario': usuario_credenciales.nombre_usuario if usuario_credenciales else None,
+            'cod_usuario': usuario_pg.cod_usuario,
             'correo': usuario_credenciales.correo if usuario_credenciales else correo,
             'contrasena_temporal': contrasena_temporal
         })
@@ -313,14 +332,18 @@ def restablecer_contrasena_encargado():
         encargado.usuario.set_password(nueva_contrasena)
         encargado.usuario.cambiar_contrasena = True  # Forzar cambio de contraseña
         encargado.usuario.fecha_actualizacion = datetime.now()
-        
+        AuthController._sincronizar_password_pg(encargado.usuario)
+
         db.session.commit()
         print("Contraseña actualizada exitosamente")
+
+        usuario_pg = UsuarioEncargado.query.filter_by(mysql_usuario_id=encargado.usuario.id).first()
 
         return jsonify({
             'success': True,
             'message': 'Contraseña restablecida exitosamente',
             'nombre_usuario': encargado.usuario.nombre_usuario,
+            'cod_usuario': usuario_pg.cod_usuario if usuario_pg else None,
             'correo': encargado.usuario.correo,
             'contrasena_temporal': nueva_contrasena
         })

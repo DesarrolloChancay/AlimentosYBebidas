@@ -150,7 +150,7 @@
                                             {{ encargado.nombre }} {{ encargado.apellido or '' }}
                                         </div>
                                         <div class="text-sm text-gray-500 dark:text-gray-400">
-                                            {{ encargado.correo }}
+                                            {{ encargado.correo or 'Sin correo' }}
                                         </div>
                                         {% if encargado.telefono %}
                                         <div class="text-sm text-gray-500 dark:text-gray-400">
@@ -324,7 +324,7 @@
 
                 <div>
                     <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Correo Electrónico
+                        Correo Electrónico (opcional)
                     </label>
                     <input type="email"
                            id="email"
@@ -961,7 +961,7 @@ async function confirmarRestablecerContrasenaEncargado() {
 
         if (data.success) {
             if (data.contrasena_temporal) {
-                mostrarCredencialesRestablecidas(data.nombre_usuario, data.correo, data.contrasena_temporal);
+                mostrarCredencialesRestablecidas(data.cod_usuario, data.correo, data.contrasena_temporal);
             } else {
                 mostrarAlerta('success', data.message);
             }
@@ -1056,7 +1056,7 @@ document.getElementById('form-agregar-encargado').addEventListener('submit', asy
 
         if (data.success) {
             if (data.contrasena_temporal) {
-                mostrarCredencialesUsuario(data.nombre_usuario, data.correo, data.contrasena_temporal);
+                mostrarCredencialesUsuario(data.cod_usuario, data.correo, data.contrasena_temporal);
             } else {
                 mostrarAlerta('success', data.message);
                 cerrarModal();
@@ -1126,7 +1126,7 @@ document.getElementById('dni').addEventListener('input', function(e) {
 });
 
 // Mostrar credenciales del usuario creado
-function mostrarCredencialesUsuario(nombreUsuario, correo, contrasena) {
+function mostrarCredencialesUsuario(codUsuario, correo, contrasena) {
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 overflow-y-auto h-full w-full';
     modal.style.zIndex = '10000';
@@ -1176,7 +1176,7 @@ function mostrarCredencialesUsuario(nombreUsuario, correo, contrasena) {
                         <div class="relative">
                             <textarea id="credenciales-texto" readonly
                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-sm font-mono"
-                                      rows="4">${`Usuario: ${nombreUsuario}\nCorreo: ${correo}\nContraseña temporal: ${contrasena}`}</textarea>
+                                      rows="4">${`Código de encargado (usuario de acceso): ${codUsuario || 'No asignado'}\nCorreo: ${correo}\nContraseña temporal: ${contrasena}`}</textarea>
                             <button onclick="copiarTextoCompleto()"
                                     class="absolute top-2 right-2 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
                                     title="Copiar todo el texto">
@@ -1196,7 +1196,8 @@ function mostrarCredencialesUsuario(nombreUsuario, correo, contrasena) {
                                     Importante
                                 </h4>
                                 <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                                    El encargado deberá cambiar esta contraseña en su primer inicio de sesión.
+                                    Debe iniciar sesión con su código de encargado (no con un nombre de usuario) y la contraseña temporal.
+                                    Deberá cambiar esta contraseña en su primer inicio de sesión.
                                     Asegúrese de compartir estas credenciales de forma segura.
                                 </p>
                             </div>
@@ -1219,7 +1220,7 @@ function mostrarCredencialesUsuario(nombreUsuario, correo, contrasena) {
 }
 
 // Mostrar credenciales restablecidas
-function mostrarCredencialesRestablecidas(nombreUsuario, correo, contrasena) {
+function mostrarCredencialesRestablecidas(codUsuario, correo, contrasena) {
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 overflow-y-auto h-full w-full';
     modal.style.zIndex = '10000';
@@ -1269,7 +1270,7 @@ function mostrarCredencialesRestablecidas(nombreUsuario, correo, contrasena) {
                         <div class="relative">
                             <textarea id="credenciales-restablecidas-texto" readonly
                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-sm font-mono"
-                                      rows="4">${`Usuario: ${nombreUsuario}\nCorreo: ${correo}\nNueva contraseña temporal: ${contrasena}`}</textarea>
+                                      rows="4">${`Código de encargado (usuario de acceso): ${codUsuario || 'No asignado'}\nCorreo: ${correo}\nNueva contraseña temporal: ${contrasena}`}</textarea>
                             <button onclick="copiarTextoRestablecido()"
                                     class="absolute top-2 right-2 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
                                     title="Copiar todo el texto">
@@ -1289,7 +1290,8 @@ function mostrarCredencialesRestablecidas(nombreUsuario, correo, contrasena) {
                                     Importante
                                 </h4>
                                 <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                                    El encargado deberá cambiar esta contraseña en su próximo inicio de sesión.
+                                    Debe iniciar sesión con su código de encargado (no con un nombre de usuario) y la nueva contraseña temporal.
+                                    Deberá cambiarla en su próximo inicio de sesión.
                                     Asegúrese de compartir estas credenciales de forma segura.
                                 </p>
                             </div>

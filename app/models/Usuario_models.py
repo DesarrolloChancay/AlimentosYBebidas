@@ -18,7 +18,7 @@ class Usuario(db.Model):
     nombre = db.Column(db.String(100), nullable=False)
     apellido = db.Column(db.String(100))
     nombre_usuario = db.Column(db.String(160), nullable=False, unique=True, index=True)
-    correo = db.Column(db.String(150), nullable=False)
+    correo = db.Column(db.String(150), nullable=True)
     contrasena = db.Column(db.String(255), nullable=False)
     rol_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=False)
     activo = db.Column(db.Boolean, default=True, nullable=False)
@@ -26,6 +26,7 @@ class Usuario(db.Model):
     ultimo_acceso = db.Column(db.TIMESTAMP, default=datetime.utcnow)  # Para timeout
     telefono = db.Column(db.String(30))
     dni = db.Column(db.String(20))
+    cod_colab = db.Column(db.String(20), unique=True, nullable=True)  # código de colaborador RRHH
     ruta_firma = db.Column(db.String(500))
     cambiar_contrasena = db.Column(db.Boolean, default=False, nullable=False)  # Indica si debe cambiar contraseña
     fecha_creacion = db.Column(db.TIMESTAMP, default=datetime.utcnow)

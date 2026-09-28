@@ -1,5 +1,6 @@
 from flask import jsonify, session
 from app.models.Usuario_models import Usuario
+from app.models.UsuarioEncargado_models import UsuarioEncargado
 from app.utils.auth_utils import check_password, hash_password, generar_contrasena_temporal
 from app.utils.roles import ROL_ADMINISTRADOR
 from datetime import datetime, timedelta
@@ -9,21 +10,61 @@ import json
 class AuthController:
 
     @staticmethod
+    def _autenticar(identificador, contrasena):
+        """Resuelve credenciales contra usuarios (MySQL) y, si no hay
+        coincidencia, contra la BD de Encargado/Jefe (Postgres).
+
+        Login por: cod_colab (RRHH) o nombre_usuario en MySQL; cod_usuario
+        o correo en Postgres. RRHH nunca se consulta aquí: solo se usa al
+        crear/refrescar cuentas.
+
+        Devuelve el Usuario (MySQL) autenticado, o None si las credenciales
+        son inválidas.
+        """
+        from sqlalchemy import or_
+
+        identificador = (identificador or '').strip()
+        identificador_lower = identificador.lower()
+        identificador_upper = identificador.upper()
+
+        usuario = Usuario.query.filter(
+            or_(Usuario.cod_colab == identificador_upper, Usuario.nombre_usuario == identificador_lower),
+            Usuario.activo == True,
+        ).first()
+
+        if usuario:
+            return usuario if usuario.check_password(contrasena) else None
+
+        usuario_pg = UsuarioEncargado.query.filter(
+            or_(UsuarioEncargado.cod_usuario == identificador_upper, UsuarioEncargado.correo == identificador_lower),
+            UsuarioEncargado.activo == True,
+        ).first()
+
+        if not usuario_pg or not usuario_pg.check_password(contrasena):
+            return None
+
+        if not usuario_pg.mysql_usuario_id:
+            return None
+
+        return Usuario.query.filter_by(id=usuario_pg.mysql_usuario_id, activo=True).first()
+
+    @staticmethod
+    def _sincronizar_password_pg(usuario):
+        """Replica el hash de contraseña de `usuario` (MySQL) a su fila
+        espejo en Postgres (Encargado/Jefe), si existe. No hace commit."""
+        usuario_pg = UsuarioEncargado.query.filter_by(mysql_usuario_id=usuario.id).first()
+        if usuario_pg:
+            usuario_pg.contrasena = usuario.contrasena
+
+    @staticmethod
     def login(nombre_usuario, contrasena):
         try:
             from app.extensions import db
             from sqlalchemy import text
 
-            nombre_usuario = (nombre_usuario or '').strip().lower()
-            usuario = Usuario.query.filter_by(nombre_usuario=nombre_usuario, activo=True).first()
+            usuario = AuthController._autenticar(nombre_usuario, contrasena)
 
             if not usuario:
-                return (
-                    jsonify({"success": False, "error": "Credenciales inválidas"}),
-                    401,
-                )
-
-            if not usuario.check_password(contrasena):
                 return (
                     jsonify({"success": False, "error": "Credenciales inválidas"}),
                     401,
@@ -163,16 +204,9 @@ class AuthController:
             from app.extensions import db
             from sqlalchemy import text
 
-            nombre_usuario = (nombre_usuario or '').strip().lower()
-            usuario = Usuario.query.filter_by(nombre_usuario=nombre_usuario, activo=True).first()
+            usuario = AuthController._autenticar(nombre_usuario, contrasena)
 
             if not usuario:
-                return (
-                    jsonify({"success": False, "error": "Credenciales inválidas"}),
-                    401,
-                )
-
-            if not usuario.check_password(contrasena):
                 return (
                     jsonify({"success": False, "error": "Credenciales inválidas"}),
                     401,
@@ -191,7 +225,7 @@ class AuthController:
                     ORDER BY ee.fecha_inicio DESC
                     LIMIT 1
                 """), {'usuario_id': usuario.id}).fetchone()
-                
+
                 if encargado_activo and not encargado_activo[0]:  # Si está deshabilitado
                     return jsonify({
                         "success": False,
@@ -573,6 +607,7 @@ class AuthController:
 
             # Usar el método del modelo para hashear la nueva contraseña
             usuario.set_password(contrasena_nueva)
+            AuthController._sincronizar_password_pg(usuario)
             db.session.commit()
 
             return jsonify(
@@ -612,6 +647,7 @@ class AuthController:
 
             # Usar el método del modelo para hashear la nueva contraseña
             usuario.set_password(nueva_contrasena)
+            AuthController._sincronizar_password_pg(usuario)
             db.session.commit()
 
             return jsonify(

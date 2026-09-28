@@ -182,7 +182,7 @@
                                 <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">
                                     {{ encargado.nombre }} {{ encargado.apellido }}
                                 </p>
-                                <p class="text-xs text-gray-600 dark:text-gray-300 truncate">{{ encargado.correo }}</p>
+                                <p class="text-xs text-gray-600 dark:text-gray-300 truncate">{{ encargado.correo or 'Sin correo' }}</p>
                                 {% if encargado.activo %}
                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 mt-1">
                                     <span class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></span>
@@ -491,7 +491,7 @@
                     
                     <div>
                         <label for="emailEncargado" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Email
+                            Email (opcional)
                         </label>
                         <input type="email" id="emailEncargado" name="email"
                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"

@@ -14,6 +14,7 @@ from flask_login import current_user
 from datetime import datetime, date, timedelta
 from functools import wraps
 import json
+import re
 from sqlalchemy import text, func, desc, or_, and_
 from app.extensions import db
 from app.models.Usuario_models import Usuario, Rol, TipoEstablecimiento
@@ -26,11 +27,15 @@ from app.models.ConfiguracionPermisos_models import (
     PermisoRol, PermisoUsuario, AuditoriaAcciones, 
     PermisosHelper, inicializar_configuraciones_basicas, inicializar_permisos_basicos
 )
-from app.utils.auth_utils import generar_contrasena_temporal
+from app.utils.auth_utils import generar_contrasena_temporal, normalizar_correo_opcional
+from app.utils.employee_code import asignar_cod_colab
+from app.utils.encargados_sync import crear_usuario_encargado_pg
+from app.services.rrhh_client import lookup_colaborador_por_dni, RRHHAPIError
 from app.utils.roles import (
     ROL_ADMINISTRADOR,
     ROL_AYUDANTE_INSPECTOR,
     ROL_INSPECTOR,
+    ROL_JEFE_ESTABLECIMIENTO,
 )
 
 # Blueprint para rutas de administrador
@@ -239,6 +244,7 @@ def gestionar_usuarios():
             Usuario.correo,
             Usuario.telefono,
             Usuario.dni,
+            Usuario.cod_colab,
             Usuario.activo,
             Usuario.en_linea,
             Usuario.ultimo_acceso,
@@ -273,6 +279,7 @@ def api_obtener_usuarios():
             Usuario.correo,
             Usuario.telefono,
             Usuario.dni,
+            Usuario.cod_colab,
             Usuario.activo,
             Usuario.en_linea,
             Usuario.ultimo_acceso,
@@ -309,6 +316,7 @@ def api_obtener_usuarios():
                 'correo': usuario.correo,
                 'telefono': usuario.telefono,
                 'dni': usuario.dni,
+                'cod_colab': usuario.cod_colab,
                 'rol_nombre': usuario.rol_nombre,
                 'rol_id': usuario.rol_id,
                 'activo': usuario.activo,
@@ -487,12 +495,15 @@ def api_obtener_establecimientos():
             Establecimiento.id,
             Establecimiento.nombre,
             Establecimiento.direccion,
-            Establecimiento.tipo_establecimiento,
+            TipoEstablecimiento.nombre.label('tipo_establecimiento'),
             Establecimiento.activo,
             Establecimiento.created_at,
             Usuario.nombre.label('encargado_nombre'),
             Usuario.apellido.label('encargado_apellido'),
             Usuario.correo.label('encargado_correo')
+        ).outerjoin(
+            TipoEstablecimiento,
+            TipoEstablecimiento.id == Establecimiento.tipo_establecimiento_id
         ).outerjoin(EncargadoEstablecimiento, and_(
             EncargadoEstablecimiento.establecimiento_id == Establecimiento.id,
             EncargadoEstablecimiento.activo == True
@@ -688,10 +699,15 @@ def api_crear_jefe_establecimiento():
         data = request.get_json()
 
         # Validar datos requeridos
-        required_fields = ['nombre', 'apellido', 'correo', 'dni', 'establecimiento_id', 'fecha_inicio']
+        required_fields = ['nombre', 'apellido', 'dni', 'establecimiento_id', 'fecha_inicio']
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'success': False, 'message': f'El campo {field} es requerido'}), 400
+
+        try:
+            correo = normalizar_correo_opcional(data.get('correo'))
+        except ValueError as exc:
+            return jsonify({'success': False, 'message': str(exc)}), 400
 
         # Verificar que el DNI no exista
         if Usuario.query.filter_by(dni=data['dni']).first():
@@ -720,7 +736,7 @@ def api_crear_jefe_establecimiento():
             nombre=data['nombre'],
             apellido=data['apellido'],
             nombre_usuario=nombre_usuario,
-            correo=data['correo'],
+            correo=correo,
             telefono=data.get('telefono'),
             dni=data['dni'],
             rol_id=rol_jefe.id,
@@ -743,21 +759,66 @@ def api_crear_jefe_establecimiento():
         )
 
         db.session.add(nuevo_jefe)
+
+        # Jefe de Establecimiento no está en RRHH: se refleja en la BD Postgres
+        usuario_pg = crear_usuario_encargado_pg(nuevo_usuario, ROL_JEFE_ESTABLECIMIENTO)
+
+        if not usuario_pg.cod_usuario:
+            db.session.rollback()
+            return jsonify({'success': False, 'message': 'No se pudo generar el código de encargado (CC).'}), 500
+
         db.session.commit()
 
         return jsonify({
             'success': True,
-            'message': f'Jefe de establecimiento creado exitosamente. Usuario: {nuevo_usuario.nombre_usuario}, Contraseña temporal: {contrasena_temporal}',
+            'message': f'Jefe de establecimiento creado exitosamente. Código: {usuario_pg.cod_usuario}, Contraseña temporal: {contrasena_temporal}',
             'usuario_id': nuevo_usuario.id,
             'jefe_id': nuevo_jefe.id,
             'nombre_usuario': nuevo_usuario.nombre_usuario,
-            'correo': data['correo'],
+            'cod_usuario': usuario_pg.cod_usuario,
+            'correo': nuevo_usuario.correo,
             'contrasena_temporal': contrasena_temporal
         })
 
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': 'Error interno del servidor'}), 500
+
+
+@admin_bp.route('/api/jefes-establecimiento/<int:jefe_id>/detalles', methods=['GET'])
+@admin_required
+def api_obtener_detalles_jefe(jefe_id):
+    from app.controllers.inspector_controller import InspectorController
+    return InspectorController.obtener_detalles_jefe(jefe_id)
+
+
+@admin_bp.route('/api/jefes-establecimiento/<int:jefe_id>/editar', methods=['GET'])
+@admin_required
+def api_obtener_jefe_para_editar(jefe_id):
+    from app.controllers.inspector_controller import InspectorController
+    return InspectorController.obtener_jefe_para_editar(jefe_id)
+
+
+@admin_bp.route('/api/jefes-establecimiento/<int:jefe_id>', methods=['PUT'])
+@admin_required
+def api_actualizar_jefe_establecimiento(jefe_id):
+    from app.controllers.inspector_controller import InspectorController
+    return InspectorController.actualizar_jefe_establecimiento(jefe_id)
+
+
+@admin_bp.route('/api/jefes-establecimiento/lista', methods=['GET'])
+@admin_required
+def api_obtener_lista_jefes():
+    from app.controllers.inspector_controller import InspectorController
+    return InspectorController.obtener_lista_jefes()
+
+
+@admin_bp.route('/api/jefes-establecimiento/estadisticas', methods=['GET'])
+@admin_required
+def api_obtener_estadisticas_jefes():
+    from app.controllers.inspector_controller import InspectorController
+    return InspectorController.obtener_estadisticas_jefes()
+
 
 @admin_bp.route('/api/establecimientos-disponibles', methods=['GET'])
 @admin_required
@@ -769,11 +830,14 @@ def api_establecimientos_disponibles():
             Establecimiento.id,
             Establecimiento.nombre,
             Establecimiento.direccion,
-            Establecimiento.tipo_establecimiento
+            TipoEstablecimiento.nombre.label('tipo_establecimiento')
         ).outerjoin(JefeEstablecimiento, and_(
             JefeEstablecimiento.establecimiento_id == Establecimiento.id,
             JefeEstablecimiento.activo == True
-        )).filter(
+        )).outerjoin(
+            TipoEstablecimiento,
+            TipoEstablecimiento.id == Establecimiento.tipo_establecimiento_id
+        ).filter(
             Establecimiento.activo == True,
             JefeEstablecimiento.id.is_(None)
         ).order_by(Establecimiento.nombre).all()
@@ -783,14 +847,15 @@ def api_establecimientos_disponibles():
             establecimientos_data.append({
                 'id': est.id,
                 'nombre': est.nombre,
-                'direccion': est.direccion,
-                'tipo_establecimiento': est.tipo_establecimiento
+                'direccion': est.direccion or '',
+                'tipo_establecimiento': est.tipo_establecimiento or 'Sin tipo'
             })
 
         return jsonify({'establecimientos': establecimientos_data})
 
     except Exception as e:
-        return jsonify({'error': 'Error obteniendo establecimientos disponibles'}), 500
+        current_app.logger.exception('Error obteniendo establecimientos disponibles')
+        return jsonify({'error': f'Error obteniendo establecimientos disponibles: {str(e)}'}), 500
 
 # =================== GESTIÓN DE INSPECTORES ===================
 
@@ -807,6 +872,7 @@ def gestionar_inspectores():
             Usuario.correo,
             Usuario.telefono,
             Usuario.dni,
+            Usuario.cod_colab,
             Usuario.activo,
             Usuario.en_linea,
             Usuario.ultimo_acceso,
@@ -835,6 +901,7 @@ def gestionar_inspectores():
                 'correo': insp.correo,
                 'telefono': insp.telefono,
                 'dni': insp.dni,
+                'cod_colab': insp.cod_colab,
                 'rol_nombre': insp.rol_nombre,
                 'activo': insp.activo,
                 'en_linea': insp.en_linea,
@@ -858,6 +925,32 @@ def gestionar_inspectores():
         return redirect(url_for('admin.dashboard'))
 
 
+@admin_bp.route('/api/rrhh/lookup-dni', methods=['GET'])
+@admin_required
+def api_rrhh_lookup_dni():
+    """Consulta RRHH por DNI para prellenar nombre/apellido al crear un
+    Inspector/Ayudante de Inspector. No crea ni modifica nada."""
+    dni = (request.args.get('dni') or '').strip()
+
+    if not re.match(r'^\d{8}$', dni):
+        return jsonify({'success': False, 'message': 'DNI debe tener exactamente 8 dígitos'}), 400
+
+    if Usuario.query.filter_by(dni=dni).first():
+        return jsonify({'success': False, 'message': 'Ya existe un usuario con este DNI'}), 400
+
+    try:
+        colaborador = lookup_colaborador_por_dni(dni)
+    except RRHHAPIError as exc:
+        return jsonify({'success': False, 'message': exc.message}), exc.status_code or 502
+
+    return jsonify({
+        'success': True,
+        'nombre': colaborador.get('nombre') or '',
+        'apellido': colaborador.get('apellido') or '',
+        'cod_colab': colaborador.get('cod_colab'),
+    })
+
+
 @admin_bp.route('/api/inspectores', methods=['POST'])
 @admin_required
 def api_crear_inspector():
@@ -866,10 +959,15 @@ def api_crear_inspector():
         data = request.get_json()
 
         # Validar datos requeridos
-        required_fields = ['nombre', 'apellido', 'correo', 'dni']
+        required_fields = ['nombre', 'apellido', 'dni']
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'success': False, 'message': f'El campo {field} es requerido'}), 400
+
+        try:
+            correo = normalizar_correo_opcional(data.get('correo'))
+        except ValueError as exc:
+            return jsonify({'success': False, 'message': str(exc)}), 400
 
         # Verificar que el DNI no exista
         if Usuario.query.filter_by(dni=data['dni']).first():
@@ -883,6 +981,19 @@ def api_crear_inspector():
         if not rol_inspector:
             return jsonify({'success': False, 'message': f'Rol "{rol_objetivo}" no encontrado. Ejecute la migración del nuevo rol antes de crear usuarios.'}), 500
 
+        # Inspector y Ayudante de Inspector requieren código de colaborador RRHH:
+        # el login de las cuentas nuevas se hace con ese código, ya no con nombre_usuario.
+        try:
+            rrhh_info = lookup_colaborador_por_dni(data['dni'])
+        except RRHHAPIError as exc:
+            return jsonify({'success': False, 'message': exc.message}), exc.status_code or 502
+
+        if not rrhh_info.get('cod_colab'):
+            return jsonify({
+                'success': False,
+                'message': 'RRHH no devolvió un código de colaborador para este DNI. No se puede crear la cuenta.'
+            }), 502
+
         nombre_usuario = Usuario.generar_nombre_usuario_unico(data['nombre'], data['apellido'])
 
         # Generar contraseña temporal robusta
@@ -893,7 +1004,7 @@ def api_crear_inspector():
             nombre=data['nombre'],
             apellido=data['apellido'],
             nombre_usuario=nombre_usuario,
-            correo=data['correo'],
+            correo=correo,
             telefono=data.get('telefono'),
             dni=data['dni'],
             rol_id=rol_inspector.id,
@@ -903,14 +1014,25 @@ def api_crear_inspector():
         nuevo_usuario.set_password(contrasena_temporal)  # Contraseña temporal generada
 
         db.session.add(nuevo_usuario)
+        db.session.flush()  # Resuelve la relación con Rol antes de asignar cod_colab
+        asignar_cod_colab(nuevo_usuario, rrhh_info.get('cod_colab'))
+
+        if not nuevo_usuario.cod_colab:
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'message': 'El código de colaborador ya está asignado a otro usuario en el sistema.'
+            }), 409
+
         db.session.commit()
 
         return jsonify({
             'success': True,
-            'message': f'{rol_objetivo} creado exitosamente. Usuario: {nuevo_usuario.nombre_usuario}, Contraseña temporal: {contrasena_temporal}',
+            'message': f'{rol_objetivo} creado exitosamente. Código de colaborador: {nuevo_usuario.cod_colab}, Contraseña temporal: {contrasena_temporal}',
             'usuario_id': nuevo_usuario.id,
             'nombre_usuario': nuevo_usuario.nombre_usuario,
-            'correo': data['correo'],
+            'cod_colab': nuevo_usuario.cod_colab,
+            'correo': nuevo_usuario.correo,
             'contrasena_temporal': contrasena_temporal,
             'rol_nombre': rol_objetivo,
         })
@@ -940,6 +1062,7 @@ def api_obtener_detalles_inspector(inspector_id):
             Usuario.correo,
             Usuario.telefono,
             Usuario.dni,
+            Usuario.cod_colab,
             Usuario.activo,
             Usuario.en_linea,
             Usuario.ultimo_acceso,
@@ -1029,6 +1152,7 @@ def api_obtener_detalles_inspector(inspector_id):
             'correo': inspector.correo or '',
             'telefono': inspector.telefono,
             'dni': inspector.dni or '',
+            'cod_colab': inspector.cod_colab or '',
             'rol': inspector.rol_nombre or ROL_INSPECTOR,
             'activo': inspector.activo if inspector.activo is not None else True,
             'en_linea': inspector.en_linea if inspector.en_linea is not None else False,
@@ -1092,6 +1216,7 @@ def api_restablecer_contrasena_inspector(inspector_id):
             'success': True,
             'message': 'Contraseña restablecida exitosamente',
             'nombre_usuario': inspector.nombre_usuario,
+            'cod_colab': inspector.cod_colab,
             'correo': inspector.correo,
             'contrasena_temporal': nueva_contrasena,
             'rol_nombre': inspector.rol.nombre,

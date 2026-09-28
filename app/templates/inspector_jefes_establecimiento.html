@@ -114,7 +114,7 @@
                                             {{ jefe.nombre }} {{ jefe.apellido or '' }}
                                         </div>
                                         <div class="text-sm text-gray-500 dark:text-gray-400">
-                                            {{ jefe.correo }}
+                                            {{ jefe.correo or 'Sin correo' }}
                                         </div>
                                         {% if jefe.telefono %}
                                         <div class="text-sm text-gray-500 dark:text-gray-400">
@@ -221,6 +221,20 @@
                     </h4>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                        <div class="sm:col-span-2">
+                            <label for="modal-dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                DNI *
+                            </label>
+                            <input type="text"
+                                   id="modal-dni"
+                                   name="dni"
+                                   required
+                                   maxlength="8"
+                                   pattern="[0-9]{8}"
+                                   class="block w-full px-3 py-3 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-base bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="12345678">
+                        </div>
+
                         <div>
                             <label for="modal-nombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Nombre *
@@ -247,12 +261,11 @@
 
                         <div>
                             <label for="modal-correo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Correo Electrónico *
+                                Correo Electrónico (opcional)
                             </label>
                             <input type="email"
                                    id="modal-correo"
                                    name="correo"
-                                   required
                                    class="block w-full px-3 py-3 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-base bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                                    placeholder="correo@ejemplo.com">
                         </div>
@@ -266,20 +279,6 @@
                                    name="telefono"
                                    class="block w-full px-3 py-3 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-base bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                                    placeholder="+51 999 999 999">
-                        </div>
-
-                        <div class="md:col-span-2">
-                            <label for="modal-dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                DNI *
-                            </label>
-                            <input type="text"
-                                   id="modal-dni"
-                                   name="dni"
-                                   required
-                                   maxlength="8"
-                                   pattern="[0-9]{8}"
-                                   class="block w-full px-3 py-3 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-base bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                                   placeholder="12345678">
                         </div>
                     </div>
                 </div>
@@ -507,13 +506,12 @@ document.getElementById('form-crear-jefe-modal').addEventListener('submit', asyn
         };
 
         // Validaciones básicas
-        if (!formData.nombre || !formData.apellido || !formData.correo || !formData.dni || !formData.establecimiento_id || !formData.fecha_inicio) {
+        if (!formData.nombre || !formData.apellido || !formData.dni || !formData.establecimiento_id || !formData.fecha_inicio) {
             throw new Error('Todos los campos marcados con * son obligatorios');
         }
 
-        // Validar formato de email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(formData.correo)) {
+        if (formData.correo && !emailRegex.test(formData.correo)) {
             throw new Error('El formato del correo electrónico no es válido');
         }
 
