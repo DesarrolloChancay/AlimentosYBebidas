@@ -14,6 +14,7 @@ from flask_login import current_user
 from datetime import datetime, date, timedelta
 from functools import wraps
 import json
+import re
 from sqlalchemy import text, func, desc, or_, and_
 from app.extensions import db
 from app.models.Usuario_models import Usuario, Rol, TipoEstablecimiento
@@ -868,6 +869,32 @@ def gestionar_inspectores():
     except Exception as e:
         flash('Error al cargar la gestión de inspectores', 'error')
         return redirect(url_for('admin.dashboard'))
+
+
+@admin_bp.route('/api/rrhh/lookup-dni', methods=['GET'])
+@admin_required
+def api_rrhh_lookup_dni():
+    """Consulta RRHH por DNI para prellenar nombre/apellido al crear un
+    Inspector/Ayudante de Inspector. No crea ni modifica nada."""
+    dni = (request.args.get('dni') or '').strip()
+
+    if not re.match(r'^\d{8}$', dni):
+        return jsonify({'success': False, 'message': 'DNI debe tener exactamente 8 dígitos'}), 400
+
+    if Usuario.query.filter_by(dni=dni).first():
+        return jsonify({'success': False, 'message': 'Ya existe un usuario con este DNI'}), 400
+
+    try:
+        colaborador = lookup_colaborador_por_dni(dni)
+    except RRHHAPIError as exc:
+        return jsonify({'success': False, 'message': exc.message}), exc.status_code or 502
+
+    return jsonify({
+        'success': True,
+        'nombre': colaborador.get('nombre') or '',
+        'apellido': colaborador.get('apellido') or '',
+        'cod_colab': colaborador.get('cod_colab'),
+    })
 
 
 @admin_bp.route('/api/inspectores', methods=['POST'])
