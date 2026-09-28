@@ -115,7 +115,7 @@
                                             {{ jefe.nombre }} {{ jefe.apellido or '' }}
                                         </div>
                                         <div class="text-sm text-gray-500 dark:text-gray-400">
-                                            {{ jefe.correo }}
+                                            {{ jefe.correo or 'Sin correo' }}
                                         </div>
                                         {% if jefe.telefono %}
                                         <div class="text-sm text-gray-500 dark:text-gray-400">
@@ -879,6 +879,26 @@ let jefeIdParaDesactivar = null;
 let jefeActivoActual = null;
 let jefeIdParaRestablecer = null;
 
+function urlApiJefes(suffix) {
+    const base = window.location.pathname.startsWith('/inspector/')
+        ? '/inspector/api/jefes-establecimiento'
+        : '/admin/api/jefes-establecimiento';
+    return `${base}${suffix || ''}`;
+}
+
+function textoCorreo(correo) {
+    return correo ? correo : 'Sin correo';
+}
+
+async function parseJsonResponse(response) {
+    const text = await response.text();
+    try {
+        return text ? JSON.parse(text) : {};
+    } catch (e) {
+        throw new Error('Error al procesar la solicitud');
+    }
+}
+
 // Esperar a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM cargado, inicializando JavaScript...');
@@ -1061,7 +1081,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Enviando datos al servidor...');
 
                 // Enviar datos
-                const response = await fetch('/inspector/api/jefes-establecimiento', {
+                const response = await fetch(urlApiJefes(''), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1173,11 +1193,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 console.log('Enviando datos de actualización al servidor...');
 
-                // Determinar la URL correcta según el contexto
-                let url = `/api/jefes-establecimiento/${jefeId}`;
-                if (window.location.pathname.startsWith('/inspector/')) {
-                    url = `/inspector/api/jefes-establecimiento/${jefeId}`;
-                }
+                const url = urlApiJefes(`/${jefeId}`);
 
                 // Enviar datos
                 const response = await fetch(url, {
@@ -1234,14 +1250,9 @@ document.addEventListener('DOMContentLoaded', function() {
             content.classList.add('hidden');
 
             try {
-                // Determinar la URL correcta según el contexto
-                let url = `/api/jefes-establecimiento/${jefeId}/detalles`;
-                if (window.location.pathname.startsWith('/inspector/')) {
-                    url = `/inspector/api/jefes-establecimiento/${jefeId}/detalles`;
-                }
-
+                const url = urlApiJefes(`/${jefeId}/detalles`);
                 const response = await fetch(url);
-                const data = await response.json();
+                const data = await parseJsonResponse(response);
 
                 if (data.success && data.jefe) {
                     // Llenar los detalles
@@ -1265,7 +1276,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function llenarDetallesJefe(jefe) {
         // Información personal
         document.getElementById('detalle-nombre-completo').textContent = `${jefe.usuario.nombre} ${jefe.usuario.apellido}`;
-        document.getElementById('detalle-correo').textContent = jefe.usuario.correo;
+        document.getElementById('detalle-correo').textContent = textoCorreo(jefe.usuario.correo);
         document.getElementById('detalle-telefono').textContent = jefe.usuario.telefono || 'No especificado';
         document.getElementById('detalle-dni').textContent = jefe.usuario.dni;
 
@@ -1362,14 +1373,9 @@ document.addEventListener('DOMContentLoaded', function() {
             form.reset();
 
             try {
-                // Determinar la URL correcta según el contexto
-                let url = `/api/jefes-establecimiento/${jefeId}/editar`;
-                if (window.location.pathname.startsWith('/inspector/')) {
-                    url = `/inspector/api/jefes-establecimiento/${jefeId}/editar`;
-                }
-
+                const url = urlApiJefes(`/${jefeId}/editar`);
                 const response = await fetch(url);
-                const data = await response.json();
+                const data = await parseJsonResponse(response);
 
                 if (data.success && data.jefe) {
                     // Llenar el formulario con los datos
@@ -1390,7 +1396,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Información personal
         document.getElementById('editar-nombre').value = jefe.usuario.nombre;
         document.getElementById('editar-apellido').value = jefe.usuario.apellido;
-        document.getElementById('editar-correo').value = jefe.usuario.correo;
+        document.getElementById('editar-correo').value = jefe.usuario.correo || '';
         document.getElementById('editar-telefono').value = jefe.usuario.telefono || '';
         document.getElementById('editar-dni').value = jefe.usuario.dni;
 
@@ -1424,11 +1430,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             console.log('Refrescando tabla de jefes...');
             
-            // Determinar la URL correcta según el contexto
-            let url = '/api/jefes-establecimiento/lista';
-            if (window.location.pathname.startsWith('/inspector/')) {
-                url = '/inspector/api/jefes-establecimiento/lista';
-            }
+            const url = urlApiJefes('/lista');
 
             const response = await fetch(url);
             const data = await response.json();
@@ -1451,11 +1453,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             console.log('Refrescando estadísticas...');
             
-            // Determinar la URL correcta según el contexto
-            let url = '/api/jefes-establecimiento/estadisticas';
-            if (window.location.pathname.startsWith('/inspector/')) {
-                url = '/inspector/api/jefes-establecimiento/estadisticas';
-            }
+            const url = urlApiJefes('/estadisticas');
 
             const response = await fetch(url);
             const data = await response.json();
@@ -1522,7 +1520,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     ${jefe.nombre} ${jefe.apellido || ''}
                                 </div>
                                 <div class="text-sm text-gray-500 dark:text-gray-400">
-                                    ${jefe.correo}
+                                    ${textoCorreo(jefe.correo)}
                                 </div>
                                 ${jefe.telefono ? `<div class="text-sm text-gray-500 dark:text-gray-400">${jefe.telefono}</div>` : ''}
                             </div>
@@ -1771,7 +1769,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="relative">
                                 <textarea id="credenciales-texto" readonly
                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white text-sm font-mono"
-                                          rows="4">${`Código de jefe (usuario de acceso): ${codUsuario || 'No asignado'}\nCorreo: ${correo}\nContraseña temporal: ${contrasena}`}</textarea>
+                                          rows="4">${`Código de jefe (usuario de acceso): ${codUsuario || 'No asignado'}\nCorreo: ${textoCorreo(correo)}\nContraseña temporal: ${contrasena}`}</textarea>
                                 <button onclick="copiarTextoCompleto()"
                                         class="absolute top-2 right-2 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
                                         title="Copiar todo el texto">

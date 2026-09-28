@@ -114,7 +114,7 @@
                                             {{ jefe.nombre }} {{ jefe.apellido or '' }}
                                         </div>
                                         <div class="text-sm text-gray-500 dark:text-gray-400">
-                                            {{ jefe.correo }}
+                                            {{ jefe.correo or 'Sin correo' }}
                                         </div>
                                         {% if jefe.telefono %}
                                         <div class="text-sm text-gray-500 dark:text-gray-400">

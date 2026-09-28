@@ -784,6 +784,42 @@ def api_crear_jefe_establecimiento():
         db.session.rollback()
         return jsonify({'success': False, 'message': 'Error interno del servidor'}), 500
 
+
+@admin_bp.route('/api/jefes-establecimiento/<int:jefe_id>/detalles', methods=['GET'])
+@admin_required
+def api_obtener_detalles_jefe(jefe_id):
+    from app.controllers.inspector_controller import InspectorController
+    return InspectorController.obtener_detalles_jefe(jefe_id)
+
+
+@admin_bp.route('/api/jefes-establecimiento/<int:jefe_id>/editar', methods=['GET'])
+@admin_required
+def api_obtener_jefe_para_editar(jefe_id):
+    from app.controllers.inspector_controller import InspectorController
+    return InspectorController.obtener_jefe_para_editar(jefe_id)
+
+
+@admin_bp.route('/api/jefes-establecimiento/<int:jefe_id>', methods=['PUT'])
+@admin_required
+def api_actualizar_jefe_establecimiento(jefe_id):
+    from app.controllers.inspector_controller import InspectorController
+    return InspectorController.actualizar_jefe_establecimiento(jefe_id)
+
+
+@admin_bp.route('/api/jefes-establecimiento/lista', methods=['GET'])
+@admin_required
+def api_obtener_lista_jefes():
+    from app.controllers.inspector_controller import InspectorController
+    return InspectorController.obtener_lista_jefes()
+
+
+@admin_bp.route('/api/jefes-establecimiento/estadisticas', methods=['GET'])
+@admin_required
+def api_obtener_estadisticas_jefes():
+    from app.controllers.inspector_controller import InspectorController
+    return InspectorController.obtener_estadisticas_jefes()
+
+
 @admin_bp.route('/api/establecimientos-disponibles', methods=['GET'])
 @admin_required
 def api_establecimientos_disponibles():

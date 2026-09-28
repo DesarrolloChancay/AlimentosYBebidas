@@ -182,7 +182,7 @@
                                 <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">
                                     {{ encargado.nombre }} {{ encargado.apellido }}
                                 </p>
-                                <p class="text-xs text-gray-600 dark:text-gray-300 truncate">{{ encargado.correo }}</p>
+                                <p class="text-xs text-gray-600 dark:text-gray-300 truncate">{{ encargado.correo or 'Sin correo' }}</p>
                                 {% if encargado.activo %}
                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 mt-1">
                                     <span class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></span>
