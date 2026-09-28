@@ -819,6 +819,7 @@ def gestionar_inspectores():
             Usuario.correo,
             Usuario.telefono,
             Usuario.dni,
+            Usuario.cod_colab,
             Usuario.activo,
             Usuario.en_linea,
             Usuario.ultimo_acceso,

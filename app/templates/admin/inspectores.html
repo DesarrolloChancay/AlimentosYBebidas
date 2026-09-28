@@ -286,6 +286,30 @@
                     </h4>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <label for="dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                DNI *
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="text"
+                                       id="dni"
+                                       name="dni"
+                                       required
+                                       maxlength="8"
+                                       pattern="[0-9]{8}"
+                                       class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                        placeholder="12345678">
+                                <button type="button"
+                                        id="btn-consultar-rrhh"
+                                        onclick="consultarRRHH()"
+                                        class="whitespace-nowrap inline-flex items-center px-3 py-2 border border-blue-300 dark:border-blue-700 rounded-md shadow-sm text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                                    <i class="fas fa-id-badge mr-2"></i>
+                                    Consultar RRHH
+                                </button>
+                            </div>
+                            <p id="rrhh-lookup-status" class="mt-2 text-sm"></p>
+                        </div>
+
                         <div>
                             <label for="nombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Nombre *
@@ -331,30 +355,6 @@
                                    name="telefono"
                                    class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                                    placeholder="+51 999 999 999">
-                        </div>
-
-                        <div class="md:col-span-2">
-                            <label for="dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                DNI *
-                            </label>
-                            <div class="flex gap-2">
-                                <input type="text"
-                                       id="dni"
-                                       name="dni"
-                                       required
-                                       maxlength="8"
-                                       pattern="[0-9]{8}"
-                                       class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                                        placeholder="12345678">
-                                <button type="button"
-                                        id="btn-consultar-rrhh"
-                                        onclick="consultarRRHH()"
-                                        class="whitespace-nowrap inline-flex items-center px-3 py-2 border border-blue-300 dark:border-blue-700 rounded-md shadow-sm text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
-                                    <i class="fas fa-id-badge mr-2"></i>
-                                    Consultar RRHH
-                                </button>
-                            </div>
-                            <p id="rrhh-lookup-status" class="mt-2 text-sm"></p>
                         </div>
 
                         <div class="md:col-span-2">
@@ -536,12 +536,13 @@ function restablecerContrasena(inspectorId, nombreUsuarioInspector) {
 
 // Función para confirmar restablecer contraseña
 async function confirmarRestablecerContrasena() {
-    if (!inspectorIdParaRestablecer) return;
+    const inspectorId = inspectorIdParaRestablecer;
+    if (!inspectorId) return;
 
     cerrarModalConfirmarRestablecer();
 
     try {
-        const response = await fetch(`/admin/api/inspectores/${inspectorIdParaRestablecer}/restablecer-contrasena`, {
+        const response = await fetch(`/admin/api/inspectores/${inspectorId}/restablecer-contrasena`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
