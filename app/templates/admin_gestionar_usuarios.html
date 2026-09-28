@@ -197,6 +197,22 @@
                     </select>
                 </div>
 
+                <!-- DNI -->
+                <div>
+                    <label for="dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-id-card mr-1"></i>
+                        DNI *
+                    </label>
+                    <input type="text"
+                           id="dni"
+                           name="dni"
+                           required
+                           maxlength="8"
+                           pattern="[0-9]{8}"
+                           class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                           placeholder="12345678">
+                </div>
+
                 <!-- Nombre -->
                 <div>
                     <label for="nombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -225,32 +241,15 @@
                            placeholder="Ingrese el apellido">
                 </div>
 
-                <!-- DNI -->
-                <div>
-                    <label for="dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        <i class="fas fa-id-card mr-1"></i>
-                        DNI *
-                    </label>
-                    <input type="text"
-                           id="dni"
-                           name="dni"
-                           required
-                           maxlength="8"
-                           pattern="[0-9]{8}"
-                           class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                           placeholder="12345678">
-                </div>
-
                 <!-- Correo -->
                 <div>
                     <label for="correo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         <i class="fas fa-envelope mr-1"></i>
-                        Correo Electrónico *
+                        Correo Electrónico (opcional)
                     </label>
                     <input type="email"
                            id="correo"
                            name="correo"
-                           required
                            class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                            placeholder="usuario@ejemplo.com">
                 </div>
@@ -681,7 +680,7 @@ document.getElementById('form-crear-usuario').addEventListener('submit', async f
         };
 
         // Validaciones
-        if (!formData.nombre || !formData.apellido || !formData.dni || !formData.correo || !formData.rol_id) {
+        if (!formData.nombre || !formData.apellido || !formData.dni || !formData.rol_id) {
             throw new Error('Todos los campos obligatorios deben estar completos');
         }
 
@@ -689,7 +688,7 @@ document.getElementById('form-crear-usuario').addEventListener('submit', async f
             throw new Error('El DNI debe tener exactamente 8 dígitos');
         }
 
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.correo)) {
+        if (formData.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.correo)) {
             throw new Error('Formato de correo inválido');
         }
 

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, session, render_template
 from app.models.Usuario_models import Usuario, Rol
 from app.controllers.auth_controller import AuthController
-from app.utils.auth_utils import generar_contrasena_temporal
+from app.utils.auth_utils import generar_contrasena_temporal, normalizar_correo_opcional
 from app.utils.employee_code import asignar_cod_colab
 from app.utils.encargados_sync import crear_usuario_encargado_pg
 from app.utils.roles import ROL_ENCARGADO, ROL_JEFE_ESTABLECIMIENTO
@@ -145,7 +145,7 @@ def crear_usuario():
                 return jsonify({'success': False, 'error': 'Rol no permitido para jefe de establecimiento'}), 403
 
         # Validar datos requeridos
-        campos_requeridos = ['nombre', 'apellido', 'dni', 'correo', 'rol_id']
+        campos_requeridos = ['nombre', 'apellido', 'dni', 'rol_id']
         for campo in campos_requeridos:
             if not data.get(campo):
                 return jsonify({'success': False, 'error': f'Campo {campo} es requerido'}), 400
@@ -154,19 +154,27 @@ def crear_usuario():
         if not re.match(r'^\d{8}$', data['dni']):
             return jsonify({'success': False, 'error': 'DNI debe tener exactamente 8 dígitos'}), 400
 
-        # Validar formato de correo
-        if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', data['correo']):
-            return jsonify({'success': False, 'error': 'Formato de correo inválido'}), 400
+        try:
+            correo = normalizar_correo_opcional(data.get('correo'))
+        except ValueError as exc:
+            return jsonify({'success': False, 'error': str(exc)}), 400
 
         rol_id = int(data['rol_id'])
 
-        # Inspector (rol_id 1): requiere código de colaborador RRHH
+        # Inspector (rol_id 1): requiere código de colaborador RRHH.
+        # El login de las cuentas nuevas se hace con ese código, ya no con nombre_usuario.
         rrhh_info = None
         if rol_id == 1:
             try:
                 rrhh_info = lookup_colaborador_por_dni(data['dni'])
             except RRHHAPIError as exc:
                 return jsonify({'success': False, 'error': exc.message}), exc.status_code or 502
+
+            if not rrhh_info.get('cod_colab'):
+                return jsonify({
+                    'success': False,
+                    'error': 'RRHH no devolvió un código de colaborador para este DNI. No se puede crear la cuenta.'
+                }), 502
 
         nombre_usuario = Usuario.generar_nombre_usuario_unico(data['nombre'], data['apellido'])
 
@@ -179,7 +187,7 @@ def crear_usuario():
             apellido=data['apellido'],
             nombre_usuario=nombre_usuario,
             dni=data['dni'],
-            correo=data['correo'],
+            correo=correo,
             rol_id=rol_id,
             telefono=data.get('telefono'),
             activo=True,
@@ -194,6 +202,12 @@ def crear_usuario():
 
         if rrhh_info:
             asignar_cod_colab(nuevo_usuario, rrhh_info.get('cod_colab'))
+            if not nuevo_usuario.cod_colab:
+                db.session.rollback()
+                return jsonify({
+                    'success': False,
+                    'error': 'El código de colaborador ya está asignado a otro usuario en el sistema.'
+                }), 409
 
         # Encargado (2) o Jefe de Establecimiento (4): se refleja en la BD Postgres
         if rol_id in (2, 4):
@@ -207,8 +221,9 @@ def crear_usuario():
             'mensaje': 'Usuario creado exitosamente',
             'usuario_id': nuevo_usuario.id,
             'nombre_usuario': nuevo_usuario.nombre_usuario,
+            'cod_colab': nuevo_usuario.cod_colab,
             'contrasena_temporal': contrasena_temporal,
-            'correo': data['correo']
+            'correo': nuevo_usuario.correo
         })
 
     except Exception as e:

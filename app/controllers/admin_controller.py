@@ -27,7 +27,7 @@ from app.models.ConfiguracionPermisos_models import (
     PermisoRol, PermisoUsuario, AuditoriaAcciones, 
     PermisosHelper, inicializar_configuraciones_basicas, inicializar_permisos_basicos
 )
-from app.utils.auth_utils import generar_contrasena_temporal
+from app.utils.auth_utils import generar_contrasena_temporal, normalizar_correo_opcional
 from app.utils.employee_code import asignar_cod_colab
 from app.utils.encargados_sync import crear_usuario_encargado_pg
 from app.services.rrhh_client import lookup_colaborador_por_dni, RRHHAPIError
@@ -495,12 +495,15 @@ def api_obtener_establecimientos():
             Establecimiento.id,
             Establecimiento.nombre,
             Establecimiento.direccion,
-            Establecimiento.tipo_establecimiento,
+            TipoEstablecimiento.nombre.label('tipo_establecimiento'),
             Establecimiento.activo,
             Establecimiento.created_at,
             Usuario.nombre.label('encargado_nombre'),
             Usuario.apellido.label('encargado_apellido'),
             Usuario.correo.label('encargado_correo')
+        ).outerjoin(
+            TipoEstablecimiento,
+            TipoEstablecimiento.id == Establecimiento.tipo_establecimiento_id
         ).outerjoin(EncargadoEstablecimiento, and_(
             EncargadoEstablecimiento.establecimiento_id == Establecimiento.id,
             EncargadoEstablecimiento.activo == True
@@ -696,10 +699,15 @@ def api_crear_jefe_establecimiento():
         data = request.get_json()
 
         # Validar datos requeridos
-        required_fields = ['nombre', 'apellido', 'correo', 'dni', 'establecimiento_id', 'fecha_inicio']
+        required_fields = ['nombre', 'apellido', 'dni', 'establecimiento_id', 'fecha_inicio']
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'success': False, 'message': f'El campo {field} es requerido'}), 400
+
+        try:
+            correo = normalizar_correo_opcional(data.get('correo'))
+        except ValueError as exc:
+            return jsonify({'success': False, 'message': str(exc)}), 400
 
         # Verificar que el DNI no exista
         if Usuario.query.filter_by(dni=data['dni']).first():
@@ -728,7 +736,7 @@ def api_crear_jefe_establecimiento():
             nombre=data['nombre'],
             apellido=data['apellido'],
             nombre_usuario=nombre_usuario,
-            correo=data['correo'],
+            correo=correo,
             telefono=data.get('telefono'),
             dni=data['dni'],
             rol_id=rol_jefe.id,
@@ -763,7 +771,7 @@ def api_crear_jefe_establecimiento():
             'usuario_id': nuevo_usuario.id,
             'jefe_id': nuevo_jefe.id,
             'nombre_usuario': nuevo_usuario.nombre_usuario,
-            'correo': data['correo'],
+            'correo': nuevo_usuario.correo,
             'contrasena_temporal': contrasena_temporal
         })
 
@@ -781,11 +789,14 @@ def api_establecimientos_disponibles():
             Establecimiento.id,
             Establecimiento.nombre,
             Establecimiento.direccion,
-            Establecimiento.tipo_establecimiento
+            TipoEstablecimiento.nombre.label('tipo_establecimiento')
         ).outerjoin(JefeEstablecimiento, and_(
             JefeEstablecimiento.establecimiento_id == Establecimiento.id,
             JefeEstablecimiento.activo == True
-        )).filter(
+        )).outerjoin(
+            TipoEstablecimiento,
+            TipoEstablecimiento.id == Establecimiento.tipo_establecimiento_id
+        ).filter(
             Establecimiento.activo == True,
             JefeEstablecimiento.id.is_(None)
         ).order_by(Establecimiento.nombre).all()
@@ -795,14 +806,15 @@ def api_establecimientos_disponibles():
             establecimientos_data.append({
                 'id': est.id,
                 'nombre': est.nombre,
-                'direccion': est.direccion,
-                'tipo_establecimiento': est.tipo_establecimiento
+                'direccion': est.direccion or '',
+                'tipo_establecimiento': est.tipo_establecimiento or 'Sin tipo'
             })
 
         return jsonify({'establecimientos': establecimientos_data})
 
     except Exception as e:
-        return jsonify({'error': 'Error obteniendo establecimientos disponibles'}), 500
+        current_app.logger.exception('Error obteniendo establecimientos disponibles')
+        return jsonify({'error': f'Error obteniendo establecimientos disponibles: {str(e)}'}), 500
 
 # =================== GESTIÓN DE INSPECTORES ===================
 
@@ -906,10 +918,15 @@ def api_crear_inspector():
         data = request.get_json()
 
         # Validar datos requeridos
-        required_fields = ['nombre', 'apellido', 'correo', 'dni']
+        required_fields = ['nombre', 'apellido', 'dni']
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'success': False, 'message': f'El campo {field} es requerido'}), 400
+
+        try:
+            correo = normalizar_correo_opcional(data.get('correo'))
+        except ValueError as exc:
+            return jsonify({'success': False, 'message': str(exc)}), 400
 
         # Verificar que el DNI no exista
         if Usuario.query.filter_by(dni=data['dni']).first():
@@ -923,11 +940,18 @@ def api_crear_inspector():
         if not rol_inspector:
             return jsonify({'success': False, 'message': f'Rol "{rol_objetivo}" no encontrado. Ejecute la migración del nuevo rol antes de crear usuarios.'}), 500
 
-        # Inspector y Ayudante de Inspector requieren código de colaborador RRHH
+        # Inspector y Ayudante de Inspector requieren código de colaborador RRHH:
+        # el login de las cuentas nuevas se hace con ese código, ya no con nombre_usuario.
         try:
             rrhh_info = lookup_colaborador_por_dni(data['dni'])
         except RRHHAPIError as exc:
             return jsonify({'success': False, 'message': exc.message}), exc.status_code or 502
+
+        if not rrhh_info.get('cod_colab'):
+            return jsonify({
+                'success': False,
+                'message': 'RRHH no devolvió un código de colaborador para este DNI. No se puede crear la cuenta.'
+            }), 502
 
         nombre_usuario = Usuario.generar_nombre_usuario_unico(data['nombre'], data['apellido'])
 
@@ -939,7 +963,7 @@ def api_crear_inspector():
             nombre=data['nombre'],
             apellido=data['apellido'],
             nombre_usuario=nombre_usuario,
-            correo=data['correo'],
+            correo=correo,
             telefono=data.get('telefono'),
             dni=data['dni'],
             rol_id=rol_inspector.id,
@@ -951,14 +975,23 @@ def api_crear_inspector():
         db.session.add(nuevo_usuario)
         db.session.flush()  # Resuelve la relación con Rol antes de asignar cod_colab
         asignar_cod_colab(nuevo_usuario, rrhh_info.get('cod_colab'))
+
+        if not nuevo_usuario.cod_colab:
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'message': 'El código de colaborador ya está asignado a otro usuario en el sistema.'
+            }), 409
+
         db.session.commit()
 
         return jsonify({
             'success': True,
-            'message': f'{rol_objetivo} creado exitosamente. Usuario: {nuevo_usuario.nombre_usuario}, Contraseña temporal: {contrasena_temporal}',
+            'message': f'{rol_objetivo} creado exitosamente. Código de colaborador: {nuevo_usuario.cod_colab}, Contraseña temporal: {contrasena_temporal}',
             'usuario_id': nuevo_usuario.id,
             'nombre_usuario': nuevo_usuario.nombre_usuario,
-            'correo': data['correo'],
+            'cod_colab': nuevo_usuario.cod_colab,
+            'correo': nuevo_usuario.correo,
             'contrasena_temporal': contrasena_temporal,
             'rol_nombre': rol_objetivo,
         })
@@ -1142,6 +1175,7 @@ def api_restablecer_contrasena_inspector(inspector_id):
             'success': True,
             'message': 'Contraseña restablecida exitosamente',
             'nombre_usuario': inspector.nombre_usuario,
+            'cod_colab': inspector.cod_colab,
             'correo': inspector.correo,
             'contrasena_temporal': nueva_contrasena,
             'rol_nombre': inspector.rol.nombre,

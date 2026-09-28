@@ -5,7 +5,7 @@ from app.models.Inspecciones_models import Establecimiento, JefeEstablecimiento,
 from app.extensions import db
 from app.controllers.auth_controller import AuthController
 from app.utils.auth_decorators import login_required
-from app.utils.auth_utils import generar_contrasena_temporal
+from app.utils.auth_utils import generar_contrasena_temporal, normalizar_correo_opcional
 from app.utils.encargados_sync import crear_usuario_encargado_pg
 from app.utils.roles import ROL_ENCARGADO
 from app.utils.media import private_signature_dir, signature_db_path, signature_public_url
@@ -164,6 +164,10 @@ def agregar_encargado():
         dni = data.get('dni', '').strip()
         telefono = data.get('telefono', '').strip()
         correo = (data.get('correo') or data.get('email') or '').strip()
+        try:
+            correo = normalizar_correo_opcional(correo)
+        except ValueError as exc:
+            return jsonify({'success': False, 'message': str(exc)}), 400
 
         # Validaciones básicas
         if not all([nombre, apellido, dni]):

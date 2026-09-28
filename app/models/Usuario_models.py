@@ -18,7 +18,7 @@ class Usuario(db.Model):
     nombre = db.Column(db.String(100), nullable=False)
     apellido = db.Column(db.String(100))
     nombre_usuario = db.Column(db.String(160), nullable=False, unique=True, index=True)
-    correo = db.Column(db.String(150), nullable=False)
+    correo = db.Column(db.String(150), nullable=True)
     contrasena = db.Column(db.String(255), nullable=False)
     rol_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=False)
     activo = db.Column(db.Boolean, default=True, nullable=False)

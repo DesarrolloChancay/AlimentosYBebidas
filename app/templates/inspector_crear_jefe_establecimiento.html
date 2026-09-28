@@ -43,6 +43,20 @@
                         </h3>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="md:col-span-2">
+                                <label for="dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    DNI *
+                                </label>
+                                <input type="text"
+                                       id="dni"
+                                       name="dni"
+                                       required
+                                       maxlength="8"
+                                       pattern="[0-9]{8}"
+                                       class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                       placeholder="12345678">
+                            </div>
+
                             <div>
                                 <label for="nombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                     Nombre *
@@ -69,12 +83,11 @@
 
                             <div>
                                 <label for="correo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    Correo Electrónico *
+                                    Correo Electrónico (opcional)
                                 </label>
                                 <input type="email"
                                        id="correo"
                                        name="correo"
-                                       required
                                        class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                                        placeholder="correo@ejemplo.com">
                             </div>
@@ -88,20 +101,6 @@
                                        name="telefono"
                                        class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                                        placeholder="+51 999 999 999">
-                            </div>
-
-                            <div class="md:col-span-2">
-                                <label for="dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    DNI *
-                                </label>
-                                <input type="text"
-                                       id="dni"
-                                       name="dni"
-                                       required
-                                       maxlength="8"
-                                       pattern="[0-9]{8}"
-                                       class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                                       placeholder="12345678">
                             </div>
                         </div>
                     </div>
@@ -266,13 +265,12 @@ document.getElementById('form-crear-jefe').addEventListener('submit', async func
         };
 
         // Validaciones básicas
-        if (!formData.nombre || !formData.apellido || !formData.correo || !formData.dni || !formData.establecimiento_id || !formData.fecha_inicio) {
+        if (!formData.nombre || !formData.apellido || !formData.dni || !formData.establecimiento_id || !formData.fecha_inicio) {
             throw new Error('Todos los campos marcados con * son obligatorios');
         }
 
-        // Validar formato de email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(formData.correo)) {
+        if (formData.correo && !emailRegex.test(formData.correo)) {
             throw new Error('El formato del correo electrónico no es válido');
         }
 

@@ -17,6 +17,22 @@ def check_password(password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
 
 
+_CORREO_REGEX = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+
+
+def normalizar_correo_opcional(raw):
+    """Devuelve el correo en minúsculas, o None si viene vacío.
+
+    Lanza ValueError si hay texto pero el formato no es válido.
+    """
+    correo = (raw or '').strip()
+    if not correo:
+        return None
+    if not _CORREO_REGEX.match(correo):
+        raise ValueError('Formato de correo inválido')
+    return correo.lower()
+
+
 
 def limpiar_fragmento_nombre_usuario(texto: str) -> str:
     texto = unicodedata.normalize('NFKD', (texto or '').strip().lower())

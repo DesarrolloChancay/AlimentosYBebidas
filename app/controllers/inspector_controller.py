@@ -11,8 +11,9 @@ from app.models.Inspecciones_models import (
 from app.extensions import db
 from sqlalchemy import and_
 import os
+import re
 from datetime import datetime
-from app.utils.auth_utils import generar_contrasena_temporal
+from app.utils.auth_utils import generar_contrasena_temporal, normalizar_correo_opcional
 from app.utils.media import private_signature_dir, signature_db_path, signature_public_url
 from app.utils.security import save_validated_upload_image
 from app.utils.signature_utils import delete_static_file, save_signature_data_url
@@ -367,6 +368,10 @@ class InspectorController:
             dni = data.get('dni', '').strip()
             telefono = data.get('telefono', '').strip()
             correo = (data.get('correo') or data.get('email') or '').strip()
+            try:
+                correo = normalizar_correo_opcional(correo)
+            except ValueError as exc:
+                return jsonify({'success': False, 'message': str(exc)}), 400
 
             if not all([nombre, apellido, dni]):
                 return jsonify({'success': False, 'message': 'Nombre, apellido y DNI son obligatorios'}), 400
@@ -486,10 +491,15 @@ class InspectorController:
             data = request.get_json()
 
             # Validar datos requeridos
-            required_fields = ['nombre', 'apellido', 'correo', 'dni', 'establecimiento_id', 'fecha_inicio']
+            required_fields = ['nombre', 'apellido', 'dni', 'establecimiento_id', 'fecha_inicio']
             for field in required_fields:
                 if not data.get(field):
                     return jsonify({'success': False, 'message': f'El campo {field} es requerido'}), 400
+
+            try:
+                correo = normalizar_correo_opcional(data.get('correo'))
+            except ValueError as exc:
+                return jsonify({'success': False, 'message': str(exc)}), 400
 
             # Verificar que el DNI no exista
             if Usuario.query.filter_by(dni=data['dni']).first():
@@ -518,7 +528,7 @@ class InspectorController:
                 nombre=data['nombre'],
                 apellido=data['apellido'],
                 nombre_usuario=nombre_usuario,
-                correo=data['correo'],
+                correo=correo,
                 telefono=data.get('telefono'),
                 dni=data['dni'],
                 rol_id=rol_jefe.id,
@@ -549,7 +559,7 @@ class InspectorController:
                 'usuario_id': nuevo_usuario.id,
                 'jefe_id': nuevo_jefe.id,
                 'nombre_usuario': nuevo_usuario.nombre_usuario,
-                'correo': data['correo'],
+                'correo': nuevo_usuario.correo,
                 'contrasena_temporal': contrasena_temporal
             })
 
@@ -894,10 +904,15 @@ class InspectorController:
                 return jsonify({'success': False, 'message': 'Usuario no encontrado'}), 404
 
             # Validar datos requeridos
-            required_fields = ['nombre', 'apellido', 'correo', 'dni', 'establecimiento_id', 'fecha_inicio']
+            required_fields = ['nombre', 'apellido', 'dni', 'establecimiento_id', 'fecha_inicio']
             for field in required_fields:
                 if not data.get(field):
                     return jsonify({'success': False, 'message': f'El campo {field} es requerido'}), 400
+
+            try:
+                correo = normalizar_correo_opcional(data.get('correo'))
+            except ValueError as exc:
+                return jsonify({'success': False, 'message': str(exc)}), 400
 
             # Verificar que el DNI no exista en otro usuario
             usuario_dni_existente = Usuario.query.filter(
@@ -916,12 +931,6 @@ class InspectorController:
                 if jefe_existente and jefe_existente.id != jefe.id:
                     return jsonify({'success': False, 'message': 'Este establecimiento ya tiene un jefe asignado'}), 400
 
-            # Validar formato de email
-            import re
-            email_regex = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
-            if not re.match(email_regex, data['correo']):
-                return jsonify({'success': False, 'message': 'El formato del correo electrónico no es válido'}), 400
-
             # Validar DNI
             if not re.match(r'^\d{8}$', data['dni']):
                 return jsonify({'success': False, 'message': 'El DNI debe tener exactamente 8 dígitos'}), 400
@@ -929,7 +938,7 @@ class InspectorController:
             # Actualizar datos del usuario
             usuario.nombre = data['nombre']
             usuario.apellido = data['apellido']
-            usuario.correo = data['correo']
+            usuario.correo = correo
             usuario.telefono = data.get('telefono')
             usuario.dni = data['dni']
             usuario.updated_at = datetime.utcnow()

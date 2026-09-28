@@ -237,6 +237,20 @@
                     </h4>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <label for="dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                DNI *
+                            </label>
+                            <input type="text"
+                                   id="dni"
+                                   name="dni"
+                                   required
+                                   maxlength="8"
+                                   pattern="[0-9]{8}"
+                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="12345678">
+                        </div>
+
                         <div>
                             <label for="nombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Nombre *
@@ -263,12 +277,11 @@
 
                         <div>
                             <label for="correo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Correo Electrónico *
+                                Correo Electrónico (opcional)
                             </label>
                             <input type="email"
                                    id="correo"
                                    name="correo"
-                                   required
                                    class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                                    placeholder="correo@ejemplo.com">
                         </div>
@@ -282,20 +295,6 @@
                                    name="telefono"
                                    class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                                    placeholder="+51 999 999 999">
-                        </div>
-
-                        <div class="md:col-span-2">
-                            <label for="dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                DNI *
-                            </label>
-                            <input type="text"
-                                   id="dni"
-                                   name="dni"
-                                   required
-                                   maxlength="8"
-                                   pattern="[0-9]{8}"
-                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                                   placeholder="12345678">
                         </div>
                     </div>
                 </div>
@@ -429,6 +428,20 @@
                     </h4>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <label for="editar-dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                DNI *
+                            </label>
+                            <input type="text"
+                                   id="editar-dni"
+                                   name="dni"
+                                   required
+                                   maxlength="8"
+                                   pattern="[0-9]{8}"
+                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                   placeholder="12345678">
+                        </div>
+
                         <div>
                             <label for="editar-nombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Nombre *
@@ -455,12 +468,11 @@
 
                         <div>
                             <label for="editar-correo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Correo Electrónico *
+                                Correo Electrónico (opcional)
                             </label>
                             <input type="email"
                                    id="editar-correo"
                                    name="correo"
-                                   required
                                    class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                                    placeholder="correo@ejemplo.com">
                         </div>
@@ -474,20 +486,6 @@
                                    name="telefono"
                                    class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                                    placeholder="+51 999 999 999">
-                        </div>
-
-                        <div class="md:col-span-2">
-                            <label for="editar-dni" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                DNI *
-                            </label>
-                            <input type="text"
-                                   id="editar-dni"
-                                   name="dni"
-                                   required
-                                   maxlength="8"
-                                   pattern="[0-9]{8}"
-                                   class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                                   placeholder="12345678">
                         </div>
                     </div>
                 </div>
@@ -973,35 +971,42 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             console.log('Cargando establecimientos disponibles...');
             
-            // Determinar la URL correcta según el contexto
-            let url = '/api/establecimientos';
-            if (window.location.pathname.startsWith('/inspector/')) {
-                url = '/inspector/api/establecimientos-disponibles';
-            }
-            
+            const url = window.location.pathname.startsWith('/inspector/')
+                ? '/inspector/api/establecimientos-disponibles'
+                : '/admin/api/establecimientos-disponibles';
+
             const response = await fetch(url);
             const data = await response.json();
+            const lista = Array.isArray(data)
+                ? data
+                : (Array.isArray(data.establecimientos) ? data.establecimientos : null);
 
-            if (data.establecimientos) {
-                establecimientosDisponibles = data.establecimientos;
-                const select = document.getElementById('establecimiento_id');
-
-                // Limpiar opciones existentes
-                select.innerHTML = '<option value="">Seleccione un establecimiento</option>';
-
-                // Agregar nuevas opciones
-                data.establecimientos.forEach(est => {
-                    const option = document.createElement('option');
-                    option.value = est.id;
-                    option.textContent = `${est.nombre} - ${est.direccion}`;
-                    select.appendChild(option);
-                });
-
-                console.log(`Cargados ${data.establecimientos.length} establecimientos`);
-            } else {
-                console.error('Error cargando establecimientos:', data.error);
-                mostrarAlerta('error', 'Error al cargar establecimientos disponibles');
+            if (!response.ok || !lista) {
+                throw new Error(data.error || 'Respuesta inválida del servidor');
             }
+
+            establecimientosDisponibles = lista;
+            const select = document.getElementById('establecimiento_id');
+            select.innerHTML = '<option value="">Seleccione un establecimiento</option>';
+
+            lista.forEach(est => {
+                const option = document.createElement('option');
+                option.value = est.id;
+                option.textContent = est.direccion
+                    ? `${est.nombre} - ${est.direccion}`
+                    : est.nombre;
+                select.appendChild(option);
+            });
+
+            if (lista.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No hay establecimientos sin jefe asignado';
+                option.disabled = true;
+                select.appendChild(option);
+            }
+
+            console.log(`Cargados ${lista.length} establecimientos`);
         } catch (error) {
             console.error('Error al cargar establecimientos:', error);
             mostrarAlerta('error', 'Error al cargar establecimientos disponibles');
@@ -1039,13 +1044,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Datos del formulario:', formData);
 
                 // Validaciones básicas
-                if (!formData.nombre || !formData.apellido || !formData.correo || !formData.dni || !formData.establecimiento_id || !formData.fecha_inicio) {
+                if (!formData.nombre || !formData.apellido || !formData.dni || !formData.establecimiento_id || !formData.fecha_inicio) {
                     throw new Error('Todos los campos marcados con * son obligatorios');
                 }
 
-                // Validar formato de email
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(formData.correo)) {
+                if (formData.correo && !emailRegex.test(formData.correo)) {
                     throw new Error('El formato del correo electrónico no es válido');
                 }
 
@@ -1153,13 +1157,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Datos del formulario de edición:', formData);
 
                 // Validaciones básicas
-                if (!formData.nombre || !formData.apellido || !formData.correo || !formData.dni || !formData.establecimiento_id || !formData.fecha_inicio) {
+                if (!formData.nombre || !formData.apellido || !formData.dni || !formData.establecimiento_id || !formData.fecha_inicio) {
                     throw new Error('Todos los campos marcados con * son obligatorios');
                 }
 
-                // Validar formato de email
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(formData.correo)) {
+                if (formData.correo && !emailRegex.test(formData.correo)) {
                     throw new Error('El formato del correo electrónico no es válido');
                 }
 
